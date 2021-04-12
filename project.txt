@@ -1,0 +1,26 @@
+April 11, 2021
+Notes regarding the project of spectrally non-flat formation of 10830
+by Jiri
+
+I'm proposing to develop a very simple NLTE code in Python solving this interesting problem and showing it possible interest. This should not take much time and I think the benefits are significant.
+
+The goal of this project is threefold:
+(1) To investigate a physically intersting and not yet considered problem of formation of the He I 10830 line in solar prominences considering spectrally non-flat radiation within the medium of solar prominence (due to non-zero optical thickness and radiation transfer within it). This line is also interesting for us apart from hydrogen lines.
+(2) To let Andreu to become familiar with the full-Stokes solution of the RT, including symmetry breaking effects of the radiation field, angular quadratures in inclinations and azimuths, boundary conditions for illumination, and also with the related quantum physics. All this experience will be very useful in the 3D inversion code.
+(3) To set up and test a collaboration similar to the near-future 3D inversion code in terms of defining a interfaces (like the abstract ESE and RTcoefs classes) between different modules that will be developed independently by different people (that will also be done on Gitlab that we don't need for this little project).
+
+The problem is fully within the CRD approximation but there is no quantum coherence between the blue component of the line and the RED components. ESE and RTE needs to be derived starting with the results of Chapter 6 of LL04 taking this into account (I have already done that). The fact that there is no such quantum coherence is trivially satisfied to up to about B = 10 kG because the natural widths of the sublevels is orders of magnitude smaller then their separation - therefore we do not need to impose the specrtally flat condition and to use the multi-term approximation. Apart from that, everything is similar to the multi-term model including the need to work in the incomplete Paschen-Back regime.
+
+My responsibility in this project (perhaps shared with Tanausu?) would be to implement and test the ESE and RTcoefs classes for the physical case of the spectrally non-flat model and also for the multiterm case (for the sake of comparison in limiting cases). Andreu's responsibility should be to develop the rest of the code using his present experience with the numerical RT; we will of course discuss it in close collaboration. Please see ESE.py and RTcoefs.py files for the interface between these two parts of the code. The Andreu's NLTE solver needs to use these interfaces for iterative solution of the radiation transfer (4 Stokes parameters, general 4x4 propagation matrix) and to provide emergent radiation for futher analysis. Both for the prominence and filament geometry.
+
+My general idea, depending on how much interesting the results will be for the red and blue components of 10830, is that we could perhaps proceed with two papers:
+(1) Stepan, ... : motivation, background physics, derivation of the equations, numerical comparison with the multi-term case for different optical thicknesses and prominence vs filamet cases, showing interesting examples
+(2) Vicente Arevalo, ... : forward solutions in full 3D geometry using the current version of the inversion code IMP (after re-implementation of ESE and RTcoefs into C); possibly some academic inversions but not necessarily; this part of the work should already be done during the work on the new C++ inversion code.
+
+In the worst case we will find only small deviations from the multi-term approximation (I doubt it given my experience with NLTE in tau~1 media) but then it would still be publishable and Andreu will get lot of useful experience needed for 3D inversion.
+
+Literature of possible interest:
+(1) Optimal quadratures for inclination-azimuth: https://ui.adsabs.harvard.edu/abs/2020A%26A...636A..24S/abstract or even better https://ui.adsabs.harvard.edu/abs/2021A%26A...645A.101J/abstract
+(2) Boundary conditions for external illumination: https://www.amazon.com/Allens-Astrophysical-Quantities-Arthur-Cox/dp/0387987460 (see the IAC's library)
+(3) Important details regarding the helium lines: https://ui.adsabs.harvard.edu/abs/2008ApJ...683..542A/abstract
+(4) BESSER formal solver for RTE: https://ui.adsabs.harvard.edu/abs/2013A%26A...557A.143S/abstract
