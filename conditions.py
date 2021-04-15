@@ -1,0 +1,63 @@
+import numpy as np
+from astropy import units, constants
+from ESE import ESE
+
+
+class ray:
+    def __init__(self, weight, inclination, azimut):
+        self.w = weight
+        self.inc = inclination
+        self.az = azimut
+
+
+class conditions:
+
+    def __init__(self, parameters):
+
+        # grid in heights
+        self.z0 = parameters.z0.cgs
+        self.zf = parameters.zf.cgs
+        self.z_N = parameters.zn
+        self.zz = np.linspace(self.z0, self.zf, self.z_N)
+
+        # points and the weights for frequency quadrature (equispaced for now)
+        self.wf = constants.c.cgs / parameters.lamb0.cgs
+        self.w0 = constants.c.cgs / parameters.lambf.cgs
+        self.nus_N = parameters.wn
+        self.nus = np.linspace(self.w0, self.wf, self.nus_N)
+        self.nus_weights = np.ones(self.nus_N)
+        self.nus_weights[0] = 0.5
+        self.nus_weights[-1] = 0.5
+
+        # weights and directions of the angular quadrature
+        self.rays = []
+        for data_ray in np.loadtxt(parameters.ray_quad):
+            self.rays.append(ray(data_ray[0],
+                                 data_ray[1] * units.deg,
+                                 data_ray[2] * units.deg))
+        self.rays_N = len(self.rays)
+
+        # Maximum lambda itterations
+        self.max_iter = int(parameters.max_iter)
+
+
+class state:
+
+    def __init__(self, cdts):
+
+        # Initializing the maximum relative change
+        self.mrc = np.ones(cdts.z_N)
+
+        # Initialice the array of the magnetic field vector
+        self.B = np.zeros((cdts.z_N, 3)) * units.G
+
+        # Initialicing the atomic state instanciating ESE class for each point
+        self.atomic = [ESE(cdts.nus_weights, vector) for vector in self.B]
+
+    def update_mrc(self):
+        for i, point in enumerate(self.atomic):
+            self.mrc[i] = point.solveESE()
+
+    def new_itter(self):
+        for i, point in enumerate(self.atomic):
+            point.resetRadiation()

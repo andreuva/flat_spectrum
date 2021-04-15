@@ -4,7 +4,7 @@ class RTcoefs:
     """
 
     def __init__(self, nus):
-        """ 
+        """
             nus: array of the line frequencies
             return value: None
         """
@@ -14,7 +14,9 @@ class RTcoefs:
         """ Provides the 4-vector of epsilon and the 4x4 K-matrix for the point
             with given ESE state and ray direction.
             ese: the local instance of the ESE class
-            ray: object with .theta and .chi variables defining the ray of propagation direction
-            return value: [epsilon (vector in frequencies), K (4x4 list of vectors in frequencies)]
+            ray: object with .theta and .chi variables defining the ray ç
+            of propagation direction
+            return value: [epsilon (vector in frequencies), K (4x4 list of
+            vectors in frequencies)]
         """
         pass
