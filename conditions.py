@@ -1,17 +1,23 @@
 import numpy as np
 from astropy import units, constants
-from ESE import ESE
+from atom import ESE
+from rad import RTE
 
 
 class ray:
     def __init__(self, weight, inclination, azimut):
-        self.w = weight
+        self.weight = weight
         self.inc = inclination
         self.az = azimut
 
+    def is_downward(self):
+        if self.inc > 180*units.deg:
+            return True
+        else: 
+            return False
+
 
 class conditions:
-
     def __init__(self, parameters):
 
         # grid in heights
@@ -54,10 +60,17 @@ class state:
         # Initialicing the atomic state instanciating ESE class for each point
         self.atomic = [ESE(cdts.nus_weights, vector) for vector in self.B]
 
+        # Initialicing the radiation state instanciating RTE class for each point
+        self.radiation = [RTE(cdts.nus_N) for z in cdts.zz]
+
+
     def update_mrc(self):
+        """Update the mrc of the current state by finding the
+        maximum mrc over all points in z (computed in ESE method)"""
         for i, point in enumerate(self.atomic):
             self.mrc[i] = point.solveESE()
 
+
     def new_itter(self):
-        for i, point in enumerate(self.atomic):
+        for i, point in enumerate(self.radiation):
             point.resetRadiation()
