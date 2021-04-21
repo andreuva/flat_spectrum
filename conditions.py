@@ -11,7 +11,7 @@ class ray:
         self.az = azimut
 
     def is_downward(self):
-        if self.inc > 180*units.deg:
+        if self.inc > 90 * units.deg:
             return True
         else: 
             return False
@@ -58,11 +58,14 @@ class state:
         self.B = np.zeros((cdts.z_N, 3)) * units.G
 
         # Initialicing the atomic state instanciating ESE class for each point
-        self.atomic = [ESE(cdts.nus_weights, vector) for vector in self.B]
+        self.atomic = [ESE(cdts.nus, cdts.nus_weights, vector) for vector in self.B]
 
         # Initialicing the radiation state instanciating RTE class for each point
         self.radiation = [RTE(cdts.nus_N) for z in cdts.zz]
 
+        self.radiation[0].make_IC(cdts.nus)
+
+        self.tau = [val for val in np.linspace(100, 0, cdts.z_N)]
 
     def update_mrc(self):
         """Update the mrc of the current state by finding the
@@ -72,5 +75,6 @@ class state:
 
 
     def new_itter(self):
-        for i, point in enumerate(self.radiation):
-            point.resetRadiation()
+        for rad, at in zip(self.radiation, self.atomic):
+            at.getSourceFunc(rad)
+            rad.resetRadiation()

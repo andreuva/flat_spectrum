@@ -1,22 +1,30 @@
 import numpy as np
 from tqq import Tqq
+from astropy import units as u
+from parameters import I_units as Iu
+from astropy.modeling.models import BlackBody as bb
 
 class RTE:
 
     def __init__(self, nus_N):
-        I = np.zeros(nus_N)
-        Q = np.zeros(nus_N)
-        U = np.zeros(nus_N)
-        V = np.zeros(nus_N)
+        I = np.zeros(nus_N)*Iu
+        Q = np.zeros(nus_N)*Iu
+        U = np.zeros(nus_N)*Iu
+        V = np.zeros(nus_N)*Iu
         self.stokes = [I,Q,U,V]
 
         # Defining the Jqq' (z = 0, m = -1, p = +1)
-        self.jzz = np.zeros(nus_N)
-        self.jpp = np.zeros(nus_N)
-        self.jmm = np.zeros(nus_N)
-        self.jmz = np.zeros(nus_N)
-        self.jmp = np.zeros(nus_N)
-        self.jzp = np.zeros(nus_N)
+        self.jzz = np.zeros(nus_N)*Iu
+        self.jpp = np.zeros(nus_N)*Iu
+        self.jmm = np.zeros(nus_N)*Iu
+        self.jmz = np.zeros(nus_N)*Iu
+        self.jmp = np.zeros(nus_N)*Iu
+        self.jzp = np.zeros(nus_N)*Iu
+
+    
+    def make_IC(self, nus):
+        self.stokes[0] = bb(temperature = 5772 * u.K )(nus)
+
 
     def sumStokes(self, ray):
         """
