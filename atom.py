@@ -16,7 +16,7 @@ class ESE:
             B: object of the magnetic field vector with xyz components (gauss)
             return value: None
         """
-        self.source = [np.zeros(nus.shape) for i in range(4)]
+        self.source = np.zeros((4,nus.shape[0]))
         self.source[0] = bb(temperature = 5772 * u.K )(nus)
 
     def solveESE(self):
@@ -27,4 +27,4 @@ class ESE:
 
     def getSourceFunc(self, rad):
 
-        self.source = [Io for Io in rad.stokes]
+        self.source = rad.stokes

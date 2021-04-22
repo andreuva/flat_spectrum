@@ -47,6 +47,9 @@ class conditions:
         self.max_iter = int(parameters.max_iter)
 
 
+        self.Id_tens = np.repeat(np.identity(4)[ :, :, np.newaxis], self.nus_N, axis=2)
+
+
 class state:
 
     def __init__(self, cdts):

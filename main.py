@@ -14,7 +14,7 @@ st = state(cdt)
 for itteration in tqdm(range(cdt.max_iter)):
     st.new_itter()
 
-    for i, point in enumerate(cdt.zz[1:], start=1):
+    for i, point in enumerate(cdt.zz[1:-1], start=1):
         for j, ray in enumerate(cdt.rays):
 
             cent_limb_coef = 1
@@ -23,31 +23,34 @@ for itteration in tqdm(range(cdt.max_iter)):
                 z = -i - 1
                 step = -1
             else:
-
                 if i == 1:
                     cent_limb_coef = 1 - 0.62 + 0.2 + 0.62*np.cos(ray.inc) - 0.2*np.cos(ray.inc)**2
-                
                 z = i
-                step = 1          
+                step = 1
             
             eps, KK = RT_coeficients.getRTcoefs(st.atomic[z], ray)
-            
-            taumo = (st.tau[z] - st.tau[z - step])/np.cos(ray.inc)
+            _ , KKm = RT_coeficients.getRTcoefs(st.atomic[z - step], ray)
 
-            psim = (1 - np.exp(-taumo)*(1 + taumo))/(taumo)
-            psio = (np.exp(-taumo) + taumo - 1)/(taumo)
+            tauMO = (st.tau[z] - st.tau[z - step])/np.cos(ray.inc)
+
+            psim = (1 - np.exp(-tauMO)*(1 + tauMO))/(tauMO)
+            psio = (np.exp(-tauMO) + tauMO - 1)/(tauMO)
             
-            wm = (2 - np.exp(-taumo)*(taumo**2 + 2*taumo + 2))/(taumo**2)
-            wo = 1 - 2*(np.exp(-taumo) + taumo - 1)/(taumo**2)
-            wc = 2*(taumo - 2 + np.exp(-taumo)*(taumo + 2))/(taumo**2)
-            
+            wm = (2 - np.exp(-tauMO)*(tauMO**2 + 2*tauMO + 2))/(tauMO**2)
+            wo = 1 - 2*(np.exp(-tauMO) + tauMO - 1)/(tauMO**2)
+            wc = 2*(tauMO - 2 + np.exp(-tauMO)*(tauMO + 2))/(tauMO**2)
+
             cm = 1
 
-            for k in range(4):
-                st.radiation[z].stokes[k] = (np.exp(-taumo) - psim * KK[k][k])* \
-                                            st.radiation[z - step].stokes[k]*cent_limb_coef + \
-                                            wm*st.atomic[z - step].source[k] + \
-                                            wo*st.atomic[z].source[k] + wc*cm*pm.I_units
+            k_1_inv = (cdt.Id_tens + psio*KKm)
+            k_1 = k_1_inv
+            k_2 = (np.exp(-tauMO) - psim * KK)
+            k_2 = np.einsum("ijb, jkb -> ikb", k_1, k_2)
+            kt = np.einsum("ijk, jk -> ik", k_2, st.radiation[z - step].stokes)
+            st.radiation[z].stokes = kt*cent_limb_coef + \
+                                     wm*st.atomic[z - step].source + \
+                                     wo*st.atomic[z].source + wc*cm*pm.I_units
+            
 
             st.radiation[z].sumStokes(ray)   
 
