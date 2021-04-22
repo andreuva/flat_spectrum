@@ -31,7 +31,7 @@ for itteration in tqdm(range(cdt.max_iter)):
             eps, KK = RT_coeficients.getRTcoefs(st.atomic[z], ray)
             _ , KKm = RT_coeficients.getRTcoefs(st.atomic[z - step], ray)
 
-            tauMO = (st.tau[z] - st.tau[z - step])/np.cos(ray.inc)
+            tauMO = np.abs((st.tau[z] - st.tau[z - step])/np.cos(ray.inc))
 
             psim = (1 - np.exp(-tauMO)*(1 + tauMO))/(tauMO)
             psio = (np.exp(-tauMO) + tauMO - 1)/(tauMO)

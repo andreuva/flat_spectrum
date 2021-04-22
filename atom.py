@@ -19,11 +19,11 @@ class ESE:
         self.source = np.zeros((4,nus.shape[0]))
         self.source[0] = bb(temperature = 5772 * u.K )(nus)
 
-    def solveESE(self):
+    def solveESE(self, rad):
         """ Called at every grid point at the end of the Lambda iteration.
             return value: maximum relative change of the level population
         """
-        pass
+        return 1
 
     def getSourceFunc(self, rad):
 

@@ -74,7 +74,7 @@ class state:
         """Update the mrc of the current state by finding the
         maximum mrc over all points in z (computed in ESE method)"""
         for i, point in enumerate(self.atomic):
-            self.mrc[i] = point.solveESE()
+            self.mrc[i] = point.solveESE(self.radiation[i])
 
 
     def new_itter(self):
