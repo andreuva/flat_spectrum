@@ -5,15 +5,18 @@ from parameters import I_units as Iu
 from astropy.modeling.models import BlackBody as bb
 
 class RTE:
+    """RTE class containing the stokes parameters and the Jqq as well as other
+    Radiation information"""
 
     def __init__(self, nus_N):
+        # Initialicing the I to 0
         I = np.zeros(nus_N)
         Q = np.zeros(nus_N)
         U = np.zeros(nus_N)
         V = np.zeros(nus_N)
         self.stokes = np.array([I,Q,U,V])*Iu
 
-        # Defining the Jqq'
+        # Defining the Jqq as nested dictionaries'
         self.jqq = {}
         for qq in [-1,0,1]:
             self.jqq[qq] = {}
@@ -22,6 +25,8 @@ class RTE:
 
     
     def make_IC(self, nus):
+        # If a point is defined as IC put Q=U=V=0 and I to BB
+        self.stokes = self.stokes*0
         self.stokes[0] = bb(temperature = 5772 * u.K )(nus)
 
 
