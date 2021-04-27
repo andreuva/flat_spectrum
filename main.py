@@ -24,23 +24,23 @@ for itteration in tqdm(range(cdt.max_iter)):
         # go through all the rays in the cuadrature
         for j, ray in enumerate(cdt.rays):
 
-            # If not specified the CL variation is not computed
+            # If we are in the boundaries, compute the CL for the IC (z=0)
             cent_limb_coef = 1
+            if i == 1:
+                cent_limb_coef = ray.clv(cdt.z0, cdt.alpha, cdt.theta_crit)
+                
 
             # If the ray is downward start for the last point downward
             if ray.is_downward():
                 z = -i - 1
                 step = -1
-            else:
-                # If we are in the first point, compute the CL for the IC (z=0)
-                if i == 1:
-                    cent_limb_coef = 1 - 0.62 + 0.2 + 0.62*np.cos(ray.inc) - 0.2*np.cos(ray.inc)**2
+            else:                
                 z = i
                 step = 1
 
             # Compute the RT coeficients for the current and last points (for solving RTE)
-            eps, KK = RT_coeficients.getRTcoefs(st.atomic[z], ray)
-            _ , KKm = RT_coeficients.getRTcoefs(st.atomic[z - step], ray)
+            Sf, KK = RT_coeficients.getRTcoefs(st.atomic[z], ray)
+            Sfm , KKm = RT_coeficients.getRTcoefs(st.atomic[z - step], ray)
 
             # Obtain the optical thicknes between the points in this ray and compute
             # BESSER coeficients to solve RTE (Jiri Stepan and Trujillo Bueno A&A 557 2013)
@@ -59,16 +59,14 @@ for itteration in tqdm(range(cdt.max_iter)):
 
             # Inverting the matrices K^-1 for all the wavelenghts
             k_1 = np.zeros_like(k_1_inv)
-            for i in range(cdt.nus_N):
-                k_1[:,:,i] = np.linalg.solve(k_1_inv[:,:,i], cdt.identity)
+            for k in range(cdt.nus_N):
+                k_1[:,:,k] = np.linalg.solve(k_1_inv[:,:,k], cdt.identity)
             k_2 = (np.exp(-tauMO) - psim * KK)
             # Multipling matrices of all wavelengths with at once (eq 7 and 8)
             k_2 = np.einsum("ijb, jkb -> ikb", k_1, k_2)
             kt = np.einsum("ijk, jk -> ik", k_2, st.radiation[z - step].stokes)
             # Bring all together to compute the new stokes parameters
-            st.radiation[z].stokes = kt*cent_limb_coef + \
-                                     wm*st.atomic[z - step].source + \
-                                     wo*st.atomic[z].source + wc*cm*pm.I_units
+            st.radiation[z].stokes = kt*cent_limb_coef + wm*Sfm + wo*Sf + wc*cm*pm.I_units
 
             # Adding the ray contribution to the Jqq's
             st.radiation[z].sumStokes(ray)   

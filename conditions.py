@@ -6,7 +6,6 @@ from rad import RTE
 
 class ray:
     """ray class representing each ray in the angular quadrature"""
-
     def __init__(self, weight, inclination, azimut):
         self.weight = weight
         self.inc = inclination
@@ -20,6 +19,20 @@ class ray:
             return False
 
 
+    def clv(self, z0, alpha, theta_crit):
+        """Compute the center to limb variation of the ray or put it to 0 
+        if it doesn't intersect with the disk due to the geometry"""
+        
+        variation = 0
+        theta = self.inc*np.sin(self.az)
+        
+
+        if theta_crit[0] < theta or theta < theta_crit[1]:
+            theta_p = np.arcsin(constants.R_sun.cgs/(constants.R_sun.cgs + z0) * np.sin(180*units.deg-theta+alpha))
+            variation = 1 - 0.64 + 0.2 + 0.64*np.cos(theta_p) - 0.2*np.cos(theta_p)**2          
+        
+        return variation
+
 class conditions:
     """Class cointaining the conditions that are not going to change during the program
     such as grids, quadratures, auxiliare matrices and some parameters"""
@@ -30,7 +43,9 @@ class conditions:
         self.z0 = parameters.z0.cgs
         self.zf = parameters.zf.cgs
         self.z_N = parameters.zn
-        self.zz = np.linspace(self.z0, self.zf, self.z_N)
+        self.zz = np.linspace(0, self.zf, self.z_N)
+
+        self.alpha = parameters.alpha
 
         # points and the weights for frequency quadrature (equispaced for now)
         self.wf = constants.c.cgs / parameters.lamb0.cgs
@@ -48,6 +63,14 @@ class conditions:
                                  data_ray[1] * units.deg,
                                  data_ray[2] * units.deg))
         self.rays_N = len(self.rays)
+
+        self.alpha = parameters.alpha
+
+        self.theta_crit = (180*units.deg-self.alpha-np.arcsin(constants.R_sun.cgs/(constants.R_sun.cgs + self.z0)),
+                          -180*units.deg-self.alpha+np.arcsin(constants.R_sun.cgs/(constants.R_sun.cgs + self.z0)))
+
+        # Dopler velocity
+        self.v_dop = parameters.v_dop
 
         # Maximum lambda itterations
         self.max_iter = int(parameters.max_iter)
@@ -71,7 +94,7 @@ class state:
         self.atomic = [ESE(cdts.nus, cdts.nus_weights, vector) for vector in self.B]
 
         # Initialicing the radiation state instanciating RTE class for each point
-        self.radiation = [RTE(cdts.nus_N) for z in cdts.zz]
+        self.radiation = [RTE(cdts.nus_N, cdts.v_dop) for z in cdts.zz]
 
         # Make the first point the IC with I=BB(T=5772 K) and Q=U=V=0
         self.radiation[0].make_IC(cdts.nus)
@@ -91,5 +114,4 @@ class state:
         """Update the source funtions of all the points with the new radiation field
         computed in the previous itteration and reseting the internal state of the rad class"""
         for rad, at in zip(self.radiation, self.atomic):
-            at.getSourceFunc(rad)
             rad.resetRadiation()

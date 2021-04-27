@@ -19,9 +19,9 @@ class RTcoefs:
             ese: the local instance of the ESE class
             ray: object with .theta and .chi variables defining the ray ç
             of propagation direction
-            return value: [epsilon (vector in frequencies), K (4x4 list of
+            return value: [S (source function vector in frequencies), K (4x4 list of
             vectors in frequencies)]
         """
-        eps = np.zeros((4,pm.wn))
+        S = np.zeros((4,pm.wn))*pm.I_units
         KK = np.zeros((4,4,pm.wn))
-        return eps, KK
+        return S, KK
