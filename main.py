@@ -28,19 +28,18 @@ for itteration in tqdm(range(cdt.max_iter)):
             cent_limb_coef = 1
             if i == 1:
                 cent_limb_coef = ray.clv(cdt.z0, cdt.alpha, cdt.theta_crit)
-                
 
             # If the ray is downward start for the last point downward
             if ray.is_downward():
                 z = -i - 1
                 step = -1
-            else:                
+            else:
                 z = i
                 step = 1
 
             # Compute the RT coeficients for the current and last points (for solving RTE)
             Sf, KK = RT_coeficients.getRTcoefs(st.atomic[z], ray)
-            Sfm , KKm = RT_coeficients.getRTcoefs(st.atomic[z - step], ray)
+            Sfm, KKm = RT_coeficients.getRTcoefs(st.atomic[z - step], ray)
 
             # Obtain the optical thicknes between the points in this ray and compute
             # BESSER coeficients to solve RTE (Jiri Stepan and Trujillo Bueno A&A 557 2013)
@@ -60,7 +59,7 @@ for itteration in tqdm(range(cdt.max_iter)):
             # Inverting the matrices K^-1 for all the wavelenghts
             k_1 = np.zeros_like(k_1_inv)
             for k in range(cdt.nus_N):
-                k_1[:,:,k] = np.linalg.solve(k_1_inv[:,:,k], cdt.identity)
+                k_1[:, :, k] = np.linalg.solve(k_1_inv[:, :, k], cdt.identity)
             k_2 = (np.exp(-tauMO) - psim * KK)
             # Multipling matrices of all wavelengths with at once (eq 7 and 8)
             k_2 = np.einsum("ijb, jkb -> ikb", k_1, k_2)
@@ -69,7 +68,7 @@ for itteration in tqdm(range(cdt.max_iter)):
             st.radiation[z].stokes = kt*cent_limb_coef + wm*Sfm + wo*Sf + wc*cm*pm.I_units
 
             # Adding the ray contribution to the Jqq's
-            st.radiation[z].sumStokes(ray)   
+            st.radiation[z].sumStokes(ray)
 
     # Update the MRC and check wether we reached convergence
     st.update_mrc()

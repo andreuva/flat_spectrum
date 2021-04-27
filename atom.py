@@ -2,6 +2,7 @@ import numpy as np
 from astropy import units as u
 from astropy.modeling.models import BlackBody as bb
 
+
 class ESE:
     """ A class that stores the atomic state and needs to be constantly updated
         during the Lambda iterations by providing the Stokes parameters.

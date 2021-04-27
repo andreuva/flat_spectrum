@@ -15,23 +15,22 @@ class ray:
         """ Checking if the ray is downward (inclination > 90º or mu < 0)"""
         if self.inc > 90 * units.deg:
             return True
-        else: 
+        else:
             return False
 
-
     def clv(self, z0, alpha, theta_crit):
-        """Compute the center to limb variation of the ray or put it to 0 
+        """Compute the center to limb variation of the ray or put it to 0
         if it doesn't intersect with the disk due to the geometry"""
-        
+
         variation = 0
         theta = self.inc*np.sin(self.az)
-        
 
         if theta_crit[0] < theta or theta < theta_crit[1]:
             theta_p = np.arcsin(constants.R_sun.cgs/(constants.R_sun.cgs + z0) * np.sin(180*units.deg-theta+alpha))
-            variation = 1 - 0.64 + 0.2 + 0.64*np.cos(theta_p) - 0.2*np.cos(theta_p)**2          
-        
+            variation = 1 - 0.64 + 0.2 + 0.64*np.cos(theta_p) - 0.2*np.cos(theta_p)**2
+
         return variation
+
 
 class conditions:
     """Class cointaining the conditions that are not going to change during the program
@@ -67,7 +66,7 @@ class conditions:
         self.alpha = parameters.alpha
 
         self.theta_crit = (180*units.deg-self.alpha-np.arcsin(constants.R_sun.cgs/(constants.R_sun.cgs + self.z0)),
-                          -180*units.deg-self.alpha+np.arcsin(constants.R_sun.cgs/(constants.R_sun.cgs + self.z0)))
+                           -180*units.deg-self.alpha+np.arcsin(constants.R_sun.cgs/(constants.R_sun.cgs + self.z0)))
 
         # Dopler velocity
         self.v_dop = parameters.v_dop
@@ -76,11 +75,12 @@ class conditions:
         self.max_iter = int(parameters.max_iter)
 
         # Auxiliar Identity tensor and matrix to not reallocate them later computations
-        self.Id_tens = np.repeat(np.identity(4)[ :, :, np.newaxis], self.nus_N, axis=2)
+        self.Id_tens = np.repeat(np.identity(4)[:, :, np.newaxis], self.nus_N, axis=2)
         self.identity = np.identity(4)
 
+
 class state:
-    """state class containing the current state of the solution, this include the 
+    """state class containing the current state of the solution, this include the
     radiation and atomic state of each point as well as the MRC, mag field, and optical depth"""
     def __init__(self, cdts):
 
@@ -102,13 +102,11 @@ class state:
         # Setting the optical depth of each point
         self.tau = [val for val in np.linspace(100, 0, cdts.z_N)]
 
-
     def update_mrc(self):
         """Update the mrc of the current state by finding the
         maximum mrc over all points in z (computed in ESE method)"""
         for i, point in enumerate(self.atomic):
             self.mrc[i] = point.solveESE(self.radiation[i])
-
 
     def new_itter(self):
         """Update the source funtions of all the points with the new radiation field

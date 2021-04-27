@@ -1,6 +1,7 @@
 import numpy as np
 import parameters as pm
 
+
 class RTcoefs:
     """ Radiative transfer coefficients.
         Just one instance of the class needs to be created in the program.
@@ -22,6 +23,6 @@ class RTcoefs:
             return value: [S (source function vector in frequencies), K (4x4 list of
             vectors in frequencies)]
         """
-        S = np.zeros((4,pm.wn))*pm.I_units
-        KK = np.zeros((4,4,pm.wn))
+        S = np.zeros((4, pm.wn))*pm.I_units
+        KK = np.zeros((4, 4, pm.wn))
         return S, KK
