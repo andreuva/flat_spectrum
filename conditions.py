@@ -32,6 +32,14 @@ class ray:
         return variation
 
 
+class point:
+    '''class to store the atomic and radiation info in each iteration'''
+
+    def __init__(self, atomic, radiation):
+        self.radiation = radiation
+        self.atomic = atomic
+
+
 class conditions:
     """Class cointaining the conditions that are not going to change during the program
     such as grids, quadratures, auxiliare matrices and some parameters"""
@@ -93,8 +101,17 @@ class state:
         # Initialicing the atomic state instanciating ESE class for each point
         self.atomic = [ESE(cdts.nus, cdts.nus_weights, vector) for vector in self.B]
 
+        # Define the IC for the downward and upward rays as an atomic class
+        self.space_atom = ESE(cdts.nus, cdts.nus_weights, np.zeros(3)*units.G)
+        self.sun_atom = ESE(cdts.nus, cdts.nus_weights, np.ones(3)*100*units.G)
+
         # Initialicing the radiation state instanciating RTE class for each point
         self.radiation = [RTE(cdts.nus_N, cdts.v_dop) for z in cdts.zz]
+
+        # Define the IC for the downward and upward rays as a radiation class
+        self.space_rad = RTE(cdts.nus_N, cdts.v_dop)
+        self.sun_rad = RTE(cdts.nus_N, cdts.v_dop)
+        self.sun_rad.make_IC(cdts.nus)
 
         # Make the first point the IC with I=BB(T=5772 K) and Q=U=V=0
         self.radiation[0].make_IC(cdts.nus)
