@@ -7,6 +7,16 @@ def BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, tau_m,
     tauOP = np.abs((tau_p - tau_o)/np.cos(ray.inc))
 
     # Compute the psi_m and psi_o
+    to_taylor_psi = tauMO < 1e-3
+
+    u_0 = 1 - np.exp(-tauMO)
+    for i, disc in enumerate(to_taylor_psi):
+        u_0[i][disc] = tauMO[i][disc] - tauMO[i][disc]**2/2 + tauMO[i][disc]**3/6
+    u_1 = tauMO - u_0
+
+    psi_m = u_0 - u_1/tauMO
+    psi_o = u_1/tauMO
+
     psi_m = (1 - np.exp(-tauMO)*(1 + tauMO))/(tauMO)
     psi_o = (np.exp(-tauMO) + tauMO - 1)/(tauMO)
 
@@ -15,14 +25,36 @@ def BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, tau_m,
     wo = 1 - 2*(np.exp(-tauMO) + tauMO - 1)/(tauMO**2)
     wc = 2*(tauMO - 2 + np.exp(-tauMO)*(tauMO + 2))/(tauMO**2)
 
-    to_taylor = tauMO < 0.14
-    wm[to_taylor] = (tauMO*(tauMO*(tauMO*(tauMO*(tauMO*(tauMO*((140-18*tauMO)*tauMO - 945) + 5400)
-                            - 25_200) + 90_720) - 226_800) + 302_400))/907_200
-    to_taylor = tauMO < 0.18
-    wo[to_taylor] = (tauMO*(tauMO*(tauMO*(tauMO*(tauMO*(tauMO*((10-tauMO)*tauMO - 90) + 720)
-                            - 5040) + 30_240) - 151_200) + 604_800))/1_814_400
-    wc[to_taylor] = (tauMO*(tauMO*(tauMO*(tauMO*(tauMO*(tauMO*((35-4*tauMO)*tauMO - 270) + 1800)
-                            - 10_800) + 45_360) - 151_200) + 302_400))/907_200
+    to_taylor_m = tauMO < 0.14
+    to_taylor_oc = tauMO < 0.18
+    for i, disc in enumerate(to_taylor_m):
+        wm[i][disc] = (tauMO[i][disc] *
+                       (tauMO[i][disc] *
+                        (tauMO[i][disc] *
+                         (tauMO[i][disc] *
+                          (tauMO[i][disc] *
+                           (tauMO[i][disc] *
+                            ((140-18*tauMO[i][disc])*tauMO[i][disc] - 945) + 5400)
+                              - 25_200) + 90_720) - 226_800) + 302_400))/907_200
+
+    for i, disc in enumerate(to_taylor_oc):
+        wo[i][disc] = (tauMO[i][disc] *
+                       (tauMO[i][disc] *
+                        (tauMO[i][disc] *
+                         (tauMO[i][disc] *
+                          (tauMO[i][disc] *
+                           (tauMO[i][disc] *
+                            ((10-tauMO[i][disc])*tauMO[i][disc] - 90) + 720)
+                             - 5040) + 30_240) - 151_200) + 604_800))/1_814_400
+
+        wc[i][disc] = (tauMO[i][disc] *
+                       (tauMO[i][disc] *
+                        (tauMO[i][disc] *
+                         (tauMO[i][disc] *
+                          (tauMO[i][disc] *
+                           (tauMO[i][disc] *
+                            ((35-4*tauMO[i][disc])*tauMO[i][disc] - 270) + 1800)
+                             - 10_800) + 45_360) - 151_200) + 302_400))/907_200
 
     # BESSER INTERPOLATION Jiri Stepan A&A 2013
     # Step 1: calculate dm(p) = (y0(p) - ym(0))/hm(p)
@@ -80,9 +112,12 @@ def BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, tau_m,
 def LinSC(point_M, point_O, sf_m, sf_o, kk_m, kk_o, tau_m, tau_o, ray, cdt):
     tauMO = np.abs((tau_o - tau_m)/np.cos(ray.inc))
 
+    # Compute the psi_m and psi_o
+    to_taylor_psi = tauMO < 1e-3
+
     u_0 = 1 - np.exp(-tauMO)
-    to_taylor = tauMO < 1e-3
-    u_0[to_taylor] = tauMO[to_taylor] - tauMO[to_taylor]**2/2 + tauMO[to_taylor]**3/6
+    for i, disc in enumerate(to_taylor_psi):
+        u_0[i][disc] = tauMO[i][disc] - tauMO[i][disc]**2/2 + tauMO[i][disc]**3/6
     u_1 = tauMO - u_0
 
     psi_m = u_0 - u_1/tauMO

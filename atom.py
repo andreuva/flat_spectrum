@@ -10,8 +10,8 @@ class ESE:
         It is assumed that only one spectral line is involved in the problem.
         This class needs to be instantiated at every grid point.
     """
-
-    def __init__(self, nus, nus_weights, B):
+    
+    def __init__(self, v_dop, a_voigt, nus, nus_weights, B):
         """
             nus_weights: array of the frequency quadrature weights
             B: object of the magnetic field vector with xyz components (gauss)

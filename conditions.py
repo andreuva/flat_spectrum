@@ -78,6 +78,7 @@ class conditions:
 
         # Dopler velocity
         self.v_dop = parameters.v_dop
+        self.a_voigt = parameters.a_voigt
 
         # Maximum lambda itterations
         self.max_iter = int(parameters.max_iter)
@@ -99,11 +100,11 @@ class state:
         self.B = np.zeros((cdts.z_N, 3)) * units.G
 
         # Initialicing the atomic state instanciating ESE class for each point
-        self.atomic = [ESE(cdts.nus, cdts.nus_weights, vector) for vector in self.B]
+        self.atomic = [ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, vector) for vector in self.B]
 
         # Define the IC for the downward and upward rays as an atomic class
-        self.space_atom = ESE(cdts.nus, cdts.nus_weights, np.zeros(3)*units.G)
-        self.sun_atom = ESE(cdts.nus, cdts.nus_weights, np.ones(3)*100*units.G)
+        self.space_atom = ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, np.zeros(3)*units.G)
+        self.sun_atom = ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, np.ones(3)*100*units.G)
 
         # Initialicing the radiation state instanciating RTE class for each point
         self.radiation = [RTE(cdts.nus_N, cdts.v_dop) for z in cdts.zz]
@@ -115,9 +116,6 @@ class state:
 
         # Make the first point the IC with I=BB(T=5772 K) and Q=U=V=0
         self.radiation[0].make_IC(cdts.nus)
-
-        # Setting the optical depth of each point
-        self.tau = [val for val in np.linspace(100, 0, cdts.z_N)]
 
     def update_mrc(self):
         """Update the mrc of the current state by finding the

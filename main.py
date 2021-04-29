@@ -15,13 +15,41 @@ cdt = conditions(pm)
 RT_coeficients = RTcoefs(cdt.nus)
 st = state(cdt)
 
+
+theta = [ray.inc.value*np.sin(ray.az.value) for ray in cdt.rays]
+r = np.ones_like(theta)
+r0 = np.zeros_like(r)
+
+plt.figure()
+plt.subplot(projection="aitoff")
+
+inclinations = np.array([ray.inc.value for ray in cdt.rays])
+azimuts = np.array([ray.az.value for ray in cdt.rays])
+
+plt.plot(inclinations - 90, azimuts, 'o')
+plt.grid(True)
+plt.show()
+
+ax = plt.subplot(111, projection='polar')
+
+for i in range(cdt.rays_N):
+    ax.plot([theta[i], theta[i]], [0, 1], 'b', linewidth=0.5)
+
+ax.set_rmax(2)
+ax.set_rticks([0.5, 1, 1.5, 2])  # less radial ticks
+ax.set_rlabel_position(-22.5)  # get radial labels away from plotted line
+ax.grid(True)
+
+ax.set_title("A line plot on a polar axis", va='bottom')
+plt.show()
+
 # Start the main loop for the Lambda iteration
-for itteration in tqdm(range(cdt.max_iter)):
+for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
     # Reset the internal state for a new itteration
     st.new_itter()
 
     # go through all the points (besides 0 and -1 for being IC)
-    for i, layer in enumerate(cdt.zz[1:-1], start=1):
+    for i in tqdm(range(len(cdt.zz)), desc=f'solve RT in the {itteration} itteration', leave=False):
         # go through all the rays in the cuadrature
         for j, ray in enumerate(cdt.rays):
 
@@ -60,13 +88,17 @@ for itteration in tqdm(range(cdt.max_iter)):
             sf_m, kk_m = RT_coeficients.getRTcoefs(point_M.atomic, ray)
 
             # Obtain the optical thicknes between the points in this ray and compute
-            tau_m, tau_o = st.tau[z - step], st.tau[z]
+            tau_m = -np.moveaxis(np.diagonal(kk_m, 0, 0, 1), 0, -1).copy() * \
+                cdt.zz[z - step].value/np.cos(ray.inc)
+            tau_o = -np.moveaxis(np.diagonal(kk_o, 0, 0, 1), 0, -1).copy() * \
+                cdt.zz[step].value/np.cos(ray.inc)
 
             if not lineal:
                 sf_p, kk_p = RT_coeficients.getRTcoefs(point_P.atomic, ray)
-                tau_p = st.tau[z + step]
-                BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, 
-                       kk_m,    kk_o,    kk_p,   tau_m, tau_o, tau_p, 
+                tau_p = -np.moveaxis(np.diagonal(kk_p, 0, 0, 1), 0, -1).copy() * \
+                    cdt.zz[step].value/np.cos(ray.inc)
+                BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p,
+                       kk_m,    kk_o,    kk_p,   tau_m, tau_o, tau_p,
                        ray, cdt, cent_limb_coef)
             else:
                 LinSC(point_M, point_O, sf_m, sf_o, kk_m, kk_o, tau_m, tau_p, ray, cdt)
