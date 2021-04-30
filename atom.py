@@ -10,7 +10,7 @@ class ESE:
         It is assumed that only one spectral line is involved in the problem.
         This class needs to be instantiated at every grid point.
     """
-    
+
     def __init__(self, v_dop, a_voigt, nus, nus_weights, B):
         """
             nus_weights: array of the frequency quadrature weights
