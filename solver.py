@@ -1,10 +1,15 @@
 import numpy as np
 
 
-def BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, tau_m, tau_o, tau_p, ray, cdt, clv=1):
+def BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, ray, cdt, clv=1):
+
     # BESSER coeficients to solve RTE (Jiri Stepan and Trujillo Bueno A&A 557 2013)
-    tauMO = np.abs((tau_o - tau_m)/np.cos(ray.inc))
-    tauOP = np.abs((tau_p - tau_o)/np.cos(ray.inc))
+    k_p = np.moveaxis(np.diagonal(kk_p, 0, 0, 1), 0, -1).copy()
+    k_m = np.moveaxis(np.diagonal(kk_m, 0, 0, 1), 0, -1).copy()
+    k_o = np.moveaxis(np.diagonal(kk_o, 0, 0, 1), 0, -1).copy()
+
+    tauMO = - ((k_m + k_o)/2) * np.abs((point_O.z.value - point_M.z.value)/np.cos(ray.inc))
+    tauOP = - ((k_o + k_p)/2) * np.abs((point_P.z.value - point_O.z.value)/np.cos(ray.inc))
 
     # Compute the psi_m and psi_o
     to_taylor_psi = tauMO < 1e-3
@@ -58,8 +63,8 @@ def BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, tau_m,
 
     # BESSER INTERPOLATION Jiri Stepan A&A 2013
     # Step 1: calculate dm(p) = (y0(p) - ym(0))/hm(p)
-    hm = tau_o - tau_m
-    hp = tau_p - tau_o
+    hm = tauMO
+    hp = tauOP
     dm = (sf_o - sf_m)/hm
     dp = (sf_p - sf_o)/hp
     cm = np.ones_like(sf_o)
@@ -109,8 +114,12 @@ def BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, tau_m,
     point_O.radiation.stokes = kt*clv + wm*sf_m + wo*sf_o + wc*cm
 
 
-def LinSC(point_M, point_O, sf_m, sf_o, kk_m, kk_o, tau_m, tau_o, ray, cdt):
-    tauMO = np.abs((tau_o - tau_m)/np.cos(ray.inc))
+def LinSC(point_M, point_O, sf_m, sf_o, kk_m, kk_o, ray, cdt):
+
+    # Obtain the optical thicknes between the points in this ray and compute
+    k_m = np.moveaxis(np.diagonal(kk_m, 0, 0, 1), 0, -1).copy()
+    k_o = np.moveaxis(np.diagonal(kk_o, 0, 0, 1), 0, -1).copy()
+    tauMO = - ((k_m + k_o)/2) * np.abs((point_O.z.value - point_M.z.value)/np.cos(ray.inc))
 
     # Compute the psi_m and psi_o
     to_taylor_psi = tauMO < 1e-3

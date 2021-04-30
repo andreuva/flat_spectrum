@@ -68,40 +68,30 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
                 cent_limb_coef = ray.clv(cdt.z0, cdt.alpha, cdt.theta_crit)
 
                 if ray.is_downward():
-                    point_M = point(st.space_atom, st.space_rad)
+                    point_M = point(st.space_atom, st.space_rad,         cdt.zf+cdt.dz)
                 else:
-                    point_M = point(st.sun_atom, st.sun_rad)
-                point_O = point(st.atomic[z], st.radiation[z])
-                point_P = point(st.atomic[z+step], st.radiation[z+step])
+                    point_M = point(st.sun_atom,   st.sun_rad,           0)
+                point_O = point(st.atomic[z],      st.radiation[z],      cdt.zz[z])
+                point_P = point(st.atomic[z+step], st.radiation[z+step], cdt.zz[z+step])
             elif i == (len(cdt.zz) - 1):
-                point_M = point(st.atomic[z-step], st.radiation[z-step])
-                point_O = point(st.atomic[z], st.radiation[z])
+                point_M = point(st.atomic[z-step], st.radiation[z-step], cdt.zz[z-step])
+                point_O = point(st.atomic[z],      st.radiation[z],      cdt.zz[z])
                 point_P = False
                 lineal = True
             else:
-                point_M = point(st.atomic[z-step], st.radiation[z-step])
-                point_O = point(st.atomic[z], st.radiation[z])
-                point_P = point(st.atomic[z+step], st.radiation[z+step])
+                point_M = point(st.atomic[z-step], st.radiation[z-step], cdt.zz[z-step])
+                point_O = point(st.atomic[z],      st.radiation[z],      cdt.zz[z])
+                point_P = point(st.atomic[z+step], st.radiation[z+step], cdt.zz[z+step])
 
             # Compute the RT coeficients for the current and last points (for solving RTE)
             sf_o, kk_o = RT_coeficients.getRTcoefs(point_O.atomic, ray)
             sf_m, kk_m = RT_coeficients.getRTcoefs(point_M.atomic, ray)
 
-            # Obtain the optical thicknes between the points in this ray and compute
-            tau_m = -np.moveaxis(np.diagonal(kk_m, 0, 0, 1), 0, -1).copy() * \
-                cdt.zz[z - step].value/np.cos(ray.inc)
-            tau_o = -np.moveaxis(np.diagonal(kk_o, 0, 0, 1), 0, -1).copy() * \
-                cdt.zz[step].value/np.cos(ray.inc)
-
             if not lineal:
                 sf_p, kk_p = RT_coeficients.getRTcoefs(point_P.atomic, ray)
-                tau_p = -np.moveaxis(np.diagonal(kk_p, 0, 0, 1), 0, -1).copy() * \
-                    cdt.zz[step].value/np.cos(ray.inc)
-                BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p,
-                       kk_m,    kk_o,    kk_p,   tau_m, tau_o, tau_p,
-                       ray, cdt, cent_limb_coef)
+                BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, ray, cdt, cent_limb_coef)
             else:
-                LinSC(point_M, point_O, sf_m, sf_o, kk_m, kk_o, tau_m, tau_p, ray, cdt)
+                LinSC(point_M, point_O, sf_m, sf_o, kk_m, kk_o, ray, cdt)
 
             # Adding the ray contribution to the Jqq's
             point_O.radiation.sumStokes(ray)

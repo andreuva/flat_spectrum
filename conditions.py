@@ -35,9 +35,10 @@ class ray:
 class point:
     '''class to store the atomic and radiation info in each iteration'''
 
-    def __init__(self, atomic, radiation):
+    def __init__(self, atomic, radiation, height):
         self.radiation = radiation
         self.atomic = atomic
+        self.z = height
 
 
 class conditions:
@@ -50,7 +51,8 @@ class conditions:
         self.z0 = parameters.z0.cgs
         self.zf = parameters.zf.cgs
         self.z_N = parameters.zn
-        self.zz = np.linspace(0, self.zf, self.z_N)
+        self.zz = np.linspace(self.z0, self.zf, self.z_N)
+        self.dz = self.zz[1] - self.zz[0]
 
         self.alpha = parameters.alpha
 
