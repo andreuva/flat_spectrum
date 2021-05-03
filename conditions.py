@@ -7,10 +7,13 @@ from rad import RTE
 class ray:
     """ray class representing each ray in the angular quadrature"""
     def __init__(self, weight, inclination, azimut, alpha, theta_crit, z0):
+
+        # basic properties of the ray (inclination, azimut and weight in the slab RF
         self.weight = weight
         self.inc = inclination
         self.az = azimut
 
+        # Rotate the RF to the global one and store the result as a attribute
         xyz_slab = np.array([np.sin(self.inc)*np.cos(self.az),
                              np.sin(self.inc)*np.sin(self.az),
                              np.cos(self.inc)])*units.cm
@@ -22,12 +25,14 @@ class ray:
         self.inc_glob = np.arccos(xyz_global[2]/units.cm).to('deg')
         self.az_glob = np.arctan2(xyz_global[1], xyz_global[0]).to('deg')
 
+        # Compute the CLV for the intersecting rays (Astrophysical quantities)
         self.clv = 0
 
         if theta_crit < self.inc_glob:
             theta_clv = 180*units.deg - np.arcsin((constants.R_sun.cgs + z0)/constants.R_sun.cgs * np.sin(180*units.deg-self.inc_glob))
             self.clv = 1 - 0.64 + 0.2 + 0.64*np.cos(theta_clv) - 0.2*np.cos(theta_clv)**2
 
+        # Check if the ray is upwards or not in the global RF
         if self.inc_glob > 90 * units.deg:
             self.is_downward = True
         else:
