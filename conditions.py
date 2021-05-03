@@ -23,11 +23,18 @@ class ray:
         if it doesn't intersect with the disk due to the geometry"""
 
         variation = 0
-        theta = self.inc*np.sin(self.az)
+        xyz_p = np.array([np.sin(self.inc)*np.cos(self.az),
+                          np.sin(self.inc)*np.sin(self.az),
+                          np.cos(self.inc)])*units.cm
+        rot = np.array([[np.cos(alpha), 0, -np.sin(alpha)],
+                        [0,             1,              0],
+                        [np.sin(alpha), 0,  np.cos(alpha)]])
+        xyz = rot @ xyz_p
+        theta = np.arccos(xyz[-1]/units.cm).to('deg')
 
-        if theta_crit[0] < theta or theta < theta_crit[1]:
-            theta_p = np.arcsin(constants.R_sun.cgs/(constants.R_sun.cgs + z0) * np.sin(180*units.deg-theta+alpha))
-            variation = 1 - 0.64 + 0.2 + 0.64*np.cos(theta_p) - 0.2*np.cos(theta_p)**2
+        if theta_crit < theta:
+            theta_clv = 180*units.deg - np.arcsin((constants.R_sun.cgs + z0)/constants.R_sun.cgs * np.sin(180*units.deg-theta))
+            variation = 1 - 0.64 + 0.2 + 0.64*np.cos(theta_clv) - 0.2*np.cos(theta_clv)**2
 
         return variation
 
@@ -75,8 +82,7 @@ class conditions:
 
         self.alpha = parameters.alpha
 
-        self.theta_crit = (180*units.deg-self.alpha-np.arcsin(constants.R_sun.cgs/(constants.R_sun.cgs + self.z0)),
-                           -180*units.deg-self.alpha+np.arcsin(constants.R_sun.cgs/(constants.R_sun.cgs + self.z0)))
+        self.theta_crit = 180*units.deg-np.arcsin(constants.R_sun.cgs/(constants.R_sun.cgs + self.z0))
 
         # Dopler velocity
         self.v_dop = parameters.v_dop
