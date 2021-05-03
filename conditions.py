@@ -6,37 +6,32 @@ from rad import RTE
 
 class ray:
     """ray class representing each ray in the angular quadrature"""
-    def __init__(self, weight, inclination, azimut):
+    def __init__(self, weight, inclination, azimut, alpha, theta_crit, z0):
         self.weight = weight
         self.inc = inclination
         self.az = azimut
 
-    def is_downward(self):
-        """ Checking if the ray is downward (inclination > 90º or mu < 0)"""
-        if self.inc > 90 * units.deg:
-            return True
+        xyz_slab = np.array([np.sin(self.inc)*np.cos(self.az),
+                             np.sin(self.inc)*np.sin(self.az),
+                             np.cos(self.inc)])*units.cm
+        rotation_matrix = np.array([[np.cos(alpha), 0, -np.sin(alpha)],
+                                    [0,             1,              0],
+                                    [np.sin(alpha), 0,  np.cos(alpha)]])
+        xyz_global = rotation_matrix @ xyz_slab
+
+        self.inc_glob = np.arccos(xyz_global[2]/units.cm).to('deg')
+        self.az_glob = np.arctan2(xyz_global[1], xyz_global[0]).to('deg')
+
+        self.clv = 0
+
+        if theta_crit < self.inc_glob:
+            theta_clv = 180*units.deg - np.arcsin((constants.R_sun.cgs + z0)/constants.R_sun.cgs * np.sin(180*units.deg-self.inc_glob))
+            self.clv = 1 - 0.64 + 0.2 + 0.64*np.cos(theta_clv) - 0.2*np.cos(theta_clv)**2
+
+        if self.inc_glob > 90 * units.deg:
+            self.is_downward = True
         else:
-            return False
-
-    def clv(self, z0, alpha, theta_crit):
-        """Compute the center to limb variation of the ray or put it to 0
-        if it doesn't intersect with the disk due to the geometry"""
-
-        variation = 0
-        xyz_p = np.array([np.sin(self.inc)*np.cos(self.az),
-                          np.sin(self.inc)*np.sin(self.az),
-                          np.cos(self.inc)])*units.cm
-        rot = np.array([[np.cos(alpha), 0, -np.sin(alpha)],
-                        [0,             1,              0],
-                        [np.sin(alpha), 0,  np.cos(alpha)]])
-        xyz = rot @ xyz_p
-        theta = np.arccos(xyz[-1]/units.cm).to('deg')
-
-        if theta_crit < theta:
-            theta_clv = 180*units.deg - np.arcsin((constants.R_sun.cgs + z0)/constants.R_sun.cgs * np.sin(180*units.deg-theta))
-            variation = 1 - 0.64 + 0.2 + 0.64*np.cos(theta_clv) - 0.2*np.cos(theta_clv)**2
-
-        return variation
+            self.is_downward = False
 
 
 class point:
@@ -72,17 +67,19 @@ class conditions:
         self.nus_weights[0] = 0.5
         self.nus_weights[-1] = 0.5
 
+        # Parameters of the rotation of the slab and the global ref frame
+        self.alpha = parameters.alpha
+
+        self.theta_crit = 180*units.deg-np.arcsin(constants.R_sun.cgs/(constants.R_sun.cgs + self.z0))
+
         # weights and directions of the angular quadrature
         self.rays = []
         for data_ray in np.loadtxt(parameters.ray_quad):
             self.rays.append(ray(data_ray[0],
                                  data_ray[1] * units.deg,
-                                 data_ray[2] * units.deg))
+                                 data_ray[2] * units.deg,
+                                 self.alpha, self.theta_crit, self.z0))
         self.rays_N = len(self.rays)
-
-        self.alpha = parameters.alpha
-
-        self.theta_crit = 180*units.deg-np.arcsin(constants.R_sun.cgs/(constants.R_sun.cgs + self.z0))
 
         # Dopler velocity
         self.v_dop = parameters.v_dop

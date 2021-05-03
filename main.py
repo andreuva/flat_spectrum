@@ -54,7 +54,7 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
         for j, ray in enumerate(cdt.rays):
 
             # If the ray is downward start for the last point downward
-            if ray.is_downward():
+            if ray.is_downward:
                 z = -i - 1
                 step = -1
             else:
@@ -65,9 +65,9 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
             cent_limb_coef = 1
             lineal = False
             if i == 0:
-                cent_limb_coef = ray.clv(cdt.z0, cdt.alpha, cdt.theta_crit)
+                cent_limb_coef = ray.clv
 
-                if ray.is_downward():
+                if ray.is_downward:
                     point_M = point(st.space_atom, st.space_rad,         cdt.zf+cdt.dz)
                 else:
                     point_M = point(st.sun_atom,   st.sun_rad,           cdt.z0*0)
