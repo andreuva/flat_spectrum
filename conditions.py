@@ -17,13 +17,15 @@ class ray:
         xyz_slab = np.array([np.sin(self.inc)*np.cos(self.az),
                              np.sin(self.inc)*np.sin(self.az),
                              np.cos(self.inc)])*units.cm
-        rotation_matrix = np.array([[np.cos(alpha), 0, -np.sin(alpha)],
+        rotation_matrix = np.array([[np.cos(alpha), 0, np.sin(-alpha)],
                                     [0,             1,              0],
                                     [np.sin(alpha), 0,  np.cos(alpha)]])
         xyz_global = rotation_matrix @ xyz_slab
 
         self.inc_glob = np.arccos(xyz_global[2]/units.cm).to('deg')
-        self.az_glob = np.arctan2(xyz_global[1], xyz_global[0]).to('deg')
+        global_az = np.arctan2(xyz_global[1], xyz_global[0]).to('deg')
+        global_az[global_az < 0] += 360*units.deg
+        self.az_glob = global_az
 
         # Compute the CLV for the intersecting rays (Astrophysical quantities)
         self.clv = 0

@@ -16,32 +16,21 @@ RT_coeficients = RTcoefs(cdt.nus)
 st = state(cdt)
 
 
-theta = [ray.inc.value*np.sin(ray.az.value) for ray in cdt.rays]
-r = np.ones_like(theta)
-r0 = np.zeros_like(r)
-
-plt.figure()
+""" plt.figure()
 plt.subplot(projection="aitoff")
 
-inclinations = np.array([ray.inc.value for ray in cdt.rays])
-azimuts = np.array([ray.az.value for ray in cdt.rays])
+inclinations_loc = np.array([ray.inc.value for ray in cdt.rays])
+azimuts_loc = np.array([ray.az.value for ray in cdt.rays])
 
-plt.plot(inclinations - 90, azimuts, 'o')
+inclinations_glob = np.array([ray.inc_glob.value for ray in cdt.rays])
+azimuts_glob = np.array([ray.az_glob.value for ray in cdt.rays])
+
+plt.plot(inclinations_loc - 90, azimuts_loc, 'o', label='local RF')
+plt.plot(inclinations_glob - 90, azimuts_glob, 'o', alpha=0.5, label='global RF')
 plt.grid(True)
-plt.show()
-
-ax = plt.subplot(111, projection='polar')
-
-for i in range(cdt.rays_N):
-    ax.plot([theta[i], theta[i]], [0, 1], 'b', linewidth=0.5)
-
-ax.set_rmax(2)
-ax.set_rticks([0.5, 1, 1.5, 2])  # less radial ticks
-ax.set_rlabel_position(-22.5)  # get radial labels away from plotted line
-ax.grid(True)
-
-ax.set_title("A line plot on a polar axis", va='bottom')
-plt.show()
+plt.title('Quadrature in the two reference frames')
+plt.legend()
+plt.show() """
 
 # Start the main loop for the Lambda iteration
 for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
