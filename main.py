@@ -1,6 +1,6 @@
 # Import classes and parameters
 from RTcoefs import RTcoefs
-from conditions import conditions, state, point
+from conditions import conditions, state, point, plot_quadrature
 import parameters as pm
 from solver import BESSER, LinSC
 
@@ -15,22 +15,7 @@ cdt = conditions(pm)
 RT_coeficients = RTcoefs(cdt.nus)
 st = state(cdt)
 
-
-""" plt.figure()
-plt.subplot(projection="aitoff")
-
-inclinations_loc = np.array([ray.inc.value for ray in cdt.rays])
-azimuts_loc = np.array([ray.az.value for ray in cdt.rays])
-
-inclinations_glob = np.array([ray.inc_glob.value for ray in cdt.rays])
-azimuts_glob = np.array([ray.az_glob.value for ray in cdt.rays])
-
-plt.plot(inclinations_loc - 90, azimuts_loc, 'o', label='local RF')
-plt.plot(inclinations_glob - 90, azimuts_glob, 'o', alpha=0.5, label='global RF')
-plt.grid(True)
-plt.title('Quadrature in the two reference frames')
-plt.legend()
-plt.show() """
+plot_quadrature(cdt)
 
 # Start the main loop for the Lambda iteration
 for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
