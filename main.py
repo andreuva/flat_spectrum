@@ -15,7 +15,7 @@ cdt = conditions(pm)
 RT_coeficients = RTcoefs(cdt.nus)
 st = state(cdt)
 
-plot_quadrature(cdt)
+# plot_quadrature(cdt)
 
 # Start the main loop for the Lambda iteration
 for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
@@ -58,11 +58,11 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
                 point_P = point(st.atomic[z+step], st.radiation[z+step], cdt.zz[z+step])
 
             # Compute the RT coeficients for the current and last points (for solving RTE)
-            sf_o, kk_o = RT_coeficients.getRTcoefs(point_O.atomic, ray)
-            sf_m, kk_m = RT_coeficients.getRTcoefs(point_M.atomic, ray)
+            sf_o, kk_o = RT_coeficients.getRTcoefs(point_O.atomic, ray, cdt)
+            sf_m, kk_m = RT_coeficients.getRTcoefs(point_M.atomic, ray, cdt)
 
             if not lineal:
-                sf_p, kk_p = RT_coeficients.getRTcoefs(point_P.atomic, ray)
+                sf_p, kk_p = RT_coeficients.getRTcoefs(point_P.atomic, ray, cdt)
                 BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, ray, cdt, cent_limb_coef)
             else:
                 LinSC(point_M, point_O, sf_m, sf_o, kk_m, kk_o, ray, cdt)

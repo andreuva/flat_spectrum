@@ -17,6 +17,7 @@ class ESE:
             B: object of the magnetic field vector with xyz components (gauss)
             return value: None
         """
+        self.rho_l = 1
 
     def solveESE(self, rad):
         """ Called at every grid point at the end of the Lambda iteration.

@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from astropy import units, constants
 from atom import ESE
 from rad import RTE
+from physical_functions import voigt
 
 
 class ray:
@@ -93,12 +94,25 @@ class conditions:
         self.v_dop = parameters.v_dop
         self.a_voigt = parameters.a_voigt
 
+        self.jl = 0
+        self.ju = 1
+        self.Blu = 1
+
         # Maximum lambda itterations
         self.max_iter = int(parameters.max_iter)
 
         # Auxiliar Identity tensor and matrix to not reallocate them later computations
         self.Id_tens = np.repeat(np.identity(4)[:, :, np.newaxis], self.nus_N, axis=2)
         self.identity = np.identity(4)
+
+    def voigt_profile(self, a):
+        vs = self.nus.value
+        prof = np.zeros_like(vs)
+
+        for i, v in enumerate(vs):
+            prof[i] = np.real(voigt(v, self.a_voigt))
+
+        return prof
 
 
 class state:
