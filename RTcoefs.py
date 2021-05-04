@@ -29,6 +29,7 @@ class RTcoefs:
             vectors in frequencies)]
         """
 
+        # Eq 7.10 of LL04
         Blu = 1
         sum_mq = 0
         for q in [-1, 0, 1]:
