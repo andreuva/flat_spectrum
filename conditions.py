@@ -65,8 +65,6 @@ class conditions:
         self.zz = np.linspace(self.z0, self.zf, self.z_N)
         self.dz = self.zz[1] - self.zz[0]
 
-        self.alpha = parameters.alpha
-
         # points and the weights for frequency quadrature (equispaced for now)
         self.wf = constants.c.cgs / parameters.lamb0.cgs
         self.w0 = constants.c.cgs / parameters.lambf.cgs
@@ -94,9 +92,9 @@ class conditions:
         self.v_dop = parameters.v_dop
         self.a_voigt = parameters.a_voigt
 
+        self.n_dens = parameters.n_dens
         self.jl = 0
         self.ju = 1
-        self.Blu = 1
 
         # Maximum lambda itterations
         self.max_iter = int(parameters.max_iter)
@@ -110,7 +108,7 @@ class conditions:
         prof = np.zeros_like(vs)
 
         for i, v in enumerate(vs):
-            prof[i] = np.real(voigt(v, self.a_voigt))
+            prof[i] = np.real(voigt(v - self.nus[int(self.nus_N/2)].value, self.a_voigt))
 
         return prof
 

@@ -49,6 +49,7 @@ def voigt_custom(x, sigma, gamma, x0=0):
         / sigma / np.sqrt(2*np.pi)
 
 
+@jit(nopython=True)
 def Tqq(q1, q2, i, theta, chi):
     t = 0.
     c = False

@@ -18,6 +18,7 @@ class ESE:
             return value: None
         """
         self.rho_l = 1
+        self.rho_u = 1
 
     def solveESE(self, rad):
         """ Called at every grid point at the end of the Lambda iteration.
