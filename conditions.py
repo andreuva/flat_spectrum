@@ -1,9 +1,10 @@
+from physical_functions import voigt
+from atom import ESE, HeI_1083
+from rad import RTE
+
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy import units, constants
-from atom import ESE
-from rad import RTE
-from physical_functions import voigt
 
 
 class ray:
@@ -91,10 +92,12 @@ class conditions:
         # Dopler velocity
         self.v_dop = parameters.v_dop
         self.a_voigt = parameters.a_voigt
-
         self.n_dens = parameters.n_dens
-        self.jl = 0
-        self.ju = 1
+
+        self.atomic_model = HeI_1083()
+
+        # Initialice the array of the magnetic field vector
+        self.B = np.zeros((self.z_N, 3)) * units.G
 
         # Maximum lambda itterations
         self.max_iter = int(parameters.max_iter)
@@ -103,12 +106,14 @@ class conditions:
         self.Id_tens = np.repeat(np.identity(4)[:, :, np.newaxis], self.nus_N, axis=2)
         self.identity = np.identity(4)
 
-    def voigt_profile(self, a):
+    def voigt_profile(self, a, transition, Mu, Ml, B):
         vs = self.nus.value
-        prof = np.zeros_like(vs)
+        v0 = transition.nu.value + (np.linalg.norm(B.value)/constants.h.cgs.value * 
+                                    (transition.upper.g*Mu - transition.lower.g*Ml))
 
+        prof = np.zeros_like(vs)
         for i, v in enumerate(vs):
-            prof[i] = np.real(voigt(v - self.nus[int(self.nus_N/2)].value, self.a_voigt))
+            prof[i] = np.real(voigt(v - v0, self.a_voigt))
 
         return prof
 
@@ -121,11 +126,11 @@ class state:
         # Initializing the maximum relative change
         self.mrc = np.ones(cdts.z_N)
 
-        # Initialice the array of the magnetic field vector
-        self.B = np.zeros((cdts.z_N, 3)) * units.G
+        # Initialice the array of the magnetic field vector (defined in conditions)
+        # self.B = cdts.B
 
         # Initialicing the atomic state instanciating ESE class for each point
-        self.atomic = [ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, vector) for vector in self.B]
+        self.atomic = [ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, vector) for vector in cdts.B]
 
         # Define the IC for the downward and upward rays as an atomic class
         self.space_atom = ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, np.zeros(3)*units.G)

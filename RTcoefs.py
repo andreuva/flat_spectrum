@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from astropy import constants as cts
 from astropy import units as unt
+# from py3nj import wigner3j
 
 
 class RTcoefs:
@@ -31,8 +32,6 @@ class RTcoefs:
         """
 
         # Eq 7.10 of LL04
-        Blu = 1
-        Bul = 1
 
         eta_a = [0, 0, 0, 0]
         eta_s = [0, 0, 0, 0]
@@ -43,26 +42,33 @@ class RTcoefs:
             sum_mulq = 0
             for q in [-1, 0, 1]:
                 for q_p in [-1, 0, 1]:
-                    for M_u in [-1, 0, 1]:
-                        sum_mluq = sum_mluq + 3*(self.jsim.j6(cdts.ju, cdts.jl, 1, -M_u, 0, -q) *
-                                                 self.jsim.j6(cdts.ju, cdts.jl, 1, -M_u, 0, -q_p))
-                        sum_mluq = sum_mluq + Tqq(q, q_p, i, ray.inc.value, ray.az.value) * ese.rho_l * cdts.voigt_profile(cdts.a_voigt)
+                    for M_l in cdts.atomic_model.transitions[0].lower.M:
+                        for M_u in cdts.atomic_model.transitions[0].upper.M:
+                            sum_mluq = sum_mluq + 3*(self.jsim.j6(cdts.atomic_model.transitions[0].upper.J,
+                                                                  cdts.atomic_model.transitions[0].lower.J, 1, -M_u, M_l, -q) *
+                                                     self.jsim.j6(cdts.atomic_model.transitions[0].upper.J,
+                                                                  cdts.atomic_model.transitions[0].lower.J, 1, -M_u, M_l, -q_p))
+                            sum_mluq = sum_mluq + (Tqq(q, q_p, i, ray.inc.value, ray.az.value) * ese.rho_l *
+                                                   cdts.voigt_profile(cdts.a_voigt, cdts.atomic_model.transitions[0], M_u, M_l, cdts.B))
 
-                        sum_mulq = sum_mulq + 3*(self.jsim.j6(cdts.ju, cdts.jl, 1, -M_u, 0, -q) *
-                                                 self.jsim.j6(cdts.ju, cdts.jl, 1, -M_u, 0, -q_p))
-                        sum_mluq = sum_mluq + Tqq(q, q_p, i, ray.inc.value, ray.az.value) * ese.rho_u * cdts.voigt_profile(cdts.a_voigt)
+                            sum_mulq = sum_mulq + 3*(self.jsim.j6(cdts.atomic_model.transitions[0].upper.J,
+                                                                  cdts.atomic_model.transitions[0].lower.J, 1, -M_u, M_l, -q) *
+                                                     self.jsim.j6(cdts.atomic_model.transitions[0].upper.J,
+                                                                  cdts.atomic_model.transitions[0].lower.J, 1, -M_u, M_l, -q_p))
+                            sum_mulq = sum_mulq + (Tqq(q, q_p, i, ray.inc.value, ray.az.value) * ese.rho_u *
+                                                   cdts.voigt_profile(cdts.a_voigt, cdts.atomic_model.transitions[0],  M_u, M_l, cdts.B))
 
             eta_a[i] = cts.h.cgs*cdts.nus/(4*np.pi) * cdts.n_dens *\
-                (2*cdts.jl + 1) * Blu * np.real(sum_mluq)
+                (2*cdts.atomic_model.transitions[0].lower.J + 1) * cdts.atomic_model.transitions[0].B_lu * np.real(sum_mluq)
 
             eta_s[i] = cts.h.cgs*cdts.nus/(4*np.pi) * cdts.n_dens *\
-                (2*cdts.ju + 1) * Bul * np.real(sum_mulq)
+                (2*cdts.atomic_model.transitions[0].upper.J + 1) * cdts.atomic_model.transitions[0].B_ul * np.real(sum_mulq)
 
             rho_a[i] = cts.h.cgs*cdts.nus/(4*np.pi) * cdts.n_dens *\
-                (2*cdts.jl + 1) * Blu * np.imag(sum_mluq)
+                (2*cdts.atomic_model.transitions[0].lower.J + 1) * cdts.atomic_model.transitions[0].B_lu * np.imag(sum_mluq)
 
             rho_s[i] = cts.h.cgs*cdts.nus/(4*np.pi) * cdts.n_dens *\
-                (2*cdts.ju + 1) * Bul * np.imag(sum_mulq)
+                (2*cdts.atomic_model.transitions[0].upper.J + 1) * cdts.atomic_model.transitions[0].B_ul * np.imag(sum_mulq)
 
         eta = [et_a - et_s for et_a, et_s in zip(eta_a, eta_s)]
         rho = [ro_a - ro_s for ro_a, ro_s in zip(rho_a, rho_s)]
