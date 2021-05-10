@@ -108,7 +108,7 @@ class conditions:
 
     def voigt_profile(self, a, transition, Mu, Ml, B):
         vs = self.nus.value
-        v0 = transition.nu.value + (np.linalg.norm(B.value)/constants.h.cgs.value * 
+        v0 = transition.nu.value + (np.linalg.norm(B.value)/constants.h.cgs.value *
                                     (transition.upper.g*Mu - transition.lower.g*Ml))
 
         prof = np.zeros_like(vs)
@@ -130,7 +130,7 @@ class state:
         # self.B = cdts.B
 
         # Initialicing the atomic state instanciating ESE class for each point
-        self.atomic = [ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, vector) for vector in cdts.B]
+        self.atomic = [ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, np.linalg.norm(vec)) for vec in cdts.B]
 
         # Define the IC for the downward and upward rays as an atomic class
         self.space_atom = ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, np.zeros(3)*units.G)
