@@ -94,8 +94,6 @@ class conditions:
         self.a_voigt = parameters.a_voigt
         self.n_dens = parameters.n_dens
 
-        self.atomic_model = HeI_1083()
-
         # Initialice the array of the magnetic field vector
         self.B = np.zeros((self.z_N, 3)) * units.G
 

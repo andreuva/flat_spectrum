@@ -2,6 +2,7 @@ import numpy as np
 from astropy import units as u
 from astropy import constants as c
 from astropy.modeling.models import BlackBody as bb
+from physical_functions import Tqq, jsymbols
 
 
 class level():
@@ -11,6 +12,8 @@ class level():
         self.g = g
         self.J = JJ
         self.M = [ml for ml in range(-self.J, self.J+1)]
+        self.num_M = 2*self.J + 1
+        self.rho = np.ones((self.num_M, self.num_M))
 
 
 class transition():
@@ -54,11 +57,100 @@ class ESE:
             B: object of the magnetic field vector with xyz components (gauss)
             return value: None
         """
-        self.rho_l = 1
-        self.rho_u = 1
+
+        self.atom = HeI_1083()
+
+        self.rho_dim = 0
+        for lev in self.atom.levels:
+            lev.initial_N = self.rho_dim*1   # Initial position of the density level submatrix
+            self.rho_dim += lev.num_M
+
+        self.rho = np.zeros((self.rho_dim, self.rho_dim))
+
+        for lev in self.atom.levels:
+            for i in range(self.rho_dim):
+                for j in range(self.rho_dim):
+                    if lev.initial_N <= i < lev.initial_N + lev.num_M and\
+                       lev.initial_N <= j < lev.initial_N + lev.num_M:
+                        self.rho[i, j] = 1
+
 
     def solveESE(self, rad):
         """ Called at every grid point at the end of the Lambda iteration.
             return value: maximum relative change of the level population
         """
         return 1
+
+
+jsim = jsymbols()
+
+
+# Eq 7.9 from LL04 for the SEE coeficients
+def TA(J, M, Mp, Jl, Ml, Mlp, JJ, Blu):
+    sum_qq = 0
+    for q in [-1, 0, 1]:
+        for qp in [-1, 0, 1]:
+            sum_qq = 3*(-1)**(Ml - Mlp)*(jsim.j6(J, Jl, 1, -M,  Ml, -q) *
+                                         jsim.j6(J, Jl, 1, -Mp, Mlp, -qp) *
+                                         JJ[q][qp])
+    return (2*Jl + 1)*Blu*sum_qq
+
+
+def TE(J, M, Mp, Ju, Mu, Mup, Aul):
+    sum_q = 0
+    for q in [-1, 0, 1]:
+        sum_q = (-1)**(Mu - Mup)*(jsim.j6(Ju, J, 1, -Mup, Mp, -q) *
+                                  jsim.j6(Ju, J, 1, -Mu,  M, -q))
+    return (2*Ju + 1)*Aul*sum_q
+
+
+def TS(J, M, Mp, Ju, Mu, Mup, JJ, Bul):
+    sum_qq = 0
+    for q in [-1, 0, 1]:
+        for qp in [-1, 0, 1]:
+            sum_qq += 3*(-1)**(Mp - M)*(jsim.j6(Ju, J, 1, -Mup, Mp, -q) *
+                                        jsim.j6(Ju, J, 1, -Mu,  M, -qp) *
+                                        JJ[q][qp])
+    return (2*Ju + 1)*Bul*sum_qq
+
+
+def RA(J, M, Mp, JJ):
+    sum_u = 0
+    for up in up_levels:
+        sum_qqMu = 0
+        for q in [-1, 0, 1]:
+            for qp in [-1, 0, 1]:
+                for Mu in up.M:
+                    sum_qqMu += 3*(-1)**(M - Mp)*(jsim.j6(Ju, J, 1, -Mu, M, -q) *
+                                                  jsim.j6(Ju, J, 1, -Mu, Mp, -qp) *
+                                                  JJ[q][qp])
+
+        sum_u += (2*J+1)*Blu*sum_qqMu
+
+    return 0.5*sum_u
+
+
+def RE(J, M, Mp):
+
+    sum_l = 0
+    if M == Mp:
+        for low in lower_levels:
+            sum_l += Aul
+
+    return 0.5*sum_l
+
+
+def RS(J, M, Mp, JJ):
+    sum_l = 0
+    for low in lower_levels:
+        sum_qqMl = 0
+        for q in [-1, 0, 1]:
+            for qp in [-1, 0, 1]:
+                for Ml in low.M:
+                    sum_qqMl += 3*(jsim.j6(J, Jl, 1, -M,  Ml, -q) *
+                                   jsim.j6(J, Jl, 1, -Mp, Ml, -qp) *
+                                   JJ[q][qp])
+
+        sum_u += (2*J+1)*Bul*sum_qqMl
+
+    return 0.5*sum_u

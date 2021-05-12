@@ -38,37 +38,44 @@ class RTcoefs:
         rho_a = [0, 0, 0, 0]
         rho_s = [0, 0, 0, 0]
         for i in range(4):
-            sum_mluq = 0
-            sum_mulq = 0
-            for q in [-1, 0, 1]:
-                for q_p in [-1, 0, 1]:
-                    for M_l in cdts.atomic_model.transitions[0].lower.M:
-                        for M_u in cdts.atomic_model.transitions[0].upper.M:
-                            sum_mluq = sum_mluq + 3*(self.jsim.j6(cdts.atomic_model.transitions[0].upper.J,
-                                                                  cdts.atomic_model.transitions[0].lower.J, 1, -M_u, M_l, -q) *
-                                                     self.jsim.j6(cdts.atomic_model.transitions[0].upper.J,
-                                                                  cdts.atomic_model.transitions[0].lower.J, 1, -M_u, M_l, -q_p))
-                            sum_mluq = sum_mluq + (Tqq(q, q_p, i, ray.inc.value, ray.az.value) * ese.rho_l *
-                                                   cdts.voigt_profile(cdts.a_voigt, cdts.atomic_model.transitions[0], M_u, M_l, cdts.B))
+            for trans in ese.atom.transitions:
+                sum_MlMlpMuqq = 0
+                sum_MuMupMlqq = 0
+                for q in [-1, 0, 1]:
+                    for qp in [-1, 0, 1]:
+                        for Ml in trans.lower.M:
+                            for Mu in trans.upper.M:
+                                for Mlp in trans.lower.M:
 
-                            sum_mulq = sum_mulq + 3*(self.jsim.j6(cdts.atomic_model.transitions[0].upper.J,
-                                                                  cdts.atomic_model.transitions[0].lower.J, 1, -M_u, M_l, -q) *
-                                                     self.jsim.j6(cdts.atomic_model.transitions[0].upper.J,
-                                                                  cdts.atomic_model.transitions[0].lower.J, 1, -M_u, M_l, -q_p))
-                            sum_mulq = sum_mulq + (Tqq(q, q_p, i, ray.inc.value, ray.az.value) * ese.rho_u *
-                                                   cdts.voigt_profile(cdts.a_voigt, cdts.atomic_model.transitions[0],  M_u, M_l, cdts.B))
+                                    sum_MlMlpMuqq += 3*(-1)**(Ml-Mlp) *\
+                                                        (self.jsim.j6(trans.upper.J,
+                                                                      trans.lower.J, 1, -Mu, Ml, -q) *
+                                                         self.jsim.j6(trans.upper.J,
+                                                                      trans.lower.J, 1, -Mu, Mlp, -qp))
+                                    sum_MlMlpMuqq += (Tqq(q, qp, i, ray.inc.value, ray.az.value) *
+                                                      trans.lower.rho[Ml+trans.lower.J, Mlp+trans.lower.J] *
+                                                      cdts.voigt_profile(cdts.a_voigt, trans, Mu, Ml, cdts.B))
+                                for Mup in trans.upper.M:
 
-            eta_a[i] = cts.h.cgs*cdts.nus/(4*np.pi) * cdts.n_dens *\
-                (2*cdts.atomic_model.transitions[0].lower.J + 1) * cdts.atomic_model.transitions[0].B_lu * np.real(sum_mluq)
+                                    sum_MuMupMlqq += 3*(self.jsim.j6(trans.upper.J,
+                                                                     trans.lower.J, 1, -Mu, Ml, -q) *
+                                                        self.jsim.j6(trans.upper.J,
+                                                                     trans.lower.J, 1, -Mup, Ml, -qp))
+                                    sum_MuMupMlqq += (Tqq(q, qp, i, ray.inc.value, ray.az.value) *
+                                                      trans.upper.rho[Mup+trans.upper.J, Mu+trans.upper.J] *
+                                                      cdts.voigt_profile(cdts.a_voigt, trans,  Mu, Ml, cdts.B))
 
-            eta_s[i] = cts.h.cgs*cdts.nus/(4*np.pi) * cdts.n_dens *\
-                (2*cdts.atomic_model.transitions[0].upper.J + 1) * cdts.atomic_model.transitions[0].B_ul * np.real(sum_mulq)
+                eta_a[i] += cts.h.cgs*cdts.nus/(4*np.pi) * cdts.n_dens *\
+                    (2*trans.lower.J + 1) * trans.B_lu * np.real(sum_MlMlpMuqq)
 
-            rho_a[i] = cts.h.cgs*cdts.nus/(4*np.pi) * cdts.n_dens *\
-                (2*cdts.atomic_model.transitions[0].lower.J + 1) * cdts.atomic_model.transitions[0].B_lu * np.imag(sum_mluq)
+                eta_s[i] += cts.h.cgs*cdts.nus/(4*np.pi) * cdts.n_dens *\
+                    (2*trans.upper.J + 1) * trans.B_ul * np.real(sum_MuMupMlqq)
 
-            rho_s[i] = cts.h.cgs*cdts.nus/(4*np.pi) * cdts.n_dens *\
-                (2*cdts.atomic_model.transitions[0].upper.J + 1) * cdts.atomic_model.transitions[0].B_ul * np.imag(sum_mulq)
+                rho_a[i] += cts.h.cgs*cdts.nus/(4*np.pi) * cdts.n_dens *\
+                    (2*trans.lower.J + 1) * trans.B_lu * np.imag(sum_MlMlpMuqq)
+
+                rho_s[i] += cts.h.cgs*cdts.nus/(4*np.pi) * cdts.n_dens *\
+                    (2*trans.upper.J + 1) * trans.B_ul * np.imag(sum_MuMupMlqq)
 
         eta = [et_a - et_s for et_a, et_s in zip(eta_a, eta_s)]
         rho = [ro_a - ro_s for ro_a, ro_s in zip(rho_a, rho_s)]
