@@ -66,14 +66,16 @@ class ESE:
             self.rho_dim += lev.num_M
 
         self.rho = np.zeros((self.rho_dim, self.rho_dim))
-
+        self.rho_vec = []
         for lev in self.atom.levels:
             for i in range(self.rho_dim):
                 for j in range(self.rho_dim):
                     if lev.initial_N <= i < lev.initial_N + lev.num_M and\
                        lev.initial_N <= j < lev.initial_N + lev.num_M:
                         self.rho[i, j] = 1
+                        self.rho_vec.append(self.rho[i, j])
 
+        self.rho_vec = np.array(self.rho_vec)
 
     def solveESE(self, rad):
         """ Called at every grid point at the end of the Lambda iteration.

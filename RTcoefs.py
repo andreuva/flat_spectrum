@@ -80,7 +80,7 @@ class RTcoefs:
         eta = [et_a - et_s for et_a, et_s in zip(eta_a, eta_s)]
         rho = [ro_a - ro_s for ro_a, ro_s in zip(rho_a, rho_s)]
         eps = [2*cts.h.cgs*cdts.nus**3/(cts.c.cgs**2)*et_s for et_s in eta_s]
-        SS = [ep/eta[0] for ep in eps]
+        SS = np.array([ep/eta[0] for ep in eps]) * pm.I_units
         KK = np.array([[eta[0],  eta[1],  eta[2],  eta[3]],
                        [eta[1],  eta[0],  rho[3], -rho[2]],
                        [eta[2], -rho[3],  eta[0],  rho[1]],
