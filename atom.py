@@ -51,6 +51,8 @@ class ESE:
         This class needs to be instantiated at every grid point.
     """
 
+    jsim = jsymbols()
+
     def __init__(self, v_dop, a_voigt, nus, nus_weights, B):
         """
             nus_weights: array of the frequency quadrature weights
@@ -76,16 +78,20 @@ class ESE:
                         self.rho_vec.append(self.rho[i, j])
 
         self.rho_vec = np.array(self.rho_vec)
+        self.rho_elements = len(self.rho_vec)
 
     def solveESE(self, rad):
-        """ Called at every grid point at the end of the Lambda iteration.
+        """
+            Called at every grid point at the end of the Lambda iteration.
             return value: maximum relative change of the level population
         """
+        self.Coeffs = np.zeros((self.rho_elements, self.rho_elements))
+        self.Coeffs[-1, :] = np.ones(self.rho_elements)
+
+        self.Indep = np.zeros(self.rho_elements)
+        self.Indep[-1] = 1
+
         return 1
-
-
-jsim = jsymbols()
-
 
 # Eq 7.9 from LL04 for the SEE coeficients
 def TA(J, M, Mp, Jl, Ml, Mlp, JJ, Blu):
@@ -126,19 +132,15 @@ def RA(J, M, Mp, JJ):
                     sum_qqMu += 3*(-1)**(M - Mp)*(jsim.j6(Ju, J, 1, -Mu, M, -q) *
                                                   jsim.j6(Ju, J, 1, -Mu, Mp, -qp) *
                                                   JJ[q][qp])
-
         sum_u += (2*J+1)*Blu*sum_qqMu
-
     return 0.5*sum_u
 
 
 def RE(J, M, Mp):
-
     sum_l = 0
     if M == Mp:
         for low in lower_levels:
             sum_l += Aul
-
     return 0.5*sum_l
 
 
@@ -152,7 +154,5 @@ def RS(J, M, Mp, JJ):
                     sum_qqMl += 3*(jsim.j6(J, Jl, 1, -M,  Ml, -q) *
                                    jsim.j6(J, Jl, 1, -Mp, Ml, -qp) *
                                    JJ[q][qp])
-
         sum_u += (2*J+1)*Bul*sum_qqMl
-
     return 0.5*sum_u
