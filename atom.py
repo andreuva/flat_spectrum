@@ -11,25 +11,28 @@ class level():
         self.E = energy
         self.g = g
         self.J = JJ
-        self.M = [ml for ml in range(-self.J, self.J+1)]
-        self.num_M = 2*self.J + 1
-        self.rho = np.ones((self.num_M, self.num_M))
+
+        self.MMp = []
+        for M in range(-self.J, self.J+1):
+            for Mp in range(-self.J, self.J+1):
+                self.MMp.append([self.E, self.J, M, Mp])
 
 
-class transition():
-    def __init__(self, level_u, level_d, Alu):
-        self.upper = level_u
-        self.lower = level_d
+class line():
+    """Class that defines the lines of the atomic model"""
+    def __init__(self, levels, line_levels, Alu):
 
-        self.wavelength = 1/(level_u.E - level_d.E)
+        self.levels = line_levels
+
+        self.wavelength = 1/(levels[line_levels[1]].E - levels[line_levels[0]].E)
         self.energy = c.h.cgs * c.c.cgs / self.wavelength
         self.nu = self.energy/c.h.cgs
 
         self.A_lu = Alu
         self.B_lu = Alu * c.c.cgs**3/(2*c.h.cgs*self.nu**3)
-        self.B_ul = self.B_lu * self.upper.g/self.lower.g
+        self.B_ul = self.B_lu * levels[line_levels[1]].g/levels[line_levels[0]].g
 
-        self.dJ = level_u.J - level_d.J
+        self.dJ = levels[line_levels[1]].J - levels[line_levels[0]].J
 
 
 class HeI_1083():
@@ -37,10 +40,25 @@ class HeI_1083():
     Class to acces the atomic model
     """
     def __init__(self):
-        self.levels = [level(169_086.8428979/u.cm, 1, 3),      # MNIST data for HeI levels (2 level atom)
-                       level(159_855.9743297/u.cm, 0, 3)]
+        levels = [level(169_086.8428979/u.cm, 1, 3),      # MNIST data for HeI levels (2 level atom)
+                  level(159_855.9743297/u.cm, 0, 3)]
 
-        self.transitions = [transition(*self.levels, 1.0216e+07)]
+        indx = np.argsort([lev.E.value for lev in levels])
+        self.levels = []
+        for i, ord in enumerate(indx):
+            self.levels.append(levels[ord])
+
+        self.lines = [line(self.levels, (0, 1), 1.0216e+07),
+                      ]
+
+        self.dens_elmnt = []
+        for i, lev in enumerate(self.levels):
+            for comb in lev.MMp:
+                self.dens_elmnt.append([i, *comb])
+
+        self.line_elmnt = []
+        for i, ln in enumerate(self.lines):
+            self.line_elmnt.append([i, *ln.levels])
 
 
 class ESE:
@@ -61,35 +79,50 @@ class ESE:
         """
 
         self.atom = HeI_1083()
-
-        self.rho_dim = 0
-        for lev in self.atom.levels:
-            lev.initial_N = self.rho_dim*1   # Initial position of the density level submatrix
-            self.rho_dim += lev.num_M
-
-        self.rho = np.zeros((self.rho_dim, self.rho_dim))
-        self.rho_vec = []
-        for lev in self.atom.levels:
-            for i in range(self.rho_dim):
-                for j in range(self.rho_dim):
-                    if lev.initial_N <= i < lev.initial_N + lev.num_M and\
-                       lev.initial_N <= j < lev.initial_N + lev.num_M:
-                        self.rho[i, j] = 1
-                        self.rho_vec.append(self.rho[i, j])
-
-        self.rho_vec = np.array(self.rho_vec)
-        self.rho_elements = len(self.rho_vec)
+        self.rho = [0 for i in self.atom.dens_elmnt]
+        self.N_rho = len(self.rho)
+        self.ESE = np.zeros((self.N_rho, self.N_rho)).astype('complex128')
 
     def solveESE(self, rad):
         """
             Called at every grid point at the end of the Lambda iteration.
             return value: maximum relative change of the level population
         """
-        self.Coeffs = np.zeros((self.rho_elements, self.rho_elements))
-        self.Coeffs[-1, :] = np.ones(self.rho_elements)
 
-        self.Indep = np.zeros(self.rho_elements)
-        self.Indep[-1] = 1
+        for i, p_lev in enumerate(self.atom.dens_elmnt):
+            self.ESE[i] = np.zeros_like(self.ESE[i])
+
+            Li = p_lev[0]
+            M = p_lev[-2]
+            Mp = p_lev[-1]
+
+            for line in self.atom.lines:
+                if Li not in line.levels:
+                    continue
+
+                for j, q_lev in enumerate(self.atom.dens_elmnt):
+
+                    Lj = q_lev[0]
+                    if Lj not in line.levels:
+                        continue
+
+                    N = q_lev[-2]
+                    Np = q_lev[-1]
+
+                    if Lj > Li:
+                        # calculate the TE(q -> p) and add it to self.ESE[i][j]
+                        self.ESE[i][j] = self.ESE[i][j] + 1
+                    elif Lj < Li:
+                        # calculate the TA(q -> p) and add it to self.ESE[i][j]
+                        self.ESE[i][j] = self.ESE[i][j] + 1
+                    elif Lj == Li:
+                        pass    # calculate the RA and RE
+                    else:
+                        print("Error in the ESE matrix calculation")
+                        exit()
+
+            nu_L = 1.3996e6*np.linalg.norm(B.value)     # Eq 3.10 LL04 Larmor freq
+            self.ESE[i][i] = self.ESE[i][i] - 2j*np.pi*(M - Mp)*nu_L*self.atom.levels[Li].g
 
         return 1
 
