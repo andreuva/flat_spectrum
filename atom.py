@@ -83,7 +83,7 @@ class ESE:
         self.N_rho = len(self.rho)
         self.ESE = np.zeros((self.N_rho, self.N_rho)).astype('complex128')
 
-    def solveESE(self, rad):
+    def solveESE(self, rad, cdt):
         """
             Called at every grid point at the end of the Lambda iteration.
             return value: maximum relative change of the level population
@@ -121,7 +121,7 @@ class ESE:
                         print("Error in the ESE matrix calculation")
                         exit()
 
-            nu_L = 1.3996e6*np.linalg.norm(B.value)     # Eq 3.10 LL04 Larmor freq
+            nu_L = 1.3996e6*np.linalg.norm(cdt.B.value)     # Eq 3.10 LL04 Larmor freq
             self.ESE[i][i] = self.ESE[i][i] - 2j*np.pi*(M - Mp)*nu_L*self.atom.levels[Li].g
 
         return 1

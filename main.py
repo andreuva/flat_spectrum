@@ -71,6 +71,6 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
             point_O.radiation.sumStokes(ray)
 
     # Update the MRC and check wether we reached convergence
-    st.update_mrc()
+    st.update_mrc(cdt)
     if (st.mrc.max() < pm.tolerance):
         break
