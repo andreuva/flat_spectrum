@@ -33,7 +33,7 @@ class RTcoefs:
 
         # Eq 7.10 of LL04
 
-        KK = np.zeros((4, 4, pm.wn))
-        SS = np.zeros((4, pm.wn))*pm.I_units
+        KK = np.ones((4, 4, pm.wn))*1e-10
+        SS = np.ones((4, pm.wn))*pm.I_units*1e-10
 
         return SS, KK
