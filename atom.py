@@ -13,7 +13,9 @@ class level():
         self.J = JJ
 
         self.MMp = []
+        self.M = []
         for M in range(-self.J, self.J+1):
+            self.M.append(M)
             for Mp in range(-self.J, self.J+1):
                 self.MMp.append([self.E, self.J, M, Mp])
 
@@ -29,8 +31,8 @@ class line():
         self.nu = self.energy/c.h.cgs
 
         self.A_lu = Alu
-        self.B_lu = Alu * c.c.cgs**3/(2*c.h.cgs*self.nu**3)
-        self.B_ul = self.B_lu * levels[line_levels[1]].g/levels[line_levels[0]].g
+        self.B_lu = Alu * (c.c.cgs**3/(2*c.h.cgs*self.nu**3)).value
+        self.B_ul = self.B_lu * (levels[line_levels[1]].g/levels[line_levels[0]].g)
 
         self.dJ = levels[line_levels[1]].J - levels[line_levels[0]].J
 
@@ -95,6 +97,7 @@ class ESE:
             Li = p_lev[0]
             M = p_lev[-2]
             Mp = p_lev[-1]
+            JJ = p_lev[-3]
 
             for line in self.atom.lines:
                 if Li not in line.levels:
@@ -103,20 +106,31 @@ class ESE:
                 for j, q_lev in enumerate(self.atom.dens_elmnt):
 
                     Lj = q_lev[0]
+                    N = q_lev[-2]
+                    Np = q_lev[-1]
+                    Jp = q_lev[-3]
+
                     if Lj not in line.levels:
                         continue
 
-                    N = q_lev[-2]
-                    Np = q_lev[-1]
-
                     if Lj > Li:
                         # calculate the TE(q -> p) and add it to self.ESE[i][j]
-                        self.ESE[i][j] = self.ESE[i][j] + 1
+                        self.ESE[i][j] = self.ESE[i][j] + TE(self, JJ, M, Mp, Jp, N, Np, line.A_lu)
                     elif Lj < Li:
                         # calculate the TA(q -> p) and add it to self.ESE[i][j]
-                        self.ESE[i][j] = self.ESE[i][j] + 1
+                        self.ESE[i][j] = self.ESE[i][j] + TA(self, JJ, M, Mp, Jp, N, Np, rad, line.B_lu, line.nu)
                     elif Lj == Li:
-                        pass    # calculate the RA and RE
+                        # calculate the RA and RE
+                        if M == N:
+                            self.ESE[i][j] = self.ESE[i][j] + (RA(self, Li, JJ, Mp, Np, rad) +
+                                                               RE(self, Li, JJ, Np, Mp) +
+                                                               RS(self, Li, JJ, Np, Mp, rad))
+                        elif Mp == Np:
+                            self.ESE[i][j] = self.ESE[i][j] + (RA(self, Li, JJ, Np, M, rad) +
+                                                               RE(self, Li, JJ, M, Np) +
+                                                               RS(self, Li, JJ, M, Np, rad))
+                        else:
+                            continue
                     else:
                         print("Error in the ESE matrix calculation")
                         exit()
@@ -133,65 +147,99 @@ class ESE:
 
 
 # Eq 7.9 from LL04 for the SEE coeficients
-def TA(J, M, Mp, Jl, Ml, Mlp, JJ, Blu):
+def TA(ESE, J, M, Mp, Jl, Ml, Mlp, rad, Blu, nu):
     sum_qq = 0
     for q in [-1, 0, 1]:
         for qp in [-1, 0, 1]:
-            sum_qq = 3*(-1)**(Ml - Mlp)*(jsim.j6(J, Jl, 1, -M,  Ml, -q) *
-                                         jsim.j6(J, Jl, 1, -Mp, Mlp, -qp) *
-                                         JJ[q][qp])
+            sum_qq = 3*(-1)**(Ml - Mlp)*(ESE.jsim.j6(J, Jl, 1, -M,  Ml, -q) *
+                                         ESE.jsim.j6(J, Jl, 1, -Mp, Mlp, -qp) *
+                                         rad.Jqq_nu(q, qp, nu))
     return (2*Jl + 1)*Blu*sum_qq
 
 
-def TE(J, M, Mp, Ju, Mu, Mup, Aul):
+def TE(ESE, J, M, Mp, Ju, Mu, Mup, Aul):
     sum_q = 0
     for q in [-1, 0, 1]:
-        sum_q = (-1)**(Mu - Mup)*(jsim.j6(Ju, J, 1, -Mup, Mp, -q) *
-                                  jsim.j6(Ju, J, 1, -Mu,  M, -q))
+        sum_q = (-1)**(Mu - Mup)*(ESE.jsim.j6(Ju, J, 1, -Mup, Mp, -q) *
+                                  ESE.jsim.j6(Ju, J, 1, -Mu,  M, -q))
     return (2*Ju + 1)*Aul*sum_q
 
 
-def TS(J, M, Mp, Ju, Mu, Mup, JJ, Bul):
+def TS(ESE, J, M, Mp, Ju, Mu, Mup, rad, Bul, nu):
     sum_qq = 0
     for q in [-1, 0, 1]:
         for qp in [-1, 0, 1]:
-            sum_qq += 3*(-1)**(Mp - M)*(jsim.j6(Ju, J, 1, -Mup, Mp, -q) *
-                                        jsim.j6(Ju, J, 1, -Mu,  M, -qp) *
-                                        JJ[q][qp])
+            sum_qq += 3*(-1)**(Mp - M)*(ESE.jsim.j6(Ju, J, 1, -Mup, Mp, -q) *
+                                        ESE.jsim.j6(Ju, J, 1, -Mu,  M, -qp) *
+                                        rad.Jqq_nu(q, qp, nu))
     return (2*Ju + 1)*Bul*sum_qq
 
 
-def RA(J, M, Mp, JJ):
+def RA(ESE, Li, J, M, Mp, rad):
+
     sum_u = 0
-    for up in up_levels:
-        sum_qqMu = 0
-        for q in [-1, 0, 1]:
-            for qp in [-1, 0, 1]:
-                for Mu in up.M:
-                    sum_qqMu += 3*(-1)**(M - Mp)*(jsim.j6(Ju, J, 1, -Mu, M, -q) *
-                                                  jsim.j6(Ju, J, 1, -Mu, Mp, -qp) *
-                                                  JJ[q][qp])
-        sum_u += (2*J+1)*Blu*sum_qqMu
+    for k, k_lev in enumerate(ESE.atom.levels):
+        for line in ESE.atom.lines:
+
+            Lk = k
+            Jk = k_lev.J
+            Mus = k_lev.M
+
+            if Li not in line.levels or Lk not in line.levels:
+                continue
+
+            if Lk > Li:
+                sum_qqMu = 0
+                for q in [-1, 0, 1]:
+                    for qp in [-1, 0, 1]:
+                        for Mu in Mus:
+                            sum_qqMu += 3*(-1)**(M - Mp)*(ESE.jsim.j6(Jk, J, 1, -Mu, M, -q) *
+                                                          ESE.jsim.j6(Jk, J, 1, -Mu, Mp, -qp) *
+                                                          rad.Jqq_nu(q, qp, line.nu))
+                sum_u += (2*J+1)*line.B_lu*sum_qqMu
+
     return 0.5*sum_u
 
 
-def RE(J, M, Mp):
+def RE(ESE, Li, J, M, Mp):
+
+    # RE(\alpha J M M') = 1/2 * \delta_{M M'} * \sum_{\alpha_l J_l} A(\alpha J -> \alpha_l J_l)
+
     sum_l = 0
     if M == Mp:
-        for low in lower_levels:
-            sum_l += Aul
+        for k, k_lev in enumerate(ESE.atom.levels):
+            Lk = k
+            if Lk < Li:
+                for line in ESE.atom.lines:
+                    if Li not in line.levels or Lk not in line.levels:
+                        continue
+                    sum_l += line.A_lu
+
     return 0.5*sum_l
 
 
-def RS(J, M, Mp, JJ):
+def RS(ESE, Li, J, M, Mp, rad):
+
     sum_l = 0
-    for low in lower_levels:
-        sum_qqMl = 0
-        for q in [-1, 0, 1]:
-            for qp in [-1, 0, 1]:
-                for Ml in low.M:
-                    sum_qqMl += 3*(jsim.j6(J, Jl, 1, -M,  Ml, -q) *
-                                   jsim.j6(J, Jl, 1, -Mp, Ml, -qp) *
-                                   JJ[q][qp])
-        sum_u += (2*J+1)*Bul*sum_qqMl
-    return 0.5*sum_u
+    for k, k_lev in enumerate(ESE.atom.levels):
+        for line in ESE.atom.lines:
+
+            Lk = k
+            Jk = k_lev.J
+            Mls = k_lev.M
+
+            if Li not in line.levels or Lk not in line.levels:
+                continue
+
+            if Lk < Li:
+                sum_qqMl = 0
+                for q in [-1, 0, 1]:
+                    for qp in [-1, 0, 1]:
+                        for Ml in Mls:
+                            sum_qqMl += 3*(ESE.jsim.j6(J, Jk, 1, -M, Ml, -q) *
+                                           ESE.jsim.j6(J, Jk, 1, -Mp, Ml, -qp) *
+                                           rad.Jqq_nu(q, qp, line.nu))
+
+                sum_l += (2*J+1)*line.B_ul*sum_qqMl
+
+    return 0.5*sum_l
