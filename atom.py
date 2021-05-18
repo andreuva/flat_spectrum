@@ -26,6 +26,9 @@ class line():
 
         self.levels = line_levels
 
+        self.gl = levels[line_levels[0]].g
+        self.gu = levels[line_levels[1]].g
+
         self.wavelength = 1/(levels[line_levels[1]].E - levels[line_levels[0]].E)
         self.energy = c.h.cgs * c.c.cgs / self.wavelength
         self.nu = self.energy/c.h.cgs

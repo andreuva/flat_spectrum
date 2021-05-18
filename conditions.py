@@ -104,10 +104,10 @@ class conditions:
         self.Id_tens = np.repeat(np.identity(4)[:, :, np.newaxis], self.nus_N, axis=2)
         self.identity = np.identity(4)
 
-    def voigt_profile(self, a, transition, Mu, Ml, B):
+    def voigt_profile(self, a, line, Mu, Ml, B):
         vs = self.nus.value
-        v0 = transition.nu.value + (np.linalg.norm(B.value)/constants.h.cgs.value *
-                                    (transition.upper.g*Mu - transition.lower.g*Ml))
+        v0 = line.nu.value + (np.linalg.norm(B.value)/constants.h.cgs.value *
+                              (line.gu*Mu - line.gl*Ml))
 
         prof = np.zeros_like(vs)
         for i, v in enumerate(vs):
