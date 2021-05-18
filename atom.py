@@ -124,6 +124,11 @@ class ESE:
             nu_L = 1.3996e6*np.linalg.norm(cdt.B.value)     # Eq 3.10 LL04 Larmor freq
             self.ESE[i][i] = self.ESE[i][i] - 2j*np.pi*(M - Mp)*nu_L*self.atom.levels[Li].g
 
+        indep = np.zeros(self.N_rho)
+        indep[0] = 1
+        self.ESE[0] = np.ones_like(self.ESE[0])
+        self.rho = np.linalg.solve(self.ESE, indep)
+
         return 1
 
 
