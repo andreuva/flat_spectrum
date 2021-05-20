@@ -84,8 +84,21 @@ class ESE:
         """
 
         self.atom = HeI_1083()
-        self.rho = [0 for i in self.atom.dens_elmnt]
+        self.rho = np.zeros(len(self.atom.dens_elmnt))
+        self.populations = 0
+
+        for i, lev in enumerate(self.atom.dens_elmnt):
+
+            Ml = lev[-2]
+            Mlp = lev[-1]
+
+            if Mlp == Ml:
+                self.rho[i] = 1
+                self.populations += 1
+
+        self.rho = self.rho/self.populations
         self.N_rho = len(self.rho)
+        self.coherences = self.N_rho - self.populations
         self.ESE = np.zeros((self.N_rho, self.N_rho)).astype('complex128')
 
     def solveESE(self, rad, cdt):
@@ -143,7 +156,13 @@ class ESE:
 
         indep = np.zeros(self.N_rho)
         indep[0] = 1
-        self.ESE[0] = np.ones_like(self.ESE[0])
+
+        for i, lev in enumerate(self.atom.dens_elmnt):
+            Ml = lev[-2]
+            Mlp = lev[-1]
+            if Mlp == Ml:
+                self.ESE[0, i] = 1
+
         self.rho = np.linalg.solve(self.ESE, indep)
 
         return 1

@@ -3,6 +3,8 @@ from atom import ESE, HeI_1083
 from rad import RTE
 
 import numpy as np
+from numpy.linalg import norm
+from numpy import real
 import matplotlib.pyplot as plt
 from astropy import units, constants
 
@@ -104,14 +106,15 @@ class conditions:
         self.Id_tens = np.repeat(np.identity(4)[:, :, np.newaxis], self.nus_N, axis=2)
         self.identity = np.identity(4)
 
-    def voigt_profile(self, a, line, Mu, Ml, B):
+    def voigt_profile(self, line, Mu, Ml, B):
         vs = self.nus.value
-        v0 = line.nu.value + (np.linalg.norm(B.value)/constants.h.cgs.value *
+        v0 = line.nu.value + (norm(B)/constants.h.cgs.value *
                               (line.gu*Mu - line.gl*Ml))
+        a = self.a_voigt
 
         prof = np.zeros_like(vs)
         for i, v in enumerate(vs):
-            prof[i] = np.real(voigt(v - v0, self.a_voigt))
+            prof[i] = real(voigt(v - v0, a))
 
         return prof
 

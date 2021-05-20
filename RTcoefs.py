@@ -72,25 +72,25 @@ class RTcoefs:
                                              self.jsim.j6(Ju, Jl, 1, -Mu, Ml, -q) *
                                              self.jsim.j6(Ju, Jl, 1, -Mu, Mlp, -qp) *
                                              np.real(Tqq(q, qp, i, ray.inc.value, ray.az.value)*ese.rho[low] *
-                                             cdts.voigt_profile(cdts.a_voigt, line, Mu, Ml, cdts.B)))
+                                             cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
 
                                 sum_rhoa += (3*(-1)**(Ml - Mlp)*(2*Jl + 1)*line.B_lu *
                                              self.jsim.j6(Ju, Jl, 1, -Mu, Ml, -q) *
                                              self.jsim.j6(Ju, Jl, 1, -Mu, Mlp, -qp) *
                                              np.imag(Tqq(q, qp, i, ray.inc.value, ray.az.value)*ese.rho[low] *
-                                             cdts.voigt_profile(cdts.a_voigt, line, Mu, Ml, cdts.B)))
+                                             cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
 
                                 sum_etas += (3*(2*Ju + 1)*line.B_ul *
                                              self.jsim.j6(Ju, Jl, 1, -Mu, Ml, -q) *
                                              self.jsim.j6(Ju, Jl, 1, -Mup, Ml, -qp) *
                                              np.real(Tqq(q, qp, i, ray.inc.value, ray.az.value)*ese.rho[up] *
-                                             cdts.voigt_profile(cdts.a_voigt, line, Mu, Ml, cdts.B)))
+                                             cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
 
                                 sum_etas += (3*(2*Ju + 1)*line.B_ul *
                                              self.jsim.j6(Ju, Jl, 1, -Mu, Ml, -q) *
                                              self.jsim.j6(Ju, Jl, 1, -Mup, Ml, -qp) *
                                              np.imag(Tqq(q, qp, i, ray.inc.value, ray.az.value)*ese.rho[up] *
-                                             cdts.voigt_profile(cdts.a_voigt, line, Mu, Ml, cdts.B)))
+                                             cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
 
             eta_a[i] = cts.h.cgs*cdts.nus/(4*np.pi) * cdts.n_dens * sum_etaa
             eta_s[i] = cts.h.cgs*cdts.nus/(4*np.pi) * cdts.n_dens * sum_etas
@@ -105,6 +105,10 @@ class RTcoefs:
                        [eta[3],  rho[2], -rho[1],  eta[0]]])
 
         eps = [2*cts.h.cgs*cdts.nus**3/(cts.c.cgs**2)*et_s for et_s in eta_s]
-        SS = np.array([ep/(eta[0]+1e-30) for ep in eps]) * pm.I_units
+        SS = np.array([ep.value/(eta[0].value+1e-30) for ep in eps]) * pm.I_units
+
+        # Just for debuging purposes overwrite KK and SS discarding the previous
+        KK = np.ones((4, 4, pm.wn))*1e-10
+        SS = np.ones((4, pm.wn))*pm.I_units*1e-10
 
         return SS, KK
