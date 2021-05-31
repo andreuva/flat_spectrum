@@ -65,32 +65,34 @@ class RTcoefs:
                         if Lu not in line.levels:
                             continue
 
-                        for q in [-1, 0, 1]:
-                            for qp in [-1, 0, 1]:
+                        q = int(Ml - Mu)
+                        qp = int(Mlp - Mu)
 
-                                sum_etaa += (3*(-1)**(Ml - Mlp)*(2*Jl + 1)*line.B_lu *
-                                             self.jsim.j3(Ju, Jl, 1, -Mu, Ml, -q) *
-                                             self.jsim.j3(Ju, Jl, 1, -Mu, Mlp, -qp) *
-                                             np.real(Tqq(q, qp, i, ray.inc.value, ray.az.value)*ese.rho[low] *
-                                             cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
+                        sum_etaa += (3*(-1)**(Ml - Mlp)*(2*Jl + 1)*line.B_lu *
+                                     self.jsim.j3(Ju, Jl, 1, -Mu, Ml, -q) *
+                                     self.jsim.j3(Ju, Jl, 1, -Mu, Mlp, -qp) *
+                                     np.real(Tqq(q, qp, i, ray.inc.value, ray.az.value)*ese.rho[low] *
+                                     cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
 
-                                sum_rhoa += (3*(-1)**(Ml - Mlp)*(2*Jl + 1)*line.B_lu *
-                                             self.jsim.j3(Ju, Jl, 1, -Mu, Ml, -q) *
-                                             self.jsim.j3(Ju, Jl, 1, -Mu, Mlp, -qp) *
-                                             np.imag(Tqq(q, qp, i, ray.inc.value, ray.az.value)*ese.rho[low] *
-                                             cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
+                        sum_rhoa += (3*(-1)**(Ml - Mlp)*(2*Jl + 1)*line.B_lu *
+                                     self.jsim.j3(Ju, Jl, 1, -Mu, Ml, -q) *
+                                     self.jsim.j3(Ju, Jl, 1, -Mu, Mlp, -qp) *
+                                     np.imag(Tqq(q, qp, i, ray.inc.value, ray.az.value)*ese.rho[low] *
+                                     cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
 
-                                sum_etas += (3*(2*Ju + 1)*line.B_ul *
-                                             self.jsim.j3(Ju, Jl, 1, -Mu, Ml, -q) *
-                                             self.jsim.j3(Ju, Jl, 1, -Mup, Ml, -qp) *
-                                             np.real(Tqq(q, qp, i, ray.inc.value, ray.az.value)*ese.rho[up] *
-                                             cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
+                        qp = int(Ml - Mup)
 
-                                sum_etas += (3*(2*Ju + 1)*line.B_ul *
-                                             self.jsim.j3(Ju, Jl, 1, -Mu, Ml, -q) *
-                                             self.jsim.j3(Ju, Jl, 1, -Mup, Ml, -qp) *
-                                             np.imag(Tqq(q, qp, i, ray.inc.value, ray.az.value)*ese.rho[up] *
-                                             cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
+                        sum_etas += (3*(2*Ju + 1)*line.B_ul *
+                                     self.jsim.j3(Ju, Jl, 1, -Mu, Ml, -q) *
+                                     self.jsim.j3(Ju, Jl, 1, -Mup, Ml, -qp) *
+                                     np.real(Tqq(q, qp, i, ray.inc.value, ray.az.value)*ese.rho[up] *
+                                     cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
+
+                        sum_etas += (3*(2*Ju + 1)*line.B_ul *
+                                     self.jsim.j3(Ju, Jl, 1, -Mu, Ml, -q) *
+                                     self.jsim.j3(Ju, Jl, 1, -Mup, Ml, -qp) *
+                                     np.imag(Tqq(q, qp, i, ray.inc.value, ray.az.value)*ese.rho[up] *
+                                     cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
 
             eta_a[i] = cts.h.cgs*cdts.nus/(4*np.pi) * cdts.n_dens * sum_etaa
             eta_s[i] = cts.h.cgs*cdts.nus/(4*np.pi) * cdts.n_dens * sum_etas
@@ -108,7 +110,7 @@ class RTcoefs:
         SS = np.array([ep.value/(eta[0].value+1e-30) for ep in eps]) * pm.I_units
 
         # Just for debuging purposes overwrite KK and SS discarding the previous
-        KK = np.ones((4, 4, pm.wn))*1e-10
-        SS = np.ones((4, pm.wn))*pm.I_units*1e-10
+        # KK = np.ones((4, 4, pm.wn))*1e-10
+        # SS = np.ones((4, pm.wn))*pm.I_units*1e-10
 
         return SS, KK
