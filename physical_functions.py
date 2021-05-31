@@ -7,37 +7,41 @@ import math
 @jit(nopython=True)
 def voigt(v, a):
 
-    s = abs(v)+a
-    d = .195e0*abs(v)-.176e0
-    z = a - 1j*v
+    ss = np.abs(v)+a
+    dd = .195e0*np.abs(v)-.176e0
+    zz = a - 1j*v
+    res = v*0j
 
-    if s >= .15e2:
-        t = .5641896e0*z/(.5+z*z)
-    else:
-
-        if s >= .55e1:
-
-            u = z*z
-            t = z*(.1410474e1 + .5641896e0*u)/(.75e0 + u*(.3e1 + u))
-
+    for i in range(len(ss)):
+        if ss[i] >= .15e2:
+            t = .5641896e0*zz[i]/(.5+zz[i]*zz[i])
         else:
 
-            if a >= d:
-                nt = .164955e2 + z*(.2020933e2 + z*(.1196482e2 +
-                                    z*(.3778987e1 + .5642236e0*z)))
-                dt = .164955e2 + z*(.3882363e2 + z*(.3927121e2 +
-                                    z*(.2169274e2 + z*(.6699398e1 + z))))
-                t = nt / dt
+            if ss[i] >= .55e1:
+
+                u = zz[i]*zz[i]
+                t = zz[i]*(.1410474e1 + .5641896e0*u)/(.75e0 + u*(.3e1 + u))
+
             else:
-                u = z*z
-                x = z*(.3618331e5 - u*(.33219905e4 - u*(.1540787e4 -
-                       u*(.2190313e3 - u*(.3576683e2 - u*(.1320522e1 -
-                          .56419e0*u))))))
-                y = .320666e5 - u*(.2432284e5 - u*(.9022228e4 -
-                                   u*(.2186181e4 - u*(.3642191e3 - u*(.6157037e2 -
-                                      u*(.1841439e1 - u))))))
-                t = np.exp(u) - x/y
-    return t
+
+                if a >= dd[i]:
+                    nt = .164955e2 + zz[i]*(.2020933e2 + zz[i]*(.1196482e2 +
+                                            zz[i]*(.3778987e1 + .5642236e0*zz[i])))
+                    dt = .164955e2 + zz[i]*(.3882363e2 + zz[i]*(.3927121e2 +
+                                            zz[i]*(.2169274e2 + zz[i]*(.6699398e1 + zz[i]))))
+                    t = nt / dt
+                else:
+                    u = zz[i]*zz[i]
+                    x = zz[i]*(.3618331e5 - u*(.33219905e4 - u*(.1540787e4 -
+                               u*(.2190313e3 - u*(.3576683e2 - u*(.1320522e1 -
+                                  .56419e0*u))))))
+                    y = .320666e5 - u*(.2432284e5 - u*(.9022228e4 -
+                                       u*(.2186181e4 - u*(.3642191e3 - u*(.6157037e2 -
+                                          u*(.1841439e1 - u))))))
+                    t = np.exp(u) - x/y
+        res[i] = t
+
+    return res
 
 
 def voigt_custom(x, sigma, gamma, x0=0):
@@ -244,13 +248,13 @@ class jsymbols():
 
         # Get minimum index to run from
         kmin = (ij3 - ij1 - im2)/2
-        kmin1 = kmin
-        kmin2 = (ij3 - ij2 + im1)/2
-        kmin = max(-1*min(kmin, kmin2), 0)
+        kmin1 = int(kmin)
+        kmin2 = int((ij3 - ij2 + im1)/2)
+        kmin = max(-1*min(kmin1, kmin2), 0)
 
         # Get maximum index to run to
         kmax = int(round(j1 + j2 - j3))
-        kmax1 = kmax
+        kmax1 = int(kmax)
         kmax2 = int(round(j1 - m1))
         kmax3 = int(round(j2 + m2))
         kmax = min([kmax, kmax2, kmax3])

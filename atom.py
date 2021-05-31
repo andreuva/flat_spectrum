@@ -173,8 +173,8 @@ def TA(ESE, J, M, Mp, Jl, Ml, Mlp, rad, Blu, nu):
     sum_qq = 0
     for q in [-1, 0, 1]:
         for qp in [-1, 0, 1]:
-            sum_qq = 3*(-1)**(Ml - Mlp)*(ESE.jsim.j6(J, Jl, 1, -M,  Ml, -q) *
-                                         ESE.jsim.j6(J, Jl, 1, -Mp, Mlp, -qp) *
+            sum_qq = 3*(-1)**(Ml - Mlp)*(ESE.jsim.j3(J, Jl, 1, -M,  Ml, -q) *
+                                         ESE.jsim.j3(J, Jl, 1, -Mp, Mlp, -qp) *
                                          rad.Jqq_nu(q, qp, nu))
     return (2*Jl + 1)*Blu*sum_qq
 
@@ -182,8 +182,8 @@ def TA(ESE, J, M, Mp, Jl, Ml, Mlp, rad, Blu, nu):
 def TE(ESE, J, M, Mp, Ju, Mu, Mup, Aul):
     sum_q = 0
     for q in [-1, 0, 1]:
-        sum_q = (-1)**(Mu - Mup)*(ESE.jsim.j6(Ju, J, 1, -Mup, Mp, -q) *
-                                  ESE.jsim.j6(Ju, J, 1, -Mu,  M, -q))
+        sum_q = (-1)**(Mu - Mup)*(ESE.jsim.j3(Ju, J, 1, -Mup, Mp, -q) *
+                                  ESE.jsim.j3(Ju, J, 1, -Mu,  M, -q))
     return (2*Ju + 1)*Aul*sum_q
 
 
@@ -191,8 +191,8 @@ def TS(ESE, J, M, Mp, Ju, Mu, Mup, rad, Bul, nu):
     sum_qq = 0
     for q in [-1, 0, 1]:
         for qp in [-1, 0, 1]:
-            sum_qq += 3*(-1)**(Mp - M)*(ESE.jsim.j6(Ju, J, 1, -Mup, Mp, -q) *
-                                        ESE.jsim.j6(Ju, J, 1, -Mu,  M, -qp) *
+            sum_qq += 3*(-1)**(Mp - M)*(ESE.jsim.j3(Ju, J, 1, -Mup, Mp, -q) *
+                                        ESE.jsim.j3(Ju, J, 1, -Mu,  M, -qp) *
                                         rad.Jqq_nu(q, qp, nu))
     return (2*Ju + 1)*Bul*sum_qq
 
@@ -215,8 +215,8 @@ def RA(ESE, Li, J, M, Mp, rad):
                 for q in [-1, 0, 1]:
                     for qp in [-1, 0, 1]:
                         for Mu in Mus:
-                            sum_qqMu += 3*(-1)**(M - Mp)*(ESE.jsim.j6(Jk, J, 1, -Mu, M, -q) *
-                                                          ESE.jsim.j6(Jk, J, 1, -Mu, Mp, -qp) *
+                            sum_qqMu += 3*(-1)**(M - Mp)*(ESE.jsim.j3(Jk, J, 1, -Mu, M, -q) *
+                                                          ESE.jsim.j3(Jk, J, 1, -Mu, Mp, -qp) *
                                                           rad.Jqq_nu(q, qp, line.nu))
                 sum_u += (2*J+1)*line.B_lu*sum_qqMu
 
@@ -258,8 +258,8 @@ def RS(ESE, Li, J, M, Mp, rad):
                 for q in [-1, 0, 1]:
                     for qp in [-1, 0, 1]:
                         for Ml in Mls:
-                            sum_qqMl += 3*(ESE.jsim.j6(J, Jk, 1, -M, Ml, -q) *
-                                           ESE.jsim.j6(J, Jk, 1, -Mp, Ml, -qp) *
+                            sum_qqMl += 3*(ESE.jsim.j3(J, Jk, 1, -M, Ml, -q) *
+                                           ESE.jsim.j3(J, Jk, 1, -Mp, Ml, -qp) *
                                            rad.Jqq_nu(q, qp, line.nu))
 
                 sum_l += (2*J+1)*line.B_ul*sum_qqMl

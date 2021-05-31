@@ -110,13 +110,7 @@ class conditions:
         vs = self.nus.value
         v0 = line.nu.value + (norm(B)/constants.h.cgs.value *
                               (line.gu*Mu - line.gl*Ml))
-        a = self.a_voigt
-
-        prof = np.zeros_like(vs)
-        for i, v in enumerate(vs):
-            prof[i] = real(voigt(v - v0, a))
-
-        return prof
+        return voigt(vs-v0, self.a_voigt)
 
 
 class state:
