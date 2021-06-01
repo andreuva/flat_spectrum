@@ -10,8 +10,8 @@ def BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, ray, c
     k_m = np.moveaxis(np.diagonal(kk_m, 0, 0, 1), 0, -1).copy()
     k_o = np.moveaxis(np.diagonal(kk_o, 0, 0, 1), 0, -1).copy()
 
-    tauMO = - ((k_m + k_o)/2) * np.abs((point_O.z.value - point_M.z.value)/np.cos(ray.inc)) + 1e-30
-    tauOP = - ((k_o + k_p)/2) * np.abs((point_P.z.value - point_O.z.value)/np.cos(ray.inc)) + 1e-30
+    tauMO = ((k_m + k_o)/2) * np.abs((point_O.z.value - point_M.z.value)/np.cos(ray.inc)) + 1e-30
+    tauOP = ((k_o + k_p)/2) * np.abs((point_P.z.value - point_O.z.value)/np.cos(ray.inc)) + 1e-30
 
     # Compute the psi_m and psi_o
     to_taylor_psi = tauMO < 1e-3

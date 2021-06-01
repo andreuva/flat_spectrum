@@ -94,10 +94,10 @@ class RTcoefs:
                                      np.imag(Tqq(q, qp, i, ray.inc.value, ray.az.value)*ese.rho[up] *
                                      cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
 
-            eta_a[i] = cts.h.cgs*cdts.nus/(4*np.pi) * cdts.n_dens * sum_etaa
-            eta_s[i] = cts.h.cgs*cdts.nus/(4*np.pi) * cdts.n_dens * sum_etas
-            rho_a[i] = cts.h.cgs*cdts.nus/(4*np.pi) * cdts.n_dens * sum_rhoa
-            rho_s[i] = cts.h.cgs*cdts.nus/(4*np.pi) * cdts.n_dens * sum_rhos
+            eta_a[i] = cts.h.cgs*cdts.nus.cgs/(4*np.pi) * cdts.n_dens * sum_etaa
+            eta_s[i] = cts.h.cgs*cdts.nus.cgs/(4*np.pi) * cdts.n_dens * sum_etas
+            rho_a[i] = cts.h.cgs*cdts.nus.cgs/(4*np.pi) * cdts.n_dens * sum_rhoa
+            rho_s[i] = cts.h.cgs*cdts.nus.cgs/(4*np.pi) * cdts.n_dens * sum_rhos
 
         eta = [et_a - et_s for et_a, et_s in zip(eta_a, eta_s)]
         rho = [ro_a - ro_s for ro_a, ro_s in zip(rho_a, rho_s)]
@@ -106,7 +106,7 @@ class RTcoefs:
                        [eta[2], -rho[3],  eta[0],  rho[1]],
                        [eta[3],  rho[2], -rho[1],  eta[0]]])
 
-        eps = [2*cts.h.cgs*cdts.nus**3/(cts.c.cgs**2)*et_s for et_s in eta_s]
+        eps = [2*cts.h.cgs*cdts.nus.cgs**3/(cts.c.cgs**2)*et_s for et_s in eta_s]
         SS = np.array([ep.value/(eta[0].value+1e-30) for ep in eps]) * pm.I_units
 
         # Just for debuging purposes overwrite KK and SS discarding the previous

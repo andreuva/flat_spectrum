@@ -10,6 +10,8 @@ from astropy import units
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
+np.seterr(all='raise')
+
 # Initializating the conditions, state and RT coefficients
 cdt = conditions(pm)
 RT_coeficients = RTcoefs(cdt.nus)
@@ -44,7 +46,7 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
                 if ray.is_downward:
                     point_M = point(st.space_atom, st.space_rad,         cdt.zf+cdt.dz)
                 else:
-                    point_M = point(st.sun_atom,   st.sun_rad,           cdt.z0*0)
+                    point_M = point(st.sun_atom,   st.sun_rad,           cdt.z0-cdt.dz)
                 point_O = point(st.atomic[z],      st.radiation[z],      cdt.zz[z])
                 point_P = point(st.atomic[z+step], st.radiation[z+step], cdt.zz[z+step])
             elif i == (len(cdt.zz) - 1):

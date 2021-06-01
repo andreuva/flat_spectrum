@@ -34,7 +34,7 @@ class line():
         self.nu = self.energy/c.h.cgs
 
         self.A_lu = Alu
-        self.B_lu = Alu * (c.c.cgs**3/(2*c.h.cgs*self.nu**3)).value
+        self.B_lu = Alu * (c.c.cgs**2/(2*c.h.cgs*self.nu**3)).value
         self.B_ul = self.B_lu * (levels[line_levels[1]].g/levels[line_levels[0]].g)
 
         self.dJ = levels[line_levels[1]].J - levels[line_levels[0]].J
