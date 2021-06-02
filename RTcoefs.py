@@ -52,7 +52,7 @@ class RTcoefs:
 
                 for line in ese.atom.lines:
 
-                    if Ll not in line.levels:
+                    if not Ll == line.levels[0]:
                         continue
 
                     for up, u_lev in enumerate(ese.atom.dens_elmnt):
@@ -62,7 +62,7 @@ class RTcoefs:
                         Mup = u_lev[-1]
                         Ju = u_lev[-3]
 
-                        if Lu not in line.levels:
+                        if not Lu == line.levels[1]:
                             continue
 
                         q = int(Ml - Mu)
@@ -71,27 +71,29 @@ class RTcoefs:
                         sum_etaa += (3*(-1)**(Ml - Mlp)*(2*Jl + 1)*line.B_lu *
                                      self.jsim.j3(Ju, Jl, 1, -Mu, Ml, -q) *
                                      self.jsim.j3(Ju, Jl, 1, -Mu, Mlp, -qp) *
-                                     np.real(Tqq(q, qp, i, ray.inc.value, ray.az.value)*ese.rho[low] *
+                                     np.real(Tqq(q, qp, i, ray.inc.to('rad').value, ray.az.to('rad').value)*ese.rho[low] *
                                      cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
 
                         sum_rhoa += (3*(-1)**(Ml - Mlp)*(2*Jl + 1)*line.B_lu *
                                      self.jsim.j3(Ju, Jl, 1, -Mu, Ml, -q) *
                                      self.jsim.j3(Ju, Jl, 1, -Mu, Mlp, -qp) *
-                                     np.imag(Tqq(q, qp, i, ray.inc.value, ray.az.value)*ese.rho[low] *
+                                     np.imag(Tqq(q, qp, i, ray.inc.to('rad').value, ray.az.to('rad').value)*ese.rho[low] *
                                      cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
 
+                        # plt.plot(cdts.nus, cdts.voigt_profile(line, Mu, Ml, cdts.B.value))
+                        # plt.show()
                         qp = int(Ml - Mup)
 
                         sum_etas += (3*(2*Ju + 1)*line.B_ul *
                                      self.jsim.j3(Ju, Jl, 1, -Mu, Ml, -q) *
                                      self.jsim.j3(Ju, Jl, 1, -Mup, Ml, -qp) *
-                                     np.real(Tqq(q, qp, i, ray.inc.value, ray.az.value)*ese.rho[up] *
+                                     np.real(Tqq(q, qp, i, ray.inc.to('rad').value, ray.az.to('rad').value)*ese.rho[up] *
                                      cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
 
-                        sum_etas += (3*(2*Ju + 1)*line.B_ul *
+                        sum_rhos += (3*(2*Ju + 1)*line.B_ul *
                                      self.jsim.j3(Ju, Jl, 1, -Mu, Ml, -q) *
                                      self.jsim.j3(Ju, Jl, 1, -Mup, Ml, -qp) *
-                                     np.imag(Tqq(q, qp, i, ray.inc.value, ray.az.value)*ese.rho[up] *
+                                     np.imag(Tqq(q, qp, i, ray.inc.to('rad').value, ray.az.to('rad').value)*ese.rho[up] *
                                      cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
 
             eta_a[i] = cts.h.cgs*cdts.nus.cgs/(4*np.pi) * cdts.n_dens * sum_etaa

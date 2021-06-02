@@ -16,7 +16,9 @@ def BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, ray, c
     # Compute the psi_m and psi_o
     to_taylor_psi = tauMO < 1e-3
 
-    u_0 = 1 - np.exp(-tauMO)
+    exp_tauMO = np.exp(-np.where(tauMO < 700, tauMO, 700))
+
+    u_0 = 1 - exp_tauMO
     for i, disc in enumerate(to_taylor_psi):
         u_0[i][disc] = tauMO[i][disc] - tauMO[i][disc]**2/2 + tauMO[i][disc]**3/6
     u_1 = tauMO - u_0
@@ -24,13 +26,13 @@ def BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, ray, c
     psi_m = u_0 - u_1/tauMO
     psi_o = u_1/tauMO
 
-    psi_m = (1 - np.exp(-tauMO)*(1 + tauMO))/(tauMO)
-    psi_o = (np.exp(-tauMO) + tauMO - 1)/(tauMO)
+    psi_m = (1 - exp_tauMO*(1 + tauMO))/(tauMO)
+    psi_o = (exp_tauMO + tauMO - 1)/(tauMO)
 
     # Compute the wm, wo and wc for the BESSER and taylor aprox if needed
-    wm = (2 - np.exp(-tauMO)*(tauMO**2 + 2*tauMO + 2))/(tauMO**2)
-    wo = 1 - 2*(np.exp(-tauMO) + tauMO - 1)/(tauMO**2)
-    wc = 2*(tauMO - 2 + np.exp(-tauMO)*(tauMO + 2))/(tauMO**2)
+    wm = (2 - exp_tauMO*(tauMO**2 + 2*tauMO + 2))/(tauMO**2)
+    wo = 1 - 2*(exp_tauMO + tauMO - 1)/(tauMO**2)
+    wc = 2*(tauMO - 2 + exp_tauMO*(tauMO + 2))/(tauMO**2)
 
     to_taylor_m = tauMO < 0.14
     to_taylor_oc = tauMO < 0.18
@@ -73,7 +75,7 @@ def BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, ray, c
     k_1 = np.zeros_like(k_1_inv)
     for k in range(cdt.nus_N):
         k_1[:, :, k] = np.linalg.solve(k_1_inv[:, :, k], cdt.identity)
-    k_2 = (np.exp(-tauMO) - psi_m * kk_o)
+    k_2 = (exp_tauMO - psi_m * kk_o)
     # Multipling matrices of all wavelengths with at once (eq 7 and 8)
     k_2 = np.einsum("ijb, jkb -> ikb", k_1, k_2)
     kt = np.einsum("ijk, jk -> ik", k_2, point_M.radiation.stokes)
@@ -86,12 +88,15 @@ def LinSC(point_M, point_O, sf_m, sf_o, kk_m, kk_o, ray, cdt):
     # Obtain the optical thicknes between the points in this ray and compute
     k_m = np.moveaxis(np.diagonal(kk_m, 0, 0, 1), 0, -1).copy()
     k_o = np.moveaxis(np.diagonal(kk_o, 0, 0, 1), 0, -1).copy()
-    tauMO = - ((k_m + k_o)/2) * np.abs((point_O.z.value - point_M.z.value)/np.cos(ray.inc))
+    tauMO = ((k_m + k_o)/2) * np.abs((point_O.z.value - point_M.z.value)/np.cos(ray.inc))
 
     # Compute the psi_m and psi_o
     to_taylor_psi = tauMO < 1e-3
 
-    u_0 = 1 - np.exp(-tauMO)
+    exp_tauMO = np.exp(-np.where(tauMO < 700, tauMO, 700))
+    exp_tauMO = np.where(exp_tauMO > 1e-50, exp_tauMO, 0)
+
+    u_0 = 1 - exp_tauMO
     for i, disc in enumerate(to_taylor_psi):
         u_0[i][disc] = tauMO[i][disc] - tauMO[i][disc]**2/2 + tauMO[i][disc]**3/6
     u_1 = tauMO - u_0
@@ -99,7 +104,7 @@ def LinSC(point_M, point_O, sf_m, sf_o, kk_m, kk_o, ray, cdt):
     psi_m = u_0 - u_1/tauMO
     psi_o = u_1/tauMO
 
-    point_O.radiation.stokes = point_M.radiation.stokes*np.exp(-tauMO) + sf_m*psi_m + sf_o*psi_o
+    point_O.radiation.stokes = point_M.radiation.stokes*exp_tauMO + sf_m*psi_m + sf_o*psi_o
 
 
 @jit(nopython=True)

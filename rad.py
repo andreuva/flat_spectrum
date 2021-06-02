@@ -43,7 +43,9 @@ class RTE:
         for i in range(4):
             for qq in [-1, 0, 1]:
                 for qp in [-1, 0, 1]:
-                    self.jqq[qq][qp] = self.jqq[qq][qp] + ray.weight * Tqq(qq, qp, i, ray.inc.value, ray.az.value) * self.stokes[i] * u.sr
+                    self.jqq[qq][qp] = self.jqq[qq][qp] + \
+                                       ray.weight*Tqq(qq, qp, i, ray.inc.to('rad').value, ray.az.to('rad').value)\
+                                       * np.where(self.stokes[i].value > 1e-20, self.stokes[i], 0)*u.sr
 
     def resetRadiation(self):
         """ Called at the beginning of every Lambda iteration.
