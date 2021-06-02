@@ -95,6 +95,7 @@ class conditions:
         self.v_dop = parameters.v_dop
         self.a_voigt = parameters.a_voigt
         self.n_dens = parameters.n_dens
+        self.temp = parameters.temp
 
         # Initialice the array of the magnetic field vector
         self.B = np.zeros((self.z_N, 3)) * units.G
@@ -125,11 +126,11 @@ class state:
         # self.B = cdts.B
 
         # Initialicing the atomic state instanciating ESE class for each point
-        self.atomic = [ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, np.linalg.norm(vec)) for vec in cdts.B]
+        self.atomic = [ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, np.linalg.norm(vec), cdts.temp) for vec in cdts.B]
 
         # Define the IC for the downward and upward rays as an atomic class
-        self.space_atom = ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, np.zeros(3)*units.G)
-        self.sun_atom = ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, np.ones(3)*100*units.G)
+        self.space_atom = ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, np.zeros(3)*units.G, cdts.temp)
+        self.sun_atom = ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, np.ones(3)*100*units.G, cdts.temp)
 
         # Initialicing the radiation state instanciating RTE class for each point
         self.radiation = [RTE(cdts.nus, cdts.v_dop) for z in cdts.zz]

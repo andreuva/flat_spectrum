@@ -76,7 +76,7 @@ class ESE:
 
     jsim = jsymbols()
 
-    def __init__(self, v_dop, a_voigt, nus, nus_weights, B):
+    def __init__(self, v_dop, a_voigt, nus, nus_weights, B, T):
         """
             nus_weights: array of the frequency quadrature weights
             B: object of the magnetic field vector with xyz components (gauss)
@@ -89,12 +89,13 @@ class ESE:
 
         for i, lev in enumerate(self.atom.dens_elmnt):
 
+            Ll = lev[0]
             Ml = lev[-2]
             Mlp = lev[-1]
 
-            if Mlp == Ml:
-                self.rho[i] = 1
-                self.populations += 1
+            if Mlp == Ml:   # If it's a population compute the Boltzman LTE ratio
+                self.rho[i] = np.exp(-c.h.cgs*c.c.cgs*self.atom.levels[Ll].E/c.k_B.cgs/T)
+                self.populations += self.rho[i]
 
         self.rho = self.rho/self.populations
         self.N_rho = len(self.rho)
