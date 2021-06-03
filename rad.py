@@ -31,6 +31,10 @@ class RTE:
         self.stokes = self.stokes*0
         self.stokes[0] = bb(temperature=5772*u.K)(nus)
 
+    def check_I(self):
+        if np.any(self.stokes[0] < 0):
+            exit()
+
     def sumStokes(self, ray):
         """
             Called per every Lambda iteration, grid point, and ray direction.
