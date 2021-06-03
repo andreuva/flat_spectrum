@@ -164,9 +164,11 @@ class ESE:
             if Mlp == Ml:
                 self.ESE[0, i] = 1
 
-        self.rho = np.linalg.solve(self.ESE, indep)
+        rho_n = np.linalg.solve(self.ESE, indep)
+        change = np.abs(rho_n - self.rho)/np.abs((rho_n + 1e-40))
+        self.rho = rho_n.copy()
 
-        return 1
+        return np.max(change)
 
 
 # Eq 7.9 from LL04 for the SEE coeficients

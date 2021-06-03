@@ -120,7 +120,7 @@ class state:
     def __init__(self, cdts):
 
         # Initializing the maximum relative change
-        self.mrc = np.ones(cdts.z_N)
+        self.mrc = np.ones((cdts.max_iter, cdts.z_N))
 
         # Initialice the array of the magnetic field vector (defined in conditions)
         # self.B = cdts.B
@@ -143,11 +143,11 @@ class state:
         # Make the first point the IC with I=BB(T=5772 K) and Q=U=V=0
         self.radiation[0].make_IC(cdts.nus)
 
-    def update_mrc(self, cdts):
+    def update_mrc(self, cdts, itter):
         """Update the mrc of the current state by finding the
         maximum mrc over all points in z (computed in ESE method)"""
         for i, point in enumerate(self.atomic):
-            self.mrc[i] = point.solveESE(self.radiation[i], cdts)
+            self.mrc[itter][i] = point.solveESE(self.radiation[i], cdts)
 
     def new_itter(self):
         """Update the source funtions of all the points with the new radiation field
