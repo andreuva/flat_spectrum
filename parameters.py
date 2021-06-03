@@ -7,7 +7,7 @@ alpha = 0 * u.deg              # angle between the vertical of the slav and the 
 
 lamb0 = 1082 * u.nm             # Initial frequency (nm)
 lambf = 1085 * u.nm             # Final frequency (nm)
-wn = 32                        # Points in the frequency quadrature (grid)
+wn = 128                        # Points in the frequency quadrature (grid)
 
 ray_quad = "pl13n100.dat"       # file where the angular quadrature is saved
 
