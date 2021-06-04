@@ -33,7 +33,7 @@ class RTE:
 
     def check_I(self):
         if np.any(self.stokes[0] < 0):
-            exit()
+            print(f"Warning: Negative intensity {self.stokes[0][self.stokes[0] < 0]}")
 
     def sumStokes(self, ray):
         """

@@ -155,6 +155,7 @@ class ESE:
             nu_L = 1.3996e6*np.linalg.norm(cdt.B.value)     # Eq 3.10 LL04 Larmor freq
             self.ESE[i][i] = self.ESE[i][i] - 2j*np.pi*(M - Mp)*nu_L*self.atom.levels[Li].g
 
+        # REVISAR (EC CIERRE)
         indep = np.zeros(self.N_rho)
         indep[0] = 1
 
@@ -163,10 +164,26 @@ class ESE:
             Mlp = lev[-1]
             if Mlp == Ml:
                 self.ESE[0, i] = 1
+        # ----------------------
 
         rho_n = np.linalg.solve(self.ESE, indep)
         change = np.abs(rho_n - self.rho)/np.abs((rho_n + 1e-40))
         self.rho = rho_n.copy()
+
+        # Check for the populations to be > 0 and to be normaliced
+        suma = 0
+        for i, lev in enumerate(self.atom.dens_elmnt):
+            Ll = lev[0]
+            Ml = lev[-2]
+            Mlp = lev[-1]
+            JJ = lev[-3]
+            if Mlp == Ml:
+                suma += self.rho[i]
+                if self.rho[i] < 0:
+                    print(f"Warning: Negative population of the level: L={Ll},J={JJ}, M={Ml},M'={Mlp}")
+
+        if not 0.98 < suma < 1.02:
+            print("Warning: Not normaliced populations in this itteration")
 
         return np.max(change)
 

@@ -102,6 +102,10 @@ class RTcoefs:
             rho_s[i] = cts.h.cgs*cdts.nus.cgs/(4*np.pi) * cdts.n_dens * sum_rhos
 
         eta = [et_a - et_s for et_a, et_s in zip(eta_a, eta_s)]
+
+        if np.any(eta[0] < 0):
+            print("Warning: eta_I < 0")
+
         rho = [ro_a - ro_s for ro_a, ro_s in zip(rho_a, rho_s)]
         KK = np.array([[eta[0],  eta[1],  eta[2],  eta[3]],
                        [eta[1],  eta[0],  rho[3], -rho[2]],
