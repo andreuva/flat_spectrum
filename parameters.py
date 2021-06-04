@@ -2,7 +2,7 @@ from astropy import units as u
 
 z0 = 2000 * u.km                 # height of the slav over the surfave
 zf = 2100 * u.km                # geometrical height of the slav
-zn = 16                         # Points in z in the slav
+zn = 32                         # Points in z in the slav
 alpha = 0 * u.deg              # angle between the vertical of the slav and the radial line
 
 lamb0 = 1082 * u.nm             # Initial frequency (nm)
