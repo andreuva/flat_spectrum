@@ -70,7 +70,7 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
                 LinSC(point_M, point_O, sf_m, sf_o, kk_m, kk_o, ray, cdt)
 
             # Adding the ray contribution to the Jqq's
-            point_O.radiation.check_I()
+            # point_O.radiation.check_I()
             point_O.radiation.sumStokes(ray)
 
     # Update the MRC and check wether we reached convergence

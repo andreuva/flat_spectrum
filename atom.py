@@ -170,6 +170,13 @@ class ESE:
         change = np.abs(rho_n - self.rho)/np.abs((rho_n + 1e-40))
         self.rho = rho_n.copy()
 
+        # Printo the ESE matrix
+        for i in range(len(self.ESE)):
+            print(f'Row {i}', end='')
+            for j in range(len(self.ESE)):
+                print(f'{self.ESE[i][j]:.2E}', end='')
+            print('')
+
         # Check for the populations to be > 0 and to be normaliced
         suma = 0
         for i, lev in enumerate(self.atom.dens_elmnt):
@@ -181,9 +188,13 @@ class ESE:
                 suma += self.rho[i]
                 if self.rho[i] < 0:
                     print(f"Warning: Negative population of the level: L={Ll},J={JJ}, M={Ml},M'={Mlp}")
+                    input("Press Enter to continue...")
 
         if not 0.98 < suma < 1.02:
             print("Warning: Not normaliced populations in this itteration")
+            input("Press Enter to continue...")
+
+        print('----------------------')
 
         return np.max(change)
 
