@@ -37,7 +37,10 @@ class ray:
 
         if theta_crit < self.inc_glob:
             theta_clv = 180*units.deg - np.arcsin((constants.R_sun.cgs + z0)/constants.R_sun.cgs * np.sin(180*units.deg-self.inc_glob))
-            self.clv = 1 - 0.64 + 0.2 + 0.64*np.cos(theta_clv) - 0.2*np.cos(theta_clv)**2
+            self.clv = 1 - 0.64 + 0.2 + 0.64*np.abs(np.cos(theta_clv)) - 0.2*np.cos(theta_clv)**2
+
+        if self.clv < 0:
+            print(f"WARNING: CLV < 0 in ray {inclination}-{azimut}: {self.clv}")
 
         # Check if the ray is upwards or not in the global RF
         if self.inc_glob > 90 * units.deg:
@@ -139,9 +142,6 @@ class state:
         self.space_rad = RTE(cdts.nus, cdts.v_dop)
         self.sun_rad = RTE(cdts.nus, cdts.v_dop)
         self.sun_rad.make_IC(cdts.nus)
-
-        # Make the first point the IC with I=BB(T=5772 K) and Q=U=V=0
-        self.radiation[0].make_IC(cdts.nus)
 
     def update_mrc(self, cdts, itter):
         """Update the mrc of the current state by finding the

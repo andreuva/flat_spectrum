@@ -94,7 +94,8 @@ class ESE:
             Mlp = lev[-1]
 
             if Mlp == Ml:   # If it's a population compute the Boltzman LTE ratio
-                self.rho[i] = np.exp(-c.h.cgs*c.c.cgs*self.atom.levels[Ll].E/c.k_B.cgs/T)
+                self.rho[i] = np.exp(-c.h.cgs*c.c.cgs*self.atom.levels[Ll].E/c.k_B.cgs/T) / \
+                              len(self.atom.levels[Ll].M)
                 self.populations += self.rho[i]
 
         self.rho = self.rho/self.populations
@@ -166,16 +167,20 @@ class ESE:
                 self.ESE[0, i] = 1
         # ----------------------
 
-        rho_n = np.linalg.solve(self.ESE, indep)
+        rho_n = np.linalg.solve(np.real(self.ESE), indep)
         change = np.abs(rho_n - self.rho)/np.abs((rho_n + 1e-40))
         self.rho = rho_n.copy()
 
         # Printo the ESE matrix
-        for i in range(len(self.ESE)):
-            print(f'Row {i}', end='')
-            for j in range(len(self.ESE)):
-                print(f'{self.ESE[i][j]:.2E}', end='')
-            print('')
+        solve = np.real(self.ESE)
+        print('')
+        for i in range(len(solve)):
+            print(f'Row {i}\t', end='')
+            for j in range(len(solve)):
+                if solve[i][j] >= 0:
+                    print(' ', end='')
+                print(f'{solve[i][j]:.2E} ', end='')
+            print(f'= {indep[i]}')
 
         # Check for the populations to be > 0 and to be normaliced
         suma = 0
