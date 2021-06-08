@@ -21,12 +21,6 @@ mrc = atom.solveESE(rad, cdts)
 
 solve = np.real(atom.ESE)
 
-sum_quad = 0
-for j, ray in enumerate(cdts.rays):
-    sum_quad += ray.weight*Tqq(-1, -1, 0, ray.inc.to('rad').value, ray.az.to('rad').value)
-
-print(sum_quad)
-
 # print('')
 # for i in range(len(solve)):
 #     print(f'Row {i}\t', end='')

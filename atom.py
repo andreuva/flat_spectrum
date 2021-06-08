@@ -140,13 +140,13 @@ class ESE:
                     elif Lj == Li:
                         # calculate the RA and RE
                         if M == N:
-                            self.ESE[i][j] = self.ESE[i][j] + (RA(self, Li, JJ, Mp, Np, rad) +
+                            self.ESE[i][j] = self.ESE[i][j] - (RA(self, Li, JJ, Mp, Np, rad) +
                                                                RE(self, Li, JJ, Np, Mp) +
                                                                RS(self, Li, JJ, Np, Mp, rad))
-                        elif Mp == Np:
-                            self.ESE[i][j] = self.ESE[i][j] + (RA(self, Li, JJ, Np, M, rad) +
-                                                               RE(self, Li, JJ, M, Np) +
-                                                               RS(self, Li, JJ, M, Np, rad))
+                        if Mp == Np:
+                            self.ESE[i][j] = self.ESE[i][j] - (RA(self, Li, JJ, N, M, rad) +
+                                                               RE(self, Li, JJ, M, N) +
+                                                               RS(self, Li, JJ, M, N, rad))
                         else:
                             continue
                     else:
@@ -156,7 +156,6 @@ class ESE:
             nu_L = 1.3996e6*np.linalg.norm(cdt.B.value)     # Eq 3.10 LL04 Larmor freq
             self.ESE[i][i] = self.ESE[i][i] - 2j*np.pi*(M - Mp)*nu_L*self.atom.levels[Li].g
 
-        # REVISAR (EC CIERRE)
         indep = np.zeros(self.N_rho)
         indep[0] = 1
 
@@ -165,7 +164,6 @@ class ESE:
             Mlp = lev[-1]
             if Mlp == Ml:
                 self.ESE[0, i] = 1
-        # ----------------------
 
         rho_n = np.linalg.solve(np.real(self.ESE), indep)
         change = np.abs(rho_n - self.rho)/np.abs((rho_n + 1e-40))
@@ -209,17 +207,17 @@ def TA(ESE, J, M, Mp, Jl, Ml, Mlp, rad, Blu, nu):
     sum_qq = 0
     for q in [-1, 0, 1]:
         for qp in [-1, 0, 1]:
-            sum_qq = 3*(-1)**(Ml - Mlp)*(ESE.jsim.j3(J, Jl, 1, -M,  Ml, -q) *
-                                         ESE.jsim.j3(J, Jl, 1, -Mp, Mlp, -qp) *
-                                         rad.Jqq_nu(q, qp, nu))
+            sum_qq += 3*(-1)**(Ml - Mlp)*(ESE.jsim.j3(J, Jl, 1, -M,  Ml, -q) *
+                                          ESE.jsim.j3(J, Jl, 1, -Mp, Mlp, -qp) *
+                                          rad.Jqq_nu(q, qp, nu))
     return (2*Jl + 1)*Blu*sum_qq
 
 
 def TE(ESE, J, M, Mp, Ju, Mu, Mup, Aul):
     sum_q = 0
     for q in [-1, 0, 1]:
-        sum_q = (-1)**(Mu - Mup)*(ESE.jsim.j3(Ju, J, 1, -Mup, Mp, -q) *
-                                  ESE.jsim.j3(Ju, J, 1, -Mu,  M, -q))
+        sum_q += (-1)**(Mu - Mup)*(ESE.jsim.j3(Ju, J, 1, -Mup, Mp, -q) *
+                                   ESE.jsim.j3(Ju, J, 1, -Mu,  M, -q))
     return (2*Ju + 1)*Aul*sum_q
 
 
@@ -271,7 +269,8 @@ def RE(ESE, Li, J, M, Mp):
                 for line in ESE.atom.lines:
                     if Li not in line.levels or Lk not in line.levels:
                         continue
-                    sum_l += line.A_lu
+                    else:
+                        sum_l += line.A_lu
 
     return 0.5*sum_l
 
