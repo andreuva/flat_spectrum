@@ -114,7 +114,9 @@ class conditions:
         vs = self.nus.value
         v0 = line.nu.value + (norm(B)/constants.h.cgs.value *
                               (line.gu*Mu - line.gl*Ml))
-        return voigt(vs-v0, self.a_voigt)
+        profile = voigt(vs-v0, self.a_voigt)
+        normalization = np.sum(profile)
+        return profile/normalization
 
 
 class state:

@@ -171,14 +171,14 @@ class ESE:
 
         # Printo the ESE matrix
         solve = np.real(self.ESE)
-        print('')
-        for i in range(len(solve)):
-            print(f'Row {i}\t', end='')
-            for j in range(len(solve)):
-                if solve[i][j] >= 0:
-                    print(' ', end='')
-                print(f'{solve[i][j]:.2E} ', end='')
-            print(f'= {indep[i]}')
+        # print('')
+        # for i in range(len(solve)):
+        #     print(f'Row {i}\t', end='')
+        #     for j in range(len(solve)):
+        #         if solve[i][j] >= 0:
+        #             print(' ', end='')
+        #         print(f'{solve[i][j]:.2E} ', end='')
+        #     print(f'= {indep[i]}')
 
         # Check for the populations to be > 0 and to be normaliced
         suma = 0
@@ -197,7 +197,7 @@ class ESE:
             print("Warning: Not normaliced populations in this itteration")
             input("Press Enter to continue...")
 
-        print('----------------------')
+        # print('----------------------')
 
         return np.max(change)
 

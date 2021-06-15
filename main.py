@@ -10,7 +10,7 @@ from astropy import units
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-np.seterr(all='raise')
+# np.seterr(all='raise')
 
 # Initializating the conditions, state and RT coefficients
 cdt = conditions(pm)
