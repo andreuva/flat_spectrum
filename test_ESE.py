@@ -12,7 +12,7 @@ cdts = conditions(pm)
 
 atom = ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, 0, cdts.temp)
 rad = RTE(cdts.nus, cdts.v_dop)
-rad.make_IC(cdts.nus)
+rad.make_IC(cdts.nus, cdts.temp)
 
 for j, ray in enumerate(cdts.rays):
     rad.sumStokes(ray)
