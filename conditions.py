@@ -115,7 +115,7 @@ class conditions:
         v0 = line.nu.value + (norm(B)/constants.h.cgs.value *
                               (line.gu*Mu - line.gl*Ml))
         profile = voigt(vs-v0, self.a_voigt)
-        normalization = np.sum(profile)
+        normalization = np.sum(profile*self.nus_weights)
         return profile/normalization
 
 
@@ -143,7 +143,7 @@ class state:
         # Define the IC for the downward and upward rays as a radiation class
         self.space_rad = RTE(cdts.nus, cdts.v_dop)
         self.sun_rad = RTE(cdts.nus, cdts.v_dop)
-        self.sun_rad.make_IC(cdts.nus)
+        self.sun_rad.make_IC(cdts.nus, cdts.temp)
 
     def update_mrc(self, cdts, itter):
         """Update the mrc of the current state by finding the

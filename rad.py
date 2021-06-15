@@ -26,10 +26,10 @@ class RTE:
             for qp in [-1, 0, 1]:
                 self.jqq[qq][qp] = np.zeros(len(nus))*Iu * u.sr
 
-    def make_IC(self, nus):
+    def make_IC(self, nus, T):
         # If a point is defined as IC put Q=U=V=0 and I to BB
         self.stokes = self.stokes*0
-        self.stokes[0] = bb(temperature=5772*u.K)(nus)
+        self.stokes[0] = bb(temperature=T)(nus)
 
     def check_I(self):
         if np.any(self.stokes[0] < 0):
