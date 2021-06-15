@@ -133,7 +133,8 @@ class ESE:
 
                     if Lj > Li:
                         # calculate the TE(q -> p) and add it to self.ESE[i][j]
-                        self.ESE[i][j] = self.ESE[i][j] + TE(self, JJ, M, Mp, Jp, N, Np, line.A_lu)
+                        self.ESE[i][j] = self.ESE[i][j] + TE(self, JJ, M, Mp, Jp, N, Np, line.A_lu)\
+                                                        + TS(self, JJ, M, Mp, Jp, N, Np, rad, line.B_ul, line.nu)
                     elif Lj < Li:
                         # calculate the TA(q -> p) and add it to self.ESE[i][j]
                         self.ESE[i][j] = self.ESE[i][j] + TA(self, JJ, M, Mp, Jp, N, Np, rad, line.B_lu, line.nu)
@@ -204,30 +205,32 @@ class ESE:
 
 # Eq 7.9 from LL04 for the SEE coeficients
 def TA(ESE, J, M, Mp, Jl, Ml, Mlp, rad, Blu, nu):
-    sum_qq = 0
-    for q in [-1, 0, 1]:
-        for qp in [-1, 0, 1]:
-            sum_qq += 3*(-1)**(Ml - Mlp)*(ESE.jsim.j3(J, Jl, 1, -M,  Ml, -q) *
-                                          ESE.jsim.j3(J, Jl, 1, -Mp, Mlp, -qp) *
-                                          rad.Jqq_nu(q, qp, nu))
+    # Applied selection rules to remove sumation
+    q = int(Ml - M)
+    qp = int(Mlp - Mp)
+
+    sum_qq = 3*(-1)**(Ml - Mlp)*(ESE.jsim.j3(J, Jl, 1, -M,  Ml, -q) *
+                                 ESE.jsim.j3(J, Jl, 1, -Mp, Mlp, -qp) *
+                                 rad.Jqq_nu(q, qp, nu))
     return (2*Jl + 1)*Blu*sum_qq
 
 
 def TE(ESE, J, M, Mp, Ju, Mu, Mup, Aul):
-    sum_q = 0
-    for q in [-1, 0, 1]:
-        sum_q += (-1)**(Mu - Mup)*(ESE.jsim.j3(Ju, J, 1, -Mup, Mp, -q) *
-                                   ESE.jsim.j3(Ju, J, 1, -Mu,  M, -q))
+    # Applied selection rules to remove sumation
+    q = int(Mp - Mup)
+    sum_q = (-1)**(Mu - Mup)*(ESE.jsim.j3(Ju, J, 1, -Mup, Mp, -q) *
+                              ESE.jsim.j3(Ju, J, 1, -Mu,  M, -q))
     return (2*Ju + 1)*Aul*sum_q
 
 
 def TS(ESE, J, M, Mp, Ju, Mu, Mup, rad, Bul, nu):
-    sum_qq = 0
-    for q in [-1, 0, 1]:
-        for qp in [-1, 0, 1]:
-            sum_qq += 3*(-1)**(Mp - M)*(ESE.jsim.j3(Ju, J, 1, -Mup, Mp, -q) *
-                                        ESE.jsim.j3(Ju, J, 1, -Mu,  M, -qp) *
-                                        rad.Jqq_nu(q, qp, nu))
+    # Applied selection rules to remove sumation
+    q = int(Mp - Mup)
+    qp = int(M - Mu)
+
+    sum_qq = 3*(-1)**(Mp - M)*(ESE.jsim.j3(Ju, J, 1, -Mup, Mp, -q) *
+                               ESE.jsim.j3(Ju, J, 1, -Mu,  M, -qp) *
+                               rad.Jqq_nu(q, qp, nu))
     return (2*Ju + 1)*Bul*sum_qq
 
 
