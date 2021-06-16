@@ -59,6 +59,7 @@ class RTE:
             for qp in [-1, 0, 1]:
                 self.jqq[qq][qp] = self.jqq[qq][qp] * 0
 
-    def Jqq_nu(self, q, qp, nu):
+    def Jqq_nu(self, cdt, line, q, qp, Mu, Ml, B, nus_weigths):
         jqqp = self.jqq[q][qp]
-        return np.interp(nu, self.nus, jqqp).value
+        profile = cdt.voigt_profile(line, Mu, Ml, B)
+        return np.sum(jqqp*profile*nus_weigths).value

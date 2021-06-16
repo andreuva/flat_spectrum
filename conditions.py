@@ -98,6 +98,7 @@ class conditions:
         self.v_dop = parameters.v_dop
         self.a_voigt = parameters.a_voigt
         self.n_dens = parameters.n_dens
+        self.mass = 4.002602 * 1.6605402e-24 * units.g
         self.temp = parameters.temp
 
         # Initialice the array of the magnetic field vector
@@ -114,9 +115,18 @@ class conditions:
         vs = self.nus.value
         v0 = line.nu.value + (norm(B)/constants.h.cgs.value *
                               (line.gu*Mu - line.gl*Ml))
-        profile = voigt(vs-v0, self.a_voigt)
-        normalization = np.sum(profile*self.nus_weights)
-        return profile/normalization
+        vt = np.sqrt(constants.k_B.cgs*self.temp/self.mass).decompose().cgs
+        delt_v = line.nu*vt/constants.c.cgs
+        profile = voigt((vs-v0)/delt_v, self.a_voigt)
+
+        profile.imag = profile.imag / (np.sqrt(np.pi)*delt_v)
+        profile.real = profile.real / (np.sqrt(np.pi)*delt_v)
+
+        normalization = np.sum(profile.real*self.nus_weights)
+
+        profile.real = profile.real/normalization
+
+        return profile
 
 
 class state:
