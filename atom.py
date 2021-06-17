@@ -136,10 +136,10 @@ class ESE:
                     if Lj > Li:
                         # calculate the TE(q -> p) and add it to self.ESE[i][j]
                         self.ESE[i][j] = self.ESE[i][j] + TE(self, JJ, M, Mp, Jp, N, Np, line.A_lu)\
-                                                        + TS(self, JJ, M, Mp, Jp, N, Np, rad, line.B_ul, cdt)
+                                                        + TS(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt)
                     elif Lj < Li:
                         # calculate the TA(q -> p) and add it to self.ESE[i][j]
-                        self.ESE[i][j] = self.ESE[i][j] + TA(self, JJ, M, Mp, Jp, N, Np, rad, line.B_lu, cdt)
+                        self.ESE[i][j] = self.ESE[i][j] + TA(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt)
                     elif Lj == Li:
                         # calculate the RA and RE
                         if M == N:
@@ -206,15 +206,15 @@ class ESE:
 
 
 # Eq 7.9 from LL04 for the SEE coeficients
-def TA(ESE, J, M, Mp, Jl, Ml, Mlp, rad, Blu, cdt):
+def TA(ESE, J, M, Mp, Jl, Ml, Mlp, rad, line, cdt):
     # Applied selection rules to remove sumation
     q = int(Ml - M)
     qp = int(Mlp - Mp)
 
     sum_qq = 3*(-1)**(Ml - Mlp)*(ESE.jsim.j3(J, Jl, 1, -M,  Ml, -q) *
                                  ESE.jsim.j3(J, Jl, 1, -Mp, Mlp, -qp) *
-                                 rad.Jqq_nu(cdt, line, q, qp, M, Ml, ESE.B, ESE.nus_weigths))
-    return (2*Jl + 1)*Blu*sum_qq
+                                 rad.Jqq_nu(cdt, line, q, qp, M, Ml, ESE.B, ESE.nus_weights))
+    return (2*Jl + 1)*line.B_lu*sum_qq
 
 
 def TE(ESE, J, M, Mp, Ju, Mu, Mup, Aul):
@@ -225,15 +225,15 @@ def TE(ESE, J, M, Mp, Ju, Mu, Mup, Aul):
     return (2*Ju + 1)*Aul*sum_q
 
 
-def TS(ESE, J, M, Mp, Ju, Mu, Mup, rad, Bul, cdt):
+def TS(ESE, J, M, Mp, Ju, Mu, Mup, rad, line, cdt):
     # Applied selection rules to remove sumation
     q = int(Mp - Mup)
     qp = int(M - Mu)
 
     sum_qq = 3*(-1)**(Mp - M)*(ESE.jsim.j3(Ju, J, 1, -Mup, Mp, -q) *
                                ESE.jsim.j3(Ju, J, 1, -Mu,  M, -qp) *
-                               rad.Jqq_nu(cdt, line, q, qp, Mu, M, ESE.B, ESE.nus_weigths))
-    return (2*Ju + 1)*Bul*sum_qq
+                               rad.Jqq_nu(cdt, line, q, qp, Mu, M, ESE.B, ESE.nus_weights))
+    return (2*Ju + 1)*line.B_ul*sum_qq
 
 
 def RA(ESE, Li, J, M, Mp, rad, cdt):
@@ -256,7 +256,7 @@ def RA(ESE, Li, J, M, Mp, rad, cdt):
                         for Mu in Mus:
                             sum_qqMu += 3*(-1)**(M - Mp)*(ESE.jsim.j3(Jk, J, 1, -Mu, M, -q) *
                                                           ESE.jsim.j3(Jk, J, 1, -Mu, Mp, -qp) *
-                                                          rad.Jqq_nu(cdt, line, q, qp, Mu, M, ESE.B, ESE.nus_weigths))
+                                                          rad.Jqq_nu(cdt, line, q, qp, Mu, M, ESE.B, ESE.nus_weights))
                 sum_u += (2*J+1)*line.B_lu*sum_qqMu
 
     return 0.5*sum_u
@@ -300,7 +300,7 @@ def RS(ESE, Li, J, M, Mp, rad, cdt):
                         for Ml in Mls:
                             sum_qqMl += 3*(ESE.jsim.j3(J, Jk, 1, -M, Ml, -q) *
                                            ESE.jsim.j3(J, Jk, 1, -Mp, Ml, -qp) *
-                                           rad.Jqq_nu(cdt, line, q, qp, M, Ml, ESE.B, ESE.nus_weigths))
+                                           rad.Jqq_nu(cdt, line, q, qp, M, Ml, ESE.B, ESE.nus_weights))
 
                 sum_l += (2*J+1)*line.B_ul*sum_qqMl
 

@@ -123,9 +123,21 @@ class conditions:
         profile.real = profile.real / (np.sqrt(np.pi)*delt_v)
 
         normalization = np.sum(profile.real*self.nus_weights)
-
         profile.real = profile.real/normalization
+        return profile
 
+    def voigt_profile_flat(self, line):
+        vs = self.nus.value
+        v0 = line.nu.value
+        vt = np.sqrt(constants.k_B.cgs*self.temp/self.mass).decompose().cgs
+        delt_v = line.nu*vt/constants.c.cgs
+
+        profile = voigt((vs-v0)/delt_v, self.a_voigt)
+        profile.imag = profile.imag / (np.sqrt(np.pi)*delt_v)
+        profile.real = profile.real / (np.sqrt(np.pi)*delt_v)
+
+        normalization = np.sum(profile.real*self.nus_weights)
+        profile.real = profile.real/normalization
         return profile
 
 
