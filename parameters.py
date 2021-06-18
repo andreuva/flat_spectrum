@@ -2,12 +2,12 @@ from astropy import units as u
 
 z0 = 2000 * u.km                 # height of the slav over the surfave
 zf = 2100 * u.km                # geometrical height of the slav
-zn = 32                         # Points in z in the slav
+zn = 25                         # Points in z in the slav
 alpha = 0 * u.deg              # angle between the vertical of the slav and the radial line
 
-lamb0 = 1050 * u.nm             # Initial frequency (nm)
-lambf = 1120 * u.nm             # Final frequency (nm)
-wn = 128                        # Points in the frequency quadrature (grid)
+lamb0 = 1081.3 * u.nm             # Initial frequency (nm)
+lambf = 1085.3 * u.nm             # Final frequency (nm)
+wn = 160                        # Points in the frequency quadrature (grid)
 
 ray_quad = "pl13n100.dat"       # file where the angular quadrature is saved
 
@@ -18,5 +18,5 @@ temp = 1e4 * u.K                 # Temperature of the slab
 
 I_units = u.erg / (u.cm**2 * u.Hz * u.s * u.sr)
 
-max_iter = 3                   # Maximum itterations for the forward method
+max_iter = 1                   # Maximum itterations for the forward method
 tolerance = 1e-10               # tolerated relative change in populations
