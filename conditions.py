@@ -111,35 +111,19 @@ class conditions:
         self.Id_tens = np.repeat(np.identity(4)[:, :, np.newaxis], self.nus_N, axis=2)
         self.identity = np.identity(4)
 
-    def voigt_profile(self, line, Mu, Ml, B):
+    def voigt_profile(self, line, Mu=0, Ml=0, B=0):
         vs = self.nus.value
         v0 = line.nu.value + (norm(B)/constants.h.cgs.value *
                               (line.gu*Mu - line.gl*Ml))
-        vt = np.sqrt(constants.k_B.cgs*self.temp/self.mass).decompose().cgs
+        vt = np.sqrt(2*constants.k_B.cgs*self.temp/self.mass).decompose().cgs
         delt_v = line.nu*vt/constants.c.cgs
-        profile = voigt((vs-v0)/delt_v, self.a_voigt)
 
-        profile.imag = profile.imag / (np.sqrt(np.pi)*delt_v)
-        profile.real = profile.real / (np.sqrt(np.pi)*delt_v)
+        profile = voigt((vs-v0)/delt_v, self.a_voigt)
+        profile = profile / (np.sqrt(np.pi))
 
         normalization = np.sum(profile.real*self.nus_weights)
         profile.real = profile.real/normalization
         return profile
-
-    def voigt_profile_flat(self, line):
-        vs = self.nus.value
-        v0 = line.nu.value
-        vt = np.sqrt(constants.k_B.cgs*self.temp/self.mass).decompose().cgs
-        delt_v = line.nu*vt/constants.c.cgs
-
-        profile = voigt((vs-v0)/delt_v, self.a_voigt)
-        profile.imag = profile.imag / (np.sqrt(np.pi)*delt_v)
-        profile.real = profile.real / (np.sqrt(np.pi)*delt_v)
-
-        normalization = np.sum(profile.real*self.nus_weights)
-        profile.real = profile.real/normalization
-        return profile
-
 
 class state:
     """state class containing the current state of the solution, this include the

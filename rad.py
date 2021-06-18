@@ -62,5 +62,5 @@ class RTE:
     def Jqq_nu(self, cdt, line, q, qp, Mu, Ml, B, nus_weigths):
         jqqp = self.jqq[q][qp]
         # profile = cdt.voigt_profile(line, Mu, Ml, B)
-        profile = cdt.voigt_profile_flat(line)
+        profile = cdt.voigt_profile(line)
         return np.sum(jqqp*profile*nus_weigths).value
