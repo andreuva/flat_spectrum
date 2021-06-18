@@ -125,6 +125,7 @@ class conditions:
         profile.real = profile.real/normalization
         return profile
 
+
 class state:
     """state class containing the current state of the solution, this include the
     radiation and atomic state of each point as well as the MRC, mag field, and optical depth"""
@@ -162,21 +163,3 @@ class state:
         computed in the previous itteration and reseting the internal state of the rad class"""
         for rad, at in zip(self.radiation, self.atomic):
             rad.resetRadiation()
-
-
-def plot_quadrature(cdt):
-    plt.figure()
-    plt.subplot(projection="aitoff")
-
-    inclinations_loc = np.array([ray.inc.value for ray in cdt.rays])
-    azimuts_loc = np.array([ray.az.value for ray in cdt.rays])
-
-    inclinations_glob = np.array([ray.inc_glob.value for ray in cdt.rays])
-    azimuts_glob = np.array([ray.az_glob.value for ray in cdt.rays])
-
-    plt.plot(inclinations_loc, azimuts_loc, 'o', label='local RF')
-    plt.plot(inclinations_glob, azimuts_glob, 'o', alpha=0.5, label='global RF')
-    plt.grid(True)
-    plt.title('Quadrature in the two reference frames')
-    plt.legend()
-    plt.show()

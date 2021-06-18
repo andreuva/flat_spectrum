@@ -1,8 +1,9 @@
 # Import classes and parameters
 from RTcoefs import RTcoefs
-from conditions import conditions, state, point, plot_quadrature
+from conditions import conditions, state, point
 import parameters as pm
 from solver import BESSER, LinSC
+from plot_utils import plot_quadrature, plot_z_profile
 
 # Import needed libraries
 import numpy as np
@@ -23,6 +24,8 @@ st = state(cdt)
 for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
     # Reset the internal state for a new itteration
     st.new_itter()
+
+    plot_z_profile(cdt, st)
 
     # go through all the points (besides 0 and -1 for being IC)
     for i in tqdm(range(len(cdt.zz)), desc=f'solve RT in the {itteration} itteration', leave=False):
@@ -75,5 +78,8 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
 
     # Update the MRC and check wether we reached convergence
     st.update_mrc(cdt, itteration)
+
+    plot_z_profile(cdt, st)
+
     if (st.mrc.max() < pm.tolerance):
         break
