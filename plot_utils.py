@@ -1,8 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 
-def plot_quadrature(cdt):
+def plot_quadrature(cdt, mode='save', directory='plots'):
     plt.figure()
     plt.subplot(projection="aitoff")
 
@@ -17,13 +18,47 @@ def plot_quadrature(cdt):
     plt.grid(True)
     plt.title('Quadrature in the two reference frames')
     plt.legend()
-    plt.show()
+    if mode == 'save':
+        dir = './' + directory + '/'
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+
+        file = 'quadrature.png'
+        ext = '.png'
+        filename = dir+file+ext
+
+        i = 0
+        while os.path.exists(filename):
+            filename = dir + file + '_' + str(i) + ext
+            i += 1
+
+        plt.savefig(filename)
+        plt.close()
+    else:
+        plt.show()
 
 
-def plot_z_profile(cdt, st):
+def plot_z_profile(cdt, st, mode='save', directory='./plots'):
     profile = np.array([st.radiation[i].stokes[0][5].value for i in range(cdt.z_N)])
     plt.plot(cdt.zz, profile)
     plt.xlabel('vertical height (Km)')
     plt.ylabel('Intensity (CGS)')
     plt.title('Vertical profile of radiation')
-    plt.show()
+    if mode == 'save':
+        dir = './' + directory + '/'
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+
+        file = 'I_z_profile'
+        ext = '.png'
+        filename = dir+file+ext
+
+        i = 0
+        while os.path.exists(filename):
+            filename = dir + file + '_' + str(i) + ext
+            i += 1
+
+        plt.savefig(filename)
+        plt.close()
+    else:
+        plt.show()
