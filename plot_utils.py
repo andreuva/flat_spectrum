@@ -22,7 +22,7 @@ def plot_quadrature(cdt):
 
 def plot_z_profile(cdt, st):
     profile = np.array([st.radiation[i].stokes[0][5].value for i in range(cdt.z_N)])
-    plt.plot(cdt.z_N, profile)
+    plt.plot(cdt.zz, profile)
     plt.xlabel('vertical height (Km)')
     plt.ylabel('Intensity (CGS)')
     plt.title('Vertical profile of radiation')
