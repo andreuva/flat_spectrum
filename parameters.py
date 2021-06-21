@@ -1,6 +1,6 @@
 from astropy import units as u
 
-z0 = 2000 * u.km                 # height of the slav over the surfave
+z0 = 100 * u.km                 # height of the slav over the surfave
 zf = 2100 * u.km                # geometrical height of the slav
 zn = 25                         # Points in z in the slav
 alpha = 0 * u.deg              # angle between the vertical of the slav and the radial line
@@ -9,7 +9,7 @@ lamb0 = 1081.3 * u.nm             # Initial frequency (nm)
 lambf = 1085.3 * u.nm             # Final frequency (nm)
 wn = 160                        # Points in the frequency quadrature (grid)
 
-ray_quad = "pl13n100.dat"       # file where the angular quadrature is saved
+ray_quad = "gaussian_quadrature.dat"       # file where the angular quadrature is saved
 
 v_dop = 5.0 * u.km / u.s         # Dopler velocity
 a_voigt = 1                   # voigt width of the line profile
