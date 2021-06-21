@@ -3,7 +3,7 @@ from RTcoefs import RTcoefs
 from conditions import conditions, state, point
 import parameters as pm
 from solver import BESSER, LinSC
-from plot_utils import plot_quadrature, plot_z_profile
+from plot_utils import plot_quadrature, plot_z_profile, plot_stokes_im
 
 # Import needed libraries
 import numpy as np
@@ -83,6 +83,8 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
                 interesting_ray[i, 1] = st.radiation[i].stokes[0][50].value
 
             point_O.radiation.sumStokes(ray)
+
+        plot_stokes_im(cdt, st)
 
     # Update the MRC and check wether we reached convergence
     st.update_mrc(cdt, itteration)

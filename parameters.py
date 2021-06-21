@@ -18,5 +18,5 @@ temp = 1e4 * u.K                 # Temperature of the slab
 
 I_units = u.erg / (u.cm**2 * u.Hz * u.s * u.sr)
 
-max_iter = 1                   # Maximum itterations for the forward method
+max_iter = 2                   # Maximum itterations for the forward method
 tolerance = 1e-10               # tolerated relative change in populations
