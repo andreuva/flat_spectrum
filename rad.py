@@ -52,6 +52,10 @@ class RTE:
                                        ray.weight*Tqq(qq, qp, i, ray.inc.to('rad').value, ray.az.to('rad').value)\
                                        * self.stokes[i] * u.sr
 
+    def resetStokes(self):
+        for i in range(4):
+            self.stokes[i] = 0
+
     def resetRadiation(self):
         """ Called at the beginning of every Lambda iteration.
             It initializes the internal state."""

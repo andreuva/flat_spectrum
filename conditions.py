@@ -157,6 +157,7 @@ class state:
         maximum mrc over all points in z (computed in ESE method)"""
         for i, point in enumerate(self.atomic):
             self.mrc[itter][i] = point.solveESE(self.radiation[i], cdts)
+            self.radiation[i].resetStokes()
 
     def new_itter(self):
         """Update the source funtions of all the points with the new radiation field
