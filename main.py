@@ -30,9 +30,9 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
     plot_z_profile(cdt, st)
 
     # go through all the points (besides 0 and -1 for being IC)
-    for i in tqdm(range(cdt.z_N), desc=f'solve RT in the {itteration} itteration', leave=False):
+    for j, ray in enumerate(tqdm(cdt.rays, desc=f'propagating rays', leave=False)):
         # go through all the rays in the cuadrature
-        for j, ray in enumerate(cdt.rays):
+        for i in range(cdt.z_N):
 
             if j == 1:
                 interesting_ray[i, 0] = st.radiation[i].stokes[0][50].value
@@ -79,10 +79,10 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
 
             # Adding the ray contribution to the Jqq's
             # point_O.radiation.check_I()
-            point_O.radiation.sumStokes(ray)
-
             if j == 1:
                 interesting_ray[i, 1] = st.radiation[i].stokes[0][50].value
+
+            point_O.radiation.sumStokes(ray)
 
     # Update the MRC and check wether we reached convergence
     st.update_mrc(cdt, itteration)
