@@ -18,6 +18,8 @@ cdt = conditions(pm)
 RT_coeficients = RTcoefs(cdt.nus)
 st = state(cdt)
 
+interesting_ray = np.empty((cdt.z_N, 2))
+
 plot_quadrature(cdt)
 
 # Start the main loop for the Lambda iteration
@@ -28,9 +30,12 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
     plot_z_profile(cdt, st)
 
     # go through all the points (besides 0 and -1 for being IC)
-    for i in tqdm(range(len(cdt.zz)), desc=f'solve RT in the {itteration} itteration', leave=False):
+    for i in tqdm(range(cdt.z_N), desc=f'solve RT in the {itteration} itteration', leave=False):
         # go through all the rays in the cuadrature
         for j, ray in enumerate(cdt.rays):
+
+            if j == 1:
+                interesting_ray[i, 0] = st.radiation[i].stokes[0][50].value
 
             # If the ray is downward start for the last point downward
             if ray.is_downward:
@@ -75,6 +80,9 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
             # Adding the ray contribution to the Jqq's
             # point_O.radiation.check_I()
             point_O.radiation.sumStokes(ray)
+
+            if j == 1:
+                interesting_ray[i, 1] = st.radiation[i].stokes[0][50].value
 
     # Update the MRC and check wether we reached convergence
     st.update_mrc(cdt, itteration)
