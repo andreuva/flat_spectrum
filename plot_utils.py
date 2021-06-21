@@ -23,7 +23,7 @@ def plot_quadrature(cdt, mode='save', directory='plots'):
         if not os.path.exists(dir):
             os.makedirs(dir)
 
-        file = 'quadrature.png'
+        file = 'quadrature'
         ext = '.png'
         filename = dir+file+ext
 
