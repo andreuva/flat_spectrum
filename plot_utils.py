@@ -41,8 +41,15 @@ def plot_quadrature(cdt, mode='save', directory='plots'):
     save_or_show(mode, 'quadrature', directory)
 
 
-def plot_z_profile(cdt, st, mode='save', directory='plots'):
-    profile = np.array([st.radiation[i].stokes[0][5].value for i in range(cdt.z_N)])
+def plot_z_profile(cdt, st, nu='mean', mode='save', directory='plots'):
+    if nu == 'mean':
+        profile = np.array([st.radiation[i].stokes[0].mean().value for i in range(cdt.z_N)])
+    elif -cdt.z_N < nu < cdt.z_N and type(nu) == int:
+        profile = np.array([st.radiation[i].stokes[0][i].value for i in range(cdt.z_N)])
+    else:
+        print(f'NOT PROFILE SELECTED, ERROR IN NU = {nu}')
+        profile = cdt.zz*0
+
     plt.plot(cdt.zz, profile)
     plt.xlabel('vertical height (Km)')
     plt.ylabel('Intensity (CGS)')
@@ -54,4 +61,6 @@ def plot_stokes_im(cdt, st, mode='save', directory='plots'):
 
     im = np.array([st.radiation[i].stokes[0].value for i in range(cdt.z_N)])
     plt.imshow(im)
-    save_or_show(mode, 'stokes_im', directory)
+    plt.xlabel('frequency $\nu$')
+    plt.ylabel('z')
+    save_or_show(mode, 'stokes_profile', directory)
