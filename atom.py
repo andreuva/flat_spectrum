@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.linalg as linalg
 from astropy import units as u
 from astropy import constants as c
 from astropy.modeling.models import BlackBody as bb
@@ -167,6 +168,9 @@ class ESE:
             Mlp = lev[-1]
             if Mlp == Ml:
                 self.ESE[0, i] = 1
+
+        LU = linalg.lu_factor(np.real(self.ESE))
+        self.rho_n_lu = linalg.lu_solve(LU, indep)
 
         rho_n = np.linalg.solve(np.real(self.ESE), indep)
         change = np.abs(rho_n - self.rho)/np.abs((rho_n + 1e-40))

@@ -95,7 +95,7 @@ class conditions:
         self.rays_N = len(self.rays)
 
         # Dopler velocity
-        self.v_dop = parameters.v_dop
+        self.v_dop = parameters.v_dop.cgs
         self.a_voigt = parameters.a_voigt
         self.n_dens = parameters.n_dens
         self.mass = 4.002602 * 1.6605402e-24 * units.g

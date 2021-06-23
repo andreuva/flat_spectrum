@@ -87,11 +87,10 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
         plot_quantity(cdt, st, source, name='source')
         plot_quantity(cdt, st, emisivity, name='emisivity')
         plot_quantity(cdt, st, absortivity, name='absortivity')
+        plot_z_profile(cdt, st)
 
     # Update the MRC and check wether we reached convergence
     st.update_mrc(cdt, itteration)
-
-    plot_z_profile(cdt, st)
 
     if (st.mrc.max() < pm.tolerance):
         break
