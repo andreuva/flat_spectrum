@@ -35,7 +35,7 @@ class ray:
         # Compute the CLV for the intersecting rays (Astrophysical quantities)
         self.clv = 0
 
-        if theta_crit < self.inc_glob:
+        if theta_crit > self.inc_glob:
             theta_clv = 180*units.deg - np.arcsin((constants.R_sun.cgs + z0)/constants.R_sun.cgs * np.sin(180*units.deg-self.inc_glob))
             self.clv = 1 - 0.64 + 0.2 + 0.64*np.abs(np.cos(theta_clv)) - 0.2*np.cos(theta_clv)**2
 
@@ -123,6 +123,9 @@ class conditions:
 
         normalization = np.sum(profile.real*self.nus_weights)
         profile.real = profile.real/normalization
+
+        # plt.plot((vs-v0)/delt_v, profile.real)
+        # plt.show()
         return profile
 
 
