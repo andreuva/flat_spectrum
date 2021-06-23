@@ -3,11 +3,11 @@ from RTcoefs import RTcoefs
 from conditions import conditions, state, point
 import parameters as pm
 from solver import BESSER, LinSC
-from plot_utils import plot_quadrature, plot_z_profile, plot_stokes_im
+from plot_utils import *
 
 # Import needed libraries
 import numpy as np
-from astropy import units
+from astropy import units as u
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
@@ -18,24 +18,21 @@ cdt = conditions(pm)
 RT_coeficients = RTcoefs(cdt.nus)
 st = state(cdt)
 
-interesting_ray = np.empty((cdt.z_N, 2))
-
-plot_quadrature(cdt)
+# plot_quadrature(cdt)
 
 # Start the main loop for the Lambda iteration
 for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
     # Reset the internal state for a new itteration
     st.new_itter()
 
-    plot_z_profile(cdt, st)
-
     # go through all the points (besides 0 and -1 for being IC)
     for j, ray in enumerate(tqdm(cdt.rays, desc=f'propagating rays', leave=False)):
+        tau_tot = np.array([0])
+        source = np.array([])
+        emisivity = np.array([])
+        absortivity = np.array([])
         # go through all the rays in the cuadrature
         for i in range(cdt.z_N):
-
-            if j == 1:
-                interesting_ray[i, 0] = st.radiation[i].stokes[0][50].value
 
             # If the ray is downward start for the last point downward
             if ray.is_downward:
@@ -49,8 +46,7 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
             cent_limb_coef = 1
             lineal = False
             if i == 0:
-                cent_limb_coef = ray.clv
-
+                # cent_limb_coef = ray.clv
                 if ray.is_downward:
                     point_M = point(st.space_atom, st.space_rad,         cdt.zf+cdt.dz)
                 else:
@@ -68,23 +64,29 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
                 point_P = point(st.atomic[z+step], st.radiation[z+step], cdt.zz[z+step])
 
             # Compute the RT coeficients for the current and last points (for solving RTE)
-            sf_o, kk_o = RT_coeficients.getRTcoefs(point_O.atomic, ray, cdt)
-            sf_m, kk_m = RT_coeficients.getRTcoefs(point_M.atomic, ray, cdt)
+            em_o, ab_o, sf_o, kk_o = RT_coeficients.getRTcoefs(point_O.atomic, ray, cdt)
+            _, _, sf_m, kk_m = RT_coeficients.getRTcoefs(point_M.atomic, ray, cdt)
+
+            source = np.append(source, sf_o[0][79].value)
+            emisivity = np.append(emisivity, em_o)
+            absortivity = np.append(absortivity, ab_o)
 
             if not lineal:
-                sf_p, kk_p = RT_coeficients.getRTcoefs(point_P.atomic, ray, cdt)
-                BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, ray, cdt, cent_limb_coef)
+                _, _, sf_p, kk_p = RT_coeficients.getRTcoefs(point_P.atomic, ray, cdt)
+                tau_tot = BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, ray, cdt, tau_tot, cent_limb_coef)
             else:
                 LinSC(point_M, point_O, sf_m, sf_o, kk_m, kk_o, ray, cdt)
 
             # Adding the ray contribution to the Jqq's
-            # point_O.radiation.check_I()
-            if j == 1:
-                interesting_ray[i, 1] = st.radiation[i].stokes[0][50].value
-
             point_O.radiation.sumStokes(ray)
 
-        plot_stokes_im(cdt, st)
+        # plot_z_profile(cdt, st)
+        # plot_stokes_im(cdt, st)
+        [st.radiation[i].resetStokes() for i in range(cdt.z_N)]
+        plot_quantity(cdt, st, tau_tot, name='opacity')
+        plot_quantity(cdt, st, source, name='source')
+        plot_quantity(cdt, st, emisivity, name='emisivity')
+        plot_quantity(cdt, st, absortivity, name='absortivity')
 
     # Update the MRC and check wether we reached convergence
     st.update_mrc(cdt, itteration)

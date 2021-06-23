@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+# from matplotlib.ticker import ScalarFormatter
 import numpy as np
 import os
 
@@ -17,7 +18,7 @@ def save_or_show(mode, file, directory):
             filename = dir + file + '_' + str(i) + ext
             i += 1
 
-        plt.savefig(filename)
+        plt.savefig(filename, bbox_inches='tight')
         plt.close()
     else:
         plt.show()
@@ -51,6 +52,7 @@ def plot_z_profile(cdt, st, nu='mean', mode='save', directory='plots'):
         profile = cdt.zz*0
 
     plt.plot(cdt.zz, profile)
+    plt.ticklabel_format(useOffset=False)
     plt.xlabel('vertical height (Km)')
     plt.ylabel('Intensity (CGS)')
     plt.title('Vertical profile of radiation')
@@ -60,7 +62,18 @@ def plot_z_profile(cdt, st, nu='mean', mode='save', directory='plots'):
 def plot_stokes_im(cdt, st, mode='save', directory='plots'):
 
     im = np.array([st.radiation[i].stokes[0].value for i in range(cdt.z_N)])
-    plt.imshow(im)
-    plt.xlabel('frequency $\nu$')
+    plt.imshow(im, aspect='auto')
+    plt.colorbar()
+    plt.xlabel('frequency')
     plt.ylabel('z')
     save_or_show(mode, 'stokes_profile', directory)
+
+
+def plot_quantity(cdt, st, quantity, name='quantity', mode='save', directory='plots'):
+
+    plt.plot(cdt.zz, quantity)
+    plt.ticklabel_format(useOffset=False)
+    plt.xlabel('z (Km)')
+    plt.ylabel(name)
+    plt.title(name + ' vs z')
+    save_or_show(mode, name, directory)

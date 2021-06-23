@@ -115,8 +115,11 @@ class RTcoefs:
         eps = [2*cts.h.cgs*cdts.nus.cgs**3/(cts.c.cgs**2)*et_s for et_s in eta_s]
         SS = np.array([ep.value/(eta[0].value+1e-30) for ep in eps]) * pm.I_units
 
+        EM = eps[0][79].value
+        ABS = eta[0][79].value
+
         # Just for debuging purposes overwrite KK and SS discarding the previous
         # KK = np.ones((4, 4, pm.wn))*1e-10
         # SS = np.ones((4, pm.wn))*pm.I_units*1e-10
 
-        return SS, KK
+        return EM, ABS, SS, KK

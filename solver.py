@@ -3,7 +3,7 @@ from numba import jit
 from parameters import I_units
 
 
-def BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, ray, cdt, clv=1):
+def BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, ray, cdt, tau_tot, clv=1):
 
     # BESSER coeficients to solve RTE (Jiri Stepan and Trujillo Bueno A&A 557 2013)
     k_p = np.moveaxis(np.diagonal(kk_p, 0, 0, 1), 0, -1).copy()
@@ -11,6 +11,7 @@ def BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, ray, c
     k_o = np.moveaxis(np.diagonal(kk_o, 0, 0, 1), 0, -1).copy()
 
     tauMO = ((k_m + k_o)/2) * np.abs((point_O.z.value - point_M.z.value)/np.cos(ray.inc)) + 1e-30
+    tau_tot = np.append(tau_tot, tau_tot[-1] + tauMO[0][79])
     tauOP = ((k_o + k_p)/2) * np.abs((point_P.z.value - point_O.z.value)/np.cos(ray.inc)) + 1e-30
 
     # Compute the psi_m and psi_o
@@ -81,6 +82,8 @@ def BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, ray, c
     kt = np.einsum("ijk, jk -> ik", k_2, point_M.radiation.stokes)
     # Bring all together to compute the new stokes parameters
     point_O.radiation.stokes = kt*clv + wm*sf_m + wo*sf_o + wc*cm
+
+    return tau_tot
 
 
 def LinSC(point_M, point_O, sf_m, sf_o, kk_m, kk_o, ray, cdt):
