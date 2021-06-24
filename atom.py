@@ -170,9 +170,7 @@ class ESE:
                 self.ESE[0, i] = 1/u.s
 
         LU = linalg.lu_factor(np.real(self.ESE))
-        self.rho_n_lu = linalg.lu_solve(LU, indep)
-
-        rho_n = np.linalg.solve(np.real(self.ESE), indep)
+        rho_n = linalg.lu_solve(LU, indep)
         change = np.abs(rho_n - self.rho)/np.abs((rho_n + 1e-40))
         self.rho = rho_n.copy()
 
