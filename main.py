@@ -80,14 +80,15 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
             # Adding the ray contribution to the Jqq's
             point_O.radiation.sumStokes(ray)
 
-        # plot_z_profile(cdt, st)
+        plot_z_profile(cdt, st, nu=79)
+        plot_z_profile(cdt, st)
+        plot_stokes_im(cdt, st)
         # plot_stokes_im(cdt, st)
         [st.radiation[i].resetStokes() for i in range(cdt.z_N)]
         plot_quantity(cdt, st, tau_tot, name='opacity')
         plot_quantity(cdt, st, source, name='source')
         plot_quantity(cdt, st, emisivity, name='emisivity')
         plot_quantity(cdt, st, absortivity, name='absortivity')
-        plot_z_profile(cdt, st)
 
     # Update the MRC and check wether we reached convergence
     st.update_mrc(cdt, itteration)

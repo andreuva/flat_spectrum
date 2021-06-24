@@ -10,9 +10,9 @@ def BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, ray, c
     k_m = np.moveaxis(np.diagonal(kk_m, 0, 0, 1), 0, -1).copy()
     k_o = np.moveaxis(np.diagonal(kk_o, 0, 0, 1), 0, -1).copy()
 
-    tauMO = ((k_m + k_o)/2) * np.abs((point_O.z.value - point_M.z.value)/np.cos(ray.inc)) + 1e-30
+    tauMO = ((k_m + k_o)/2) * np.abs((point_O.z - point_M.z)/np.cos(ray.inc)) + 1e-30
     tau_tot = np.append(tau_tot, tau_tot[-1] + tauMO[0][79])
-    tauOP = ((k_o + k_p)/2) * np.abs((point_P.z.value - point_O.z.value)/np.cos(ray.inc)) + 1e-30
+    tauOP = ((k_o + k_p)/2) * np.abs((point_P.z - point_O.z)/np.cos(ray.inc)) + 1e-30
 
     # Compute the psi_m and psi_o
     to_taylor_psi = tauMO < 1e-3
@@ -70,13 +70,13 @@ def BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, ray, c
     # Step 1: calculate dm(p) = (y0(p) - ym(0))/hm(p)
     cm, cp = BESSER_interp(tauMO, tauOP, sf_m, sf_o, sf_p)*I_units
 
-    k_1_inv = (cdt.Id_tens + psi_o*kk_m)
+    k_1_inv = (cdt.Id_tens*kk_m.unit + psi_o*kk_m)
 
     # Inverting the matrices K^-1 for all the wavelenghts
-    k_1 = np.zeros_like(k_1_inv)
+    k_1 = np.zeros_like(k_1_inv)/k_1_inv.unit**2
     for k in range(cdt.nus_N):
         k_1[:, :, k] = np.linalg.solve(k_1_inv[:, :, k], cdt.identity)
-    k_2 = (exp_tauMO - psi_m * kk_o)
+    k_2 = (exp_tauMO*kk_o.unit - psi_m*kk_o)
     # Multipling matrices of all wavelengths with at once (eq 7 and 8)
     k_2 = np.einsum("ijb, jkb -> ikb", k_1, k_2)
     kt = np.einsum("ijk, jk -> ik", k_2, point_M.radiation.stokes)
@@ -91,7 +91,7 @@ def LinSC(point_M, point_O, sf_m, sf_o, kk_m, kk_o, ray, cdt):
     # Obtain the optical thicknes between the points in this ray and compute
     k_m = np.moveaxis(np.diagonal(kk_m, 0, 0, 1), 0, -1).copy()
     k_o = np.moveaxis(np.diagonal(kk_o, 0, 0, 1), 0, -1).copy()
-    tauMO = ((k_m + k_o)/2) * np.abs((point_O.z.value - point_M.z.value)/np.cos(ray.inc))
+    tauMO = ((k_m + k_o)/2) * np.abs((point_O.z - point_M.z)/np.cos(ray.inc))
 
     # Compute the psi_m and psi_o
     to_taylor_psi = tauMO < 1e-3

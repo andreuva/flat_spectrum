@@ -31,10 +31,10 @@ class RTcoefs:
         """
 
         # Eq 7.10 of LL04
-        eta_a = [0, 0, 0, 0]
-        eta_s = [0, 0, 0, 0]
-        rho_a = [0, 0, 0, 0]
-        rho_s = [0, 0, 0, 0]
+        eta_a = np.zeros((4, cdts.nus_N)) * 1/(unt.cm)
+        eta_s = np.zeros((4, cdts.nus_N)) * 1/(unt.cm)
+        rho_a = np.zeros((4, cdts.nus_N)) * 1/(unt.cm)
+        rho_s = np.zeros((4, cdts.nus_N)) * 1/(unt.cm)
 
         for i in range(4):
 
@@ -96,12 +96,12 @@ class RTcoefs:
                                      np.imag(Tqq(q, qp, i, ray.inc.to('rad').value, ray.az.to('rad').value)*ese.rho[up] *
                                      cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
 
-            eta_a[i] = cts.h.cgs*cdts.nus.cgs/(4*np.pi) * cdts.n_dens * sum_etaa
-            eta_s[i] = cts.h.cgs*cdts.nus.cgs/(4*np.pi) * cdts.n_dens * sum_etas
-            rho_a[i] = cts.h.cgs*cdts.nus.cgs/(4*np.pi) * cdts.n_dens * sum_rhoa
-            rho_s[i] = cts.h.cgs*cdts.nus.cgs/(4*np.pi) * cdts.n_dens * sum_rhos
+            eta_a[i, :] = cts.h.cgs*cdts.nus.cgs/(4*np.pi) * cdts.n_dens * sum_etaa
+            eta_s[i, :] = cts.h.cgs*cdts.nus.cgs/(4*np.pi) * cdts.n_dens * sum_etas
+            rho_a[i, :] = cts.h.cgs*cdts.nus.cgs/(4*np.pi) * cdts.n_dens * sum_rhoa
+            rho_s[i, :] = cts.h.cgs*cdts.nus.cgs/(4*np.pi) * cdts.n_dens * sum_rhos
 
-        eta = [et_a - et_s for et_a, et_s in zip(eta_a, eta_s)]
+        eta = eta_a - eta_s
 
         if np.any(eta[0] < 0):
             print("Warning: eta_I < 0")
@@ -110,16 +110,15 @@ class RTcoefs:
         KK = np.array([[eta[0],  eta[1],  eta[2],  eta[3]],
                        [eta[1],  eta[0],  rho[3], -rho[2]],
                        [eta[2], -rho[3],  eta[0],  rho[1]],
-                       [eta[3],  rho[2], -rho[1],  eta[0]]])
+                       [eta[3],  rho[2], -rho[1],  eta[0]]])*eta.unit
 
-        eps = [2*cts.h.cgs*cdts.nus.cgs**3/(cts.c.cgs**2)*et_s for et_s in eta_s]
-        SS = np.array([ep.value/(eta[0].value+1e-30) for ep in eps]) * pm.I_units
+        eps = 2*cts.h.cgs*cdts.nus.cgs**3/(cts.c.cgs**2)*eta_s
+        SS = eps/(eta[0]+1e-30*eta[0].unit) / unt.s / unt.Hz / unt.sr
 
         EM = eps[0][79].value
         ABS = eta[0][79].value
 
-        # Just for debuging purposes overwrite KK and SS discarding the previous
-        # KK = np.ones((4, 4, pm.wn))*1e-10
-        # SS = np.ones((4, pm.wn))*pm.I_units*1e-10
+        # plt.plot(eta[0])
+        # plt.show()
 
         return EM, ABS, SS, KK

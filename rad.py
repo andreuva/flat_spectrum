@@ -50,7 +50,7 @@ class RTE:
                 for qp in [-1, 0, 1]:
                     self.jqq[qq][qp] = self.jqq[qq][qp] + \
                                        ray.weight*Tqq(qq, qp, i, ray.inc.to('rad').value, ray.az.to('rad').value)\
-                                       * self.stokes[i] * u.sr
+                                       * self.stokes[i]
 
     def resetStokes(self):
         for i in range(4):
@@ -63,8 +63,8 @@ class RTE:
             for qp in [-1, 0, 1]:
                 self.jqq[qq][qp] = self.jqq[qq][qp] * 0
 
-    def Jqq_nu(self, cdt, line, q, qp, Mu, Ml, B, nus_weigths):
+    def Jqq_nu(self, cdt, line, q, qp, Mu, Ml, B, nus_weights):
         jqqp = self.jqq[q][qp]
         # profile = cdt.voigt_profile(line, Mu, Ml, B)
         profile = cdt.voigt_profile(line)
-        return np.sum(jqqp*profile*nus_weigths).value
+        return np.sum(jqqp*profile*nus_weights)

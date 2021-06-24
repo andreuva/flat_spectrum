@@ -45,7 +45,7 @@ def plot_quadrature(cdt, mode='save', directory='plots'):
 def plot_z_profile(cdt, st, nu='mean', mode='save', directory='plots'):
     if nu == 'mean':
         profile = np.array([st.radiation[i].stokes[0].mean().value for i in range(cdt.z_N)])
-    elif -cdt.z_N < nu < cdt.z_N and type(nu) == int:
+    elif -cdt.nus_N < nu < cdt.nus_N and type(nu) == int:
         profile = np.array([st.radiation[i].stokes[0][i].value for i in range(cdt.z_N)])
     else:
         print(f'NOT PROFILE SELECTED, ERROR IN NU = {nu}')

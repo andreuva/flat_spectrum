@@ -72,13 +72,13 @@ class conditions:
         self.dz = self.zz[1] - self.zz[0]
 
         # points and the weights for frequency quadrature (equispaced for now)
-        self.wf = constants.c.cgs / parameters.lamb0.cgs
-        self.w0 = constants.c.cgs / parameters.lambf.cgs
+        self.wf = (constants.c.cgs / parameters.lamb0.cgs).to('Hz')
+        self.w0 = (constants.c.cgs / parameters.lambf.cgs).to('Hz')
         self.nus_N = parameters.wn
         self.nus = np.linspace(self.w0, self.wf, self.nus_N)
-        self.nus_weights = np.ones(self.nus_N)
-        self.nus_weights[0] = 0.5
-        self.nus_weights[-1] = 0.5
+        self.nus_weights = np.ones(self.nus_N)*units.Hz
+        self.nus_weights[0] = 0.5*units.Hz
+        self.nus_weights[-1] = 0.5*units.Hz
 
         # Parameters of the rotation of the slab and the global ref frame
         self.alpha = parameters.alpha
@@ -88,7 +88,7 @@ class conditions:
         # weights and directions of the angular quadrature
         self.rays = []
         for data_ray in np.loadtxt(parameters.ray_quad):
-            self.rays.append(ray(data_ray[0],
+            self.rays.append(ray(data_ray[0] * units.sr,
                                  data_ray[1] * units.deg,
                                  data_ray[2] * units.deg,
                                  self.alpha, self.theta_crit, self.z0))
@@ -112,20 +112,20 @@ class conditions:
         self.identity = np.identity(4)
 
     def voigt_profile(self, line, Mu=0, Ml=0, B=0):
-        vs = self.nus.value
-        v0 = line.nu.value + (norm(B)/constants.h.cgs.value *
-                              (line.gu*Mu - line.gl*Ml))
+        vs = self.nus
+        v0 = line.nu + 1.3996*norm(B)*(line.gu*Mu - line.gl*Ml)*line.nu.unit
         vt = np.sqrt(2*constants.k_B.cgs*self.temp/self.mass).decompose().cgs
         delt_v = line.nu*vt/constants.c.cgs
 
         profile = voigt((vs-v0)/delt_v, self.a_voigt)
-        profile = profile / (np.sqrt(np.pi))
+        profile = profile * units.s / (np.sqrt(np.pi))
 
         normalization = np.sum(profile.real*self.nus_weights)
         profile.real = profile.real/normalization
 
         # plt.plot((vs-v0)/delt_v, profile.real)
         # plt.show()
+
         return profile
 
 
@@ -145,7 +145,7 @@ class state:
 
         # Define the IC for the downward and upward rays as an atomic class
         self.space_atom = ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, np.zeros(3)*units.G, cdts.temp)
-        self.sun_atom = ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, np.ones(3)*100*units.G, cdts.temp)
+        self.sun_atom = ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, np.zeros(3)*100*units.G, cdts.temp)
 
         # Initialicing the radiation state instanciating RTE class for each point
         self.radiation = [RTE(cdts.nus, cdts.v_dop) for z in cdts.zz]

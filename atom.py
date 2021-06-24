@@ -35,7 +35,7 @@ class line():
         self.nu = self.energy/c.h.cgs
 
         self.A_lu = Alu
-        self.B_lu = Alu * (c.c.cgs**2/(2*c.h.cgs*self.nu**3)).value
+        self.B_lu = Alu * (c.c.cgs**2/(2*c.h.cgs*self.nu**3))
         self.B_ul = self.B_lu * (levels[line_levels[1]].g/levels[line_levels[0]].g)
 
         self.dJ = levels[line_levels[1]].J - levels[line_levels[0]].J
@@ -54,7 +54,7 @@ class HeI_1083():
         for i, ord in enumerate(indx):
             self.levels.append(levels[ord])
 
-        self.lines = [line(self.levels, (0, 1), 1.0216e+07),
+        self.lines = [line(self.levels, (0, 1), 1.0216e+07 / u.s),
                       ]
 
         self.dens_elmnt = []
@@ -104,7 +104,7 @@ class ESE:
         self.rho = self.rho/self.populations
         self.N_rho = len(self.rho)
         self.coherences = self.N_rho - self.populations
-        self.ESE = np.zeros((self.N_rho, self.N_rho)).astype('complex128')
+        self.ESE = np.zeros((self.N_rho, self.N_rho)).astype('complex128') / u.s
 
     def solveESE(self, rad, cdt):
         """
@@ -160,14 +160,14 @@ class ESE:
             nu_L = 1.3996e6*np.linalg.norm(cdt.B.value)     # Eq 3.10 LL04 Larmor freq
             self.ESE[i][i] = self.ESE[i][i] - 2j*np.pi*(M - Mp)*nu_L*self.atom.levels[Li].g
 
-        indep = np.zeros(self.N_rho)
-        indep[0] = 1
+        indep = np.zeros(self.N_rho)/u.s
+        indep[0] = 1/u.s
 
         for i, lev in enumerate(self.atom.dens_elmnt):
             Ml = lev[-2]
             Mlp = lev[-1]
             if Mlp == Ml:
-                self.ESE[0, i] = 1
+                self.ESE[0, i] = 1/u.s
 
         LU = linalg.lu_factor(np.real(self.ESE))
         self.rho_n_lu = linalg.lu_solve(LU, indep)
@@ -242,7 +242,7 @@ def TS(ESE, J, M, Mp, Ju, Mu, Mup, rad, line, cdt):
 
 def RA(ESE, Li, J, M, Mp, rad, cdt):
 
-    sum_u = 0
+    sum_u = (0+0j) / u.s
     for k, k_lev in enumerate(ESE.atom.levels):
         for line in ESE.atom.lines:
 
@@ -270,7 +270,7 @@ def RE(ESE, Li, J, M, Mp):
 
     # RE(\alpha J M M') = 1/2 * \delta_{M M'} * \sum_{\alpha_l J_l} A(\alpha J -> \alpha_l J_l)
 
-    sum_l = 0
+    sum_l = (0+0j) / u.s
     if M == Mp:
         for k, k_lev in enumerate(ESE.atom.levels):
             Lk = k
@@ -286,7 +286,7 @@ def RE(ESE, Li, J, M, Mp):
 
 def RS(ESE, Li, J, M, Mp, rad, cdt):
 
-    sum_l = 0
+    sum_l = (0+0j) / u.s
     for k, k_lev in enumerate(ESE.atom.levels):
         for line in ESE.atom.lines:
 

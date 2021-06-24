@@ -13,5 +13,5 @@ atom = ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, 0, cdts.temp)
 
 ray = cdts.rays[4]
 
-Source_func, KK = RT_coeficients.getRTcoefs(atom, ray, cdts)
+em, abs, Source_func, KK = RT_coeficients.getRTcoefs(atom, ray, cdts)
 Bw = bb(temperature=cdts.temp)(cdts.nus)
