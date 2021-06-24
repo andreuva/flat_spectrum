@@ -81,7 +81,7 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
             point_O.radiation.sumStokes(ray)
 
         plot_z_profile(cdt, st, nu=79)
-        plot_z_profile(cdt, st, mode='show')
+        # plot_z_profile(cdt, st, mode='show')
         # plot_stokes_im(cdt, st)
         # plot_stokes_im(cdt, st)
         [st.radiation[i].resetStokes() for i in range(cdt.z_N)]
