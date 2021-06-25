@@ -21,13 +21,13 @@ mrc = atom.solveESE(rad, cdts)
 
 solve = np.real(atom.ESE)
 
-# print('')
-# for i in range(len(solve)):
-#     print(f'Row {i}\t', end='')
-#     for j in range(len(solve)):
-#         if solve[i][j] >= 0:
-#             print(' ', end='')
-#         print(f'{solve[i][j]:.2E} ', end='')
-#     print(f'')
+print('')
+for i in range(len(solve)):
+    print(f'Row {i}\t', end='')
+    for j in range(len(solve)):
+        if solve[i][j] >= 0:
+            print(' ', end='')
+        print(f'{solve[i][j].value:.2E} ', end='')
+    print(f'')
 
 print("Finished")

@@ -168,6 +168,8 @@ class ESE:
             Mlp = lev[-1]
             if Mlp == Ml:
                 self.ESE[0, i] = 1/u.s
+            else:
+                self.ESE[0, i] = 0/u.s
 
         LU = linalg.lu_factor(np.real(self.ESE))
         rho_n = linalg.lu_solve(LU, indep)
