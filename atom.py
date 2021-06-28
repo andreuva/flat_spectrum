@@ -18,30 +18,28 @@ class level():
         for M in range(-self.J, self.J+1):
             self.M.append(M)
             for Mp in range(-self.J, self.J+1):
-                self.MMp.append([self.J, M, Mp])
-                # self.MMp.append([self.E, self.J, M, Mp])
+                self.MMp.append([self.E, self.J, M, Mp])
 
 
 class line():
     """Class that defines the lines of the atomic model"""
-    def __init__(self, levels, line_levels, Alu):
+    def __init__(self, levels, line_levels, jlju, Alu):
 
         self.levels = line_levels
-        # line levels are the two levels in the transition with [(Ll, Jl), (Lu, Ju)]
-        # with L = level and J = angular moment
+        self.jlju = jlju
 
-        self.gl = levels[line_levels[0][0]].g
-        self.gu = levels[line_levels[1][0]].g
+        self.gl = levels[line_levels[0]].g
+        self.gu = levels[line_levels[1]].g
 
-        self.wavelength = 1/(levels[line_levels[1][0]].E - levels[line_levels[0][0]].E)
+        self.wavelength = 1/(levels[line_levels[1]].E - levels[line_levels[0]].E)
         self.energy = c.h.cgs * c.c.cgs / self.wavelength
         self.nu = self.energy/c.h.cgs
 
         self.A_lu = Alu
         self.B_lu = Alu * (c.c.cgs**2/(2*c.h.cgs*self.nu**3))
-        self.B_ul = self.B_lu * (levels[line_levels[1][0]].g/levels[line_levels[0][0]].g)
+        self.B_ul = self.B_lu * (levels[line_levels[1]].g/levels[line_levels[0]].g)
 
-        self.dJ = levels[line_levels[1][0]].J - levels[line_levels[0][0]].J
+        self.dJ = levels[line_levels[1]].J - levels[line_levels[0]].J
 
 
 class HeI_1083():
@@ -57,7 +55,7 @@ class HeI_1083():
         for i, ord in enumerate(indx):
             self.levels.append(levels[ord])
 
-        self.lines = [line(self.levels, [(0, 0), (1, 1)], 1.0216e+07 / u.s), ]
+        self.lines = [line(self.levels, (0, 1), (0, 1), 1.0216e+07 / u.s), ]
 
         self.dens_elmnt = []
         for i, lev in enumerate(self.levels):
@@ -211,7 +209,7 @@ class ESE:
         return np.max(change)
 
     def rho_call(self, lev, JJ, M, Mp):
-        index = self.atom.dens_elmnt.index([lev, JJ, M, Mp])
+        index = self.atom.dens_elmnt.index([lev, self.atom.levels[lev].E, JJ, M, Mp])
         return self.rho[index]
 
 

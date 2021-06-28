@@ -42,17 +42,17 @@ class RTcoefs:
         # for q in [-1, 0, 1]:
         #     eta_a_LTE += cts.h.cgs*cdts.nus.cgs/(4*np.pi)*cdts.n_dens*ese.atom.lines[0].B_lu *\
         #         3*self.jsim.j3(1, 0, 1, q, 0, -q)**2 *\
-        #         np.real(ese.rho[0]*cdts.voigt_profile(ese.atom.lines[0], -q, 0, cdts.B.value) *\
+        #         np.real(ese.rho[0]*cdts.voigt_profile(ese.atom.lines[0], -q, 0, cdts.B.value) *
         #                 Tqq(q, q, 0, ray.inc.to('rad').value, ray.az.to('rad').value))
 
         #     for qp in [-1, 0, 1]:
         #         eta_s_LTE += cts.h.cgs*cdts.nus.cgs/(4*np.pi)*cdts.n_dens*ese.atom.lines[0].B_ul *\
         #             9*self.jsim.j3(1, 0, 1, q, 0, -q)*self.jsim.j3(1, 0, 1, qp, 0, -qp) *\
-        #             np.real(ese.rho_call(1, 1, -qp, -q) * cdts.voigt_profile(ese.atom.lines[0], -q, 0, cdts.B.value) *\
+        #             np.real(ese.rho_call(1, 1, -qp, -q) * cdts.voigt_profile(ese.atom.lines[0], -q, 0, cdts.B.value) *
         #                     Tqq(q, qp, 0, ray.inc.to('rad').value, ray.az.to('rad').value))
         #         emision += cts.h.cgs*cdts.nus.cgs/(4*np.pi)*cdts.n_dens*ese.atom.lines[0].A_lu *\
         #             9*self.jsim.j3(1, 0, 1, q, 0, -q)*self.jsim.j3(1, 0, 1, qp, 0, -qp) *\
-        #             np.real(ese.rho_call(1, 1, -qp, -q) * cdts.voigt_profile(ese.atom.lines[0], -q, 0, cdts.B.value) *\
+        #             np.real(ese.rho_call(1, 1, -qp, -q) * cdts.voigt_profile(ese.atom.lines[0], -q, 0, cdts.B.value) *
         #                     Tqq(q, qp, 0, ray.inc.to('rad').value, ray.az.to('rad').value))
 
         for i in range(4):
@@ -64,12 +64,12 @@ class RTcoefs:
 
             for line in ese.atom.lines:
 
-                Ll = line.levels[0][0]
-                Jl = line.levels[0][1]
-                Lu = line.levels[1][0]
-                Ju = line.levels[1][1]
+                Ll = line.levels[0]
+                Jl = line.jlju[0]
+                Lu = line.levels[1]
+                Ju = line.jlju[1]
 
-                for _, Ml, Mlp in ese.atom.levels[Ll].MMp:
+                for _, _, Ml, Mlp in ese.atom.levels[Ll].MMp:
 
                     for Mu in ese.atom.levels[Lu].M:
                         q = int(Ml - Mu)
@@ -87,7 +87,7 @@ class RTcoefs:
                                      np.imag(Tqq(q, qp, i, ray.inc.to('rad').value, ray.az.to('rad').value)*ese.rho_call(Ll, Jl, Ml, Mlp) *
                                      cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
 
-                for _, Mu, Mup in ese.atom.levels[Lu].MMp:
+                for _, _, Mu, Mup in ese.atom.levels[Lu].MMp:
 
                     for Ml in ese.atom.levels[Ll].M:
                         q = int(Ml - Mu)
@@ -124,8 +124,8 @@ class RTcoefs:
         eps = 2*cts.h.cgs*cdts.nus.cgs**3/(cts.c.cgs**2)*eta_s
         SS = eps/(eta[0]+1e-30*eta[0].unit) / unt.s / unt.Hz / unt.sr
 
-        EM = eps[0].value
-        ABS = eta[0].value
+        EM = eps[0][79].value
+        ABS = eta[0][79].value
 
         # plt.plot(eps[0])
         # plt.plot(emision)
