@@ -15,3 +15,12 @@ ray = cdts.rays[4]
 
 em, abs, Source_func, KK = RT_coeficients.getRTcoefs(atom, ray, cdts)
 Bw = bb(temperature=cdts.temp)(cdts.nus)
+
+print('')
+for i in range(len(KK)):
+    print(f'Row {i}\t', end='')
+    for j in range(len(KK)):
+        if KK[i][j].mean() >= 0:
+            print(' ', end='')
+        print(f'{KK[i][j].mean().value:.2E} ', end='')
+    print(f'')
