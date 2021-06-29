@@ -124,8 +124,8 @@ class RTcoefs:
         eps = 2*cts.h.cgs*cdts.nus.cgs**3/(cts.c.cgs**2)*eta_s
         SS = eps/(eta[0]+1e-30*eta[0].unit) / unt.s / unt.Hz / unt.sr
 
-        EM = eps[0][79].value
-        ABS = eta[0][79].value
+        EM = eps[0].value
+        ABS = eta[0].value
 
         # plt.plot(eps[0])
         # plt.plot(emision)

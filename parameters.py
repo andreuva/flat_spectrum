@@ -1,7 +1,7 @@
 from astropy import units as u
 
 z0 = 100 * u.km                 # height of the slav over the surfave
-zf = 110 * u.km                # geometrical height of the slav
+zf = 100.1 * u.km                # geometrical height of the slav
 zn = 10                         # Points in z in the slav
 alpha = 0 * u.deg              # angle between the vertical of the slav and the radial line
 
@@ -18,5 +18,5 @@ temp = 1e4 * u.K                 # Temperature of the slab
 
 I_units = u.erg / (u.cm**2 * u.Hz * u.s * u.sr)
 
-max_iter = 1                    # Maximum itterations for the forward method
+max_iter = 3                    # Maximum itterations for the forward method
 tolerance = 1e-10               # tolerated relative change in populations
