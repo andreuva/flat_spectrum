@@ -1,5 +1,6 @@
 import parameters as pm
 from physical_functions import Tqq, jsymbols
+from plot_utils import plot_quantity
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -105,16 +106,17 @@ class RTcoefs:
                                      np.imag(Tqq(q, qp, i, ray.inc.to('rad').value, ray.az.to('rad').value)*ese.rho_call(Lu, Ju, Mup, Mu) *
                                      cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
 
-            eta_a[i, :] = cts.h.cgs*cdts.nus.cgs/(4*np.pi) * cdts.n_dens * sum_etaa
-            eta_s[i, :] = cts.h.cgs*cdts.nus.cgs/(4*np.pi) * cdts.n_dens * sum_etas
-            rho_a[i, :] = cts.h.cgs*cdts.nus.cgs/(4*np.pi) * cdts.n_dens * sum_rhoa
-            rho_s[i, :] = cts.h.cgs*cdts.nus.cgs/(4*np.pi) * cdts.n_dens * sum_rhos
+            eta_a[i, :] = cts.h.cgs*line.nu.cgs/(4*np.pi) * cdts.n_dens * sum_etaa
+            eta_s[i, :] = cts.h.cgs*line.nu.cgs/(4*np.pi) * cdts.n_dens * sum_etas
+            rho_a[i, :] = cts.h.cgs*line.nu.cgs/(4*np.pi) * cdts.n_dens * sum_rhoa
+            rho_s[i, :] = cts.h.cgs*line.nu.cgs/(4*np.pi) * cdts.n_dens * sum_rhos
 
         eta = eta_a - eta_s
         rho = rho_a - rho_s
 
         if np.any(eta[0] < 0):
             print("Warning: eta_I < 0")
+            plot_quantity(cdts, cdts.nus, eta[0], names=['ww', 'negative_eta_I'])
 
         KK = np.array([[eta[0],  eta[1],  eta[2],  eta[3]],
                        [eta[1],  eta[0],  rho[3], -rho[2]],
@@ -124,8 +126,8 @@ class RTcoefs:
         eps = 2*cts.h.cgs*cdts.nus.cgs**3/(cts.c.cgs**2)*eta_s
         SS = eps/(eta[0]+1e-30*eta[0].unit) / unt.s / unt.Hz / unt.sr
 
-        EM = eps[0].value
-        ABS = eta[0].value
+        EM = eps[0][79].value
+        ABS = eta[0][79].value
 
         # plt.plot(eps[0])
         # plt.plot(emision)

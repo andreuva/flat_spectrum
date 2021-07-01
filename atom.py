@@ -198,6 +198,7 @@ class ESE:
                 suma += self.rho[i]
                 if self.rho[i] < 0:
                     print(f"Warning: Negative population of the level: L={Ll},J={JJ}, M={Ml},M'={Mlp}")
+                    print(f"with population of rho={self.rho[i]}")
                     # input("Press Enter to continue...")
 
         if not 0.98 < suma < 1.02:

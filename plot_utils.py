@@ -42,26 +42,36 @@ def plot_quadrature(cdt, mode='save', directory='plots'):
     save_or_show(mode, 'quadrature', directory)
 
 
-def plot_z_profile(cdt, st, nu='mean', mode='save', directory='plots'):
+def plot_z_profile(cdt, st, nu='mean', norm=True, mode='save', directory='plots'):
+
+    normalization = st.sun_rad.stokes[0][int(len(st.sun_rad.stokes[0])/2)].value
+
     if nu == 'mean':
         profile = np.array([st.radiation[i].stokes[0].mean().value for i in range(cdt.z_N)])
     elif -cdt.nus_N < nu < cdt.nus_N and type(nu) == int:
-        profile = np.array([st.radiation[i].stokes[0][i].value for i in range(cdt.z_N)])
+        profile = np.array([st.radiation[i].stokes[0][nu].value for i in range(cdt.z_N)])
     else:
         print(f'NOT PROFILE SELECTED, ERROR IN NU = {nu}')
         profile = cdt.zz*0
 
+    if norm:
+        profile = profile/normalization
+
     plt.plot(cdt.zz, profile)
     plt.ticklabel_format(useOffset=False)
-    plt.xlabel('vertical height (Km)')
-    plt.ylabel('Intensity (CGS)')
+    plt.xlabel('vertical height (CGS)')
+    plt.ylabel('Intensity/B_w (normaliced)')
     plt.title('Vertical profile of radiation')
     save_or_show(mode, 'I_z_profile', directory)
 
 
-def plot_stokes_im(cdt, st, mode='save', directory='plots'):
+def plot_stokes_im(cdt, st, norm=True, mode='save', directory='plots'):
 
     im = np.array([st.radiation[i].stokes[0].value for i in range(cdt.z_N)])
+    if norm:
+        normalization = st.sun_rad.stokes[0][int(len(st.sun_rad.stokes[0])/2)].value
+        im = im/normalization
+
     plt.imshow(im, aspect='auto')
     plt.colorbar()
     plt.xlabel('frequency')
@@ -69,11 +79,11 @@ def plot_stokes_im(cdt, st, mode='save', directory='plots'):
     save_or_show(mode, 'stokes_profile', directory)
 
 
-def plot_quantity(cdt, st, quantity, name='quantity', mode='save', directory='plots'):
+def plot_quantity(cdt, xx, quantity, names=['x', 'quantity'], mode='save', directory='plots'):
 
-    plt.plot(cdt.zz, quantity)
+    plt.plot(xx, quantity)
     plt.ticklabel_format(useOffset=False)
-    plt.xlabel('z (Km)')
-    plt.ylabel(name)
-    plt.title(name + ' vs z')
-    save_or_show(mode, name, directory)
+    plt.xlabel(names[0])
+    plt.ylabel(names[1])
+    plt.title(names[1] + ' vs ' + names[0])
+    save_or_show(mode, names[1], directory)
