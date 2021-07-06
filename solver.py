@@ -14,7 +14,7 @@ def BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, ray, c
     tau_tot = np.append(tau_tot, tau_tot[-1] + tauMO[0][2])
     tauOP = ((k_o + k_p)/2) * np.abs((point_P.z - point_O.z)/np.cos(ray.inc)) + 1e-30
 
-    exp_tauMO = np.exp(-np.where(tauMO < 700, tauMO, 700))
+    exp_tauMO = np.exp(-np.where(tauMO < 300, tauMO, 300))
 
     # Compute the psi_m and psi_o
     # to_taylor_psi = tauMO < 1e-3
