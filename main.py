@@ -87,13 +87,13 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
         plot_z_profile(cdt, st, norm=False, directory=pm.dir + 'plots_prof')
         plot_stokes_im(cdt, st, norm=False, directory=pm.dir + 'plots_prof')
         [st.radiation[i].resetStokes() for i in range(cdt.z_N)]
-        plot_quantity(cdt, cdt.zz, tau_tot, names=['zz', 'opacity'], directory=pm.dir + 'plots')
-        plot_quantity(cdt, cdt.zz, source, names=['zz', 'source'], directory=pm.dir + 'plots')
-        plot_quantity(cdt, cdt.zz, emisivity, names=['zz', 'emisivity'], directory=pm.dir + 'plots')
-        plot_quantity(cdt, cdt.zz, absortivity, names=['zz', 'absortivity'], directory=pm.dir + 'plots')
+        plot_quantity(cdt, cdt.zz, tau_tot, names=['Z (CGS)', r'$\tau$'], directory=pm.dir + 'plots')
+        plot_quantity(cdt, cdt.zz, source, names=['Z (CGS)', r'$Sf_I$'], directory=pm.dir + 'plots')
+        plot_quantity(cdt, cdt.zz, emisivity, names=['Z (CGS)', r'$\varepsilon_I$'], directory=pm.dir + 'plots')
+        plot_quantity(cdt, cdt.zz, absortivity, names=['Z (CGS)', r'$\eta_I$'], directory=pm.dir + 'plots')
 
-        if j == 3:
-            exit()
+        # if j == 3:
+        #     exit()
 
     # Update the MRC and check wether we reached convergence
     st.update_mrc(cdt, itteration)
