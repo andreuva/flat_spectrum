@@ -145,7 +145,7 @@ class state:
 
         # Define the IC for the downward and upward rays as an atomic class
         self.space_atom = ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, np.zeros(3)*units.G, cdts.temp)
-        self.sun_atom = ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, np.zeros(3)*100*units.G, cdts.temp)
+        self.sun_atom = ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, np.zeros(3)*100*units.G, cdts.temp, equilibrium=True)
 
         # Initialicing the radiation state instanciating RTE class for each point
         self.radiation = [RTE(cdts.nus, cdts.v_dop) for z in cdts.zz]

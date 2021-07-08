@@ -78,8 +78,8 @@ def BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, ray, c
         k_1[:, :, k] = np.linalg.inv(k_1_inv[:, :, k])
     k_2 = (exp_tauMO*kk_m.unit - psi_m*kk_m)
     # Multipling matrices of all wavelengths with at once (eq 7 and 8)
-    k_2 = np.einsum("ijb, jkb -> ikb", k_1, k_2)
-    kt = np.einsum("ijk, jk -> ik", k_2, point_M.radiation.stokes)
+    k_3 = np.einsum("ijb, jkb -> ikb", k_1, k_2)
+    kt = np.einsum("ijk, jk -> ik", k_3, point_M.radiation.stokes)
     # Bring all together to compute the new stokes parameters
     point_O.radiation.stokes = kt*clv + wm*sf_m + wo*sf_o + wc*cm
 

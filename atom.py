@@ -77,7 +77,7 @@ class ESE:
 
     jsim = jsymbols()
 
-    def __init__(self, v_dop, a_voigt, nus, nus_weights, B, T):
+    def __init__(self, v_dop, a_voigt, nus, nus_weights, B, T, equilibrium=False):
         """
             nus_weights: array of the frequency quadrature weights
             B: object of the magnetic field vector with xyz components (gauss)
@@ -90,18 +90,22 @@ class ESE:
         self.rho = np.zeros(len(self.atom.dens_elmnt))
         self.populations = 0
 
-        for i, lev in enumerate(self.atom.dens_elmnt):
+        if equilibrium:
+            for i, lev in enumerate(self.atom.dens_elmnt):
 
-            Ll = lev[0]
-            Ml = lev[-2]
-            Mlp = lev[-1]
+                Ll = lev[0]
+                Ml = lev[-2]
+                Mlp = lev[-1]
 
-            if Mlp == Ml:   # If it's a population compute the Boltzman LTE ratio
-                self.rho[i] = np.exp(-c.h.cgs*c.c.cgs*self.atom.levels[Ll].E/c.k_B.cgs/T) / \
-                              len(self.atom.levels[Ll].M)
-                self.populations += self.rho[i]
+                if Mlp == Ml:   # If it's a population compute the Boltzman LTE ratio
+                    self.rho[i] = np.exp(-c.h.cgs*c.c.cgs*self.atom.levels[Ll].E/c.k_B.cgs/T) / \
+                                  len(self.atom.levels[Ll].M)
+                    self.populations += self.rho[i]
 
-        self.rho = self.rho/self.populations
+            self.rho = self.rho/self.populations
+        else:
+            self.rho[0] = 1
+
         self.N_rho = len(self.rho)
         self.coherences = self.N_rho - self.populations
         self.ESE = np.zeros((self.N_rho, self.N_rho)).astype('complex128') / u.s
