@@ -123,10 +123,10 @@ class RTcoefs:
                        [eta[2], -rho[3],  eta[0],  rho[1]],
                        [eta[3],  rho[2], -rho[1],  eta[0]]])*eta.unit
 
-        KK = np.array([[eta[0] + 1e-4*eta[0].unit,  eta[1],  eta[2],  eta[3]],
-                       [eta[1],  eta[0] + 1e-4*eta[0].unit,  rho[3], -rho[2]],
-                       [eta[2], -rho[3],  eta[0] + 1e-4*eta[0].unit,  rho[1]],
-                       [eta[3],  rho[2], -rho[1],  eta[0] + 1e-4*eta[0].unit]])*eta.unit
+        # KK = np.array([[eta[0] + 1e-4*eta[0].unit,  eta[1],  eta[2],  eta[3]],
+        #                [eta[1],  eta[0] + 1e-4*eta[0].unit,  rho[3], -rho[2]],
+        #                [eta[2], -rho[3],  eta[0] + 1e-4*eta[0].unit,  rho[1]],
+        #                [eta[3],  rho[2], -rho[1],  eta[0] + 1e-4*eta[0].unit]])*eta.unit
 
         eps = 2*cts.h.cgs*cdts.nus.cgs**3/(cts.c.cgs**2)*eta_s
         SS = eps/(eta[0]+1e-30*eta[0].unit) / unt.s / unt.Hz / unt.sr

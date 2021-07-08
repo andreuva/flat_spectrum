@@ -65,9 +65,9 @@ def plot_z_profile(cdt, st, nu='mean', norm=True, name='stokes_profile', mode='s
 
     if norm:
         name = name + '_norm'
-        QQ = QQ/II
-        UU = UU/II
-        VV = VV/II
+        QQ = QQ/(II + 1e-30)
+        UU = UU/(II + 1e-30)
+        VV = VV/(II + 1e-30)
         II = II/normalization
         lab = ['I(norm)', 'Q/I', 'U/I', 'V/I']
     else:
@@ -97,9 +97,9 @@ def plot_stokes_im(cdt, st, norm=True, name='stokes_image', mode='save', directo
     if norm:
         name = name + '_norm'
         normalization = st.sun_rad.stokes[0][int(len(st.sun_rad.stokes[0])/2)].value
-        QQ = QQ/II
-        UU = UU/II
-        VV = VV/II
+        QQ = QQ/(II + 1e-30)
+        UU = UU/(II + 1e-30)
+        VV = VV/(II + 1e-30)
         II = II/normalization
 
     stokes = [II, QQ, UU, VV]
