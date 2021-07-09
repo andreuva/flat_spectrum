@@ -92,9 +92,6 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
         plot_quantity(cdt, cdt.zz, emisivity, names=['Z (CGS)', r'$\varepsilon_I$'], directory=pm.dir + f'plots_itt{itteration}')
         plot_quantity(cdt, cdt.zz, absortivity, names=['Z (CGS)', r'$\eta_I$'], directory=pm.dir + f'plots_itt{itteration}')
 
-        # if j == 3:
-        #     exit()
-
     # Update the MRC and check wether we reached convergence
     st.update_mrc(cdt, itteration)
 
