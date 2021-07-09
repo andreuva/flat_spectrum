@@ -116,7 +116,7 @@ class RTcoefs:
 
         if np.any(eta[0] < 0):
             print("Warning: eta_I < 0")
-            plot_quantity(cdts, cdts.nus, eta[0], names=['ww', 'negative_eta_I'])
+            # plot_quantity(cdts, cdts.nus, eta[0], names=['ww', 'negative_eta_I'])
 
         KK = np.array([[eta[0],  eta[1],  eta[2],  eta[3]],
                        [eta[1],  eta[0],  rho[3], -rho[2]],
