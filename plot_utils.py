@@ -93,6 +93,7 @@ def plot_stokes_im(cdt, st, norm=True, name='stokes_image', mode='save', directo
     QQ = np.array([st.radiation[i].stokes[1].value for i in range(cdt.z_N)])
     UU = np.array([st.radiation[i].stokes[2].value for i in range(cdt.z_N)])
     VV = np.array([st.radiation[i].stokes[3].value for i in range(cdt.z_N)])
+    lab = ['I', 'Q', 'U', 'V']
 
     if norm:
         name = name + '_norm'
@@ -101,9 +102,9 @@ def plot_stokes_im(cdt, st, norm=True, name='stokes_image', mode='save', directo
         UU = UU/(II + 1e-30)
         VV = VV/(II + 1e-30)
         II = II/normalization
+        lab = ['I(norm)', 'Q/I', 'U/I', 'V/I']
 
     stokes = [II, QQ, UU, VV]
-    lab = ['I(norm)', 'Q/I', 'U/I', 'V/I']
     fig = plt.figure(figsize=(8, 8))
     for i in range(1, 4+1):
         fig.add_subplot(2, 2, i)

@@ -26,7 +26,7 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
     st.new_itter()
 
     # go through all the points (besides 0 and -1 for being IC)
-    for j, ray in enumerate(tqdm(cdt.rays, desc=f'propagating rays', leave=False)):
+    for j, ray in enumerate(tqdm(cdt.rays, desc='propagating rays', leave=False)):
         tau_tot = np.array([0])
         source = np.array([])
         emisivity = np.array([])
@@ -80,17 +80,19 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
             # Adding the ray contribution to the Jqq's
             point_O.radiation.sumStokes(ray)
 
-        plot_z_profile(cdt, st, nu=79, directory=pm.dir + f'plots_core_norm_itt{itteration}')
-        plot_z_profile(cdt, st, directory=pm.dir + f'plots_norm_itt{itteration}')
-        plot_stokes_im(cdt, st, directory=pm.dir + f'plots_norm_itt{itteration}')
-        plot_z_profile(cdt, st, nu=79, norm=False, directory=pm.dir + f'plots_core_itt{itteration}')
-        plot_z_profile(cdt, st, norm=False, directory=pm.dir + f'plots_prof_itt{itteration}')
-        plot_stokes_im(cdt, st, norm=False, directory=pm.dir + f'plots_prof_itt{itteration}')
+        # subfix = f'_itt{itteration}'
+        subfix = f'_ray_inc_{round(ray.inc.value, 1)}_az_{round(ray.az.value, 1)}'
+        plot_z_profile(cdt, st, nu=79, directory=pm.dir + 'plots_core_norm' + subfix)
+        plot_z_profile(cdt, st, directory=pm.dir + 'plots_norm' + subfix)
+        plot_stokes_im(cdt, st, directory=pm.dir + 'plots_norm' + subfix)
+        plot_z_profile(cdt, st, nu=79, norm=False, directory=pm.dir + 'plots_core' + subfix)
+        plot_z_profile(cdt, st, norm=False, directory=pm.dir + 'plots_prof' + subfix)
+        plot_stokes_im(cdt, st, norm=False, directory=pm.dir + 'plots_prof' + subfix)
         [st.radiation[i].resetStokes() for i in range(cdt.z_N)]
-        plot_quantity(cdt, cdt.zz, tau_tot, names=['Z (CGS)', r'$\tau$'], directory=pm.dir + f'plots_itt{itteration}')
-        plot_quantity(cdt, cdt.zz, source, names=['Z (CGS)', r'$Sf_I$'], directory=pm.dir + f'plots_itt{itteration}')
-        plot_quantity(cdt, cdt.zz, emisivity, names=['Z (CGS)', r'$\varepsilon_I$'], directory=pm.dir + f'plots_itt{itteration}')
-        plot_quantity(cdt, cdt.zz, absortivity, names=['Z (CGS)', r'$\eta_I$'], directory=pm.dir + f'plots_itt{itteration}')
+        plot_quantity(cdt, cdt.zz, tau_tot, names=['Z (CGS)', r'$\tau$'], directory=pm.dir + 'plots' + subfix)
+        plot_quantity(cdt, cdt.zz, source, names=['Z (CGS)', r'$Sf_I$'], directory=pm.dir + 'plots' + subfix)
+        plot_quantity(cdt, cdt.zz, emisivity, names=['Z (CGS)', r'$\varepsilon_I$'], directory=pm.dir + 'plots' + subfix)
+        plot_quantity(cdt, cdt.zz, absortivity, names=['Z (CGS)', r'$\eta_I$'], directory=pm.dir + 'plots' + subfix)
 
     # Update the MRC and check wether we reached convergence
     st.update_mrc(cdt, itteration)
