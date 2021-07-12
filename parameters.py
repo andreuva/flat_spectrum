@@ -22,4 +22,4 @@ I_units = u.erg / (u.cm**2 * u.Hz * u.s * u.sr)
 max_iter = 25                    # Maximum itterations for the forward method
 tolerance = 1e-10               # tolerated relative change in populations
 
-dir = f'plots_ndens_{n_dens.value}_dz_{(zf-z0).value}_{time.strftime("%Y%m%d-%H%M%S")}/'
+dir = f'{time.strftime("%Y%m%d-%H%M%S")}_plots_ndens_{n_dens.value}_dz_{(zf-z0).value}/'
