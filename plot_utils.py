@@ -108,7 +108,7 @@ def plot_stokes_im(cdt, st, norm=True, name='stokes_image', mode='save', directo
     fig = plt.figure(figsize=(8, 8))
     for i in range(1, 4+1):
         fig.add_subplot(2, 2, i)
-        plt.imshow(stokes[i-1], aspect='auto', extent=[cdt.w0.value, cdt.wf.value, cdt.z0.value, cdt.zf.value], cmap='inferno')
+        plt.imshow(stokes[i-1], aspect='auto', origin='lower', extent=[cdt.w0.value, cdt.wf.value, cdt.z0.value, cdt.zf.value], cmap='inferno')
         plt.xlabel('frequency')
         plt.ylabel('z')
         plt.colorbar()

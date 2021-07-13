@@ -11,7 +11,7 @@ def BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, ray, c
 
     # BESSER coeficients to solve RTE (Jiri Stepan and Trujillo Bueno A&A 557 2013)
     tauMO = ((kk_m[0, 0] + kk_o[0, 0])/2) * np.abs((point_O.z - point_M.z)/np.cos(ray.inc)) + 1e-30
-    tau_tot = np.append(tau_tot, tau_tot[-1] + tauMO[2])
+    tau_tot = np.append(tau_tot, tau_tot[-1] + tauMO[int(cdt.nus_N/2)])
     tauOP = ((kk_o[0, 0] + kk_p[0, 0])/2) * np.abs((point_P.z - point_O.z)/np.cos(ray.inc)) + 1e-30
 
     exp_tauMO = np.exp(-np.where(tauMO < 300, tauMO, 300))
