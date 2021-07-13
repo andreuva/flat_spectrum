@@ -39,12 +39,16 @@ for i in range(len(solve)):
 
 print('\nPopulations after the ESE solution:\n', np.array_str(atom.rho, precision=3))
 
-rho_K0 = np.zeros(3)
+print('\nrho_KQ:')
+rho_KQ = np.zeros((3, 5)) + 0j
 for K in [0, 1, 2]:
-    for M in [-1, 0, 1]:
-        for Mp in [-1, 0, 1]:
-            rho_K0[K] += ((-1)**(1-M) * np.sqrt(2*K + 1) * atom.jsim.j3(1, 1, K, M, -Mp, 0)*atom.rho_call(1, 1, M, Mp))
+    for Q in range(-K, K+1):
+        for M in [-1, 0, 1]:
+            for Mp in [-1, 0, 1]:
+                rho_KQ[K][Q+K] += ((-1)**(1-M) * np.sqrt(2*K + 1) * atom.jsim.j3(1, 1, K, M, -Mp, Q)*atom.rho_call(1, 1, M, Mp))
 
-    rho_K0[K] += ((-1)**(-M) * np.sqrt(2*K + 1) * atom.jsim.j3(0, 0, K, 0, 0, 0)*atom.rho_call(0, 0, 0, 0))
+        print(f'rho^{K}_{Q} = {rho_KQ[K][Q+K]}')
+
+        # rho_KQ[K][Q+K] += ((-1)**(-M) * np.sqrt(2*K + 1) * atom.jsim.j3(0, 0, K, 0, 0, Q)*atom.rho_call(0, 0, 0, 0))
 
 print("Finished")
