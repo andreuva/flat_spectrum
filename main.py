@@ -7,6 +7,7 @@ from plot_utils import *
 
 # Import needed libraries
 import numpy as np
+import json
 from astropy import units as u
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -67,7 +68,7 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
             em_o, ab_o, sf_o, kk_o = RT_coeficients.getRTcoefs(point_O.atomic, ray, cdt)
             _, _, sf_m, kk_m = RT_coeficients.getRTcoefs(point_M.atomic, ray, cdt)
 
-            source = np.append(source, sf_o[0][79].value)
+            source = np.append(source, sf_o[0][int(cdt.nus_N/2)].value)
             emisivity = np.append(emisivity, em_o)
             absortivity = np.append(absortivity, ab_o)
 
@@ -82,20 +83,56 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
 
         # subfix = f'_itt{itteration}'
         subfix = f'_ray_inc_{round(ray.inc.value, 1)}_az_{round(ray.az.value, 1)}'
-        plot_z_profile(cdt, st, nu=79, directory=pm.dir + 'plots_core_norm' + subfix)
+        plot_z_profile(cdt, st, nu=int(cdt.nus_N/2), directory=pm.dir + 'plots_core_norm' + subfix)
         plot_z_profile(cdt, st, directory=pm.dir + 'plots_norm' + subfix)
         plot_stokes_im(cdt, st, directory=pm.dir + 'plots_norm' + subfix)
-        plot_z_profile(cdt, st, nu=79, norm=False, directory=pm.dir + 'plots_core' + subfix)
+        plot_z_profile(cdt, st, nu=int(cdt.nus_N/2), norm=False, directory=pm.dir + 'plots_core' + subfix)
         plot_z_profile(cdt, st, norm=False, directory=pm.dir + 'plots_prof' + subfix)
         plot_stokes_im(cdt, st, norm=False, directory=pm.dir + 'plots_prof' + subfix)
-        [st.radiation[i].resetStokes() for i in range(cdt.z_N)]
         plot_quantity(cdt, cdt.zz, tau_tot, names=['Z (CGS)', r'$\tau$'], directory=pm.dir + 'plots' + subfix)
         plot_quantity(cdt, cdt.zz, source, names=['Z (CGS)', r'$Sf_I$'], directory=pm.dir + 'plots' + subfix)
         plot_quantity(cdt, cdt.zz, emisivity, names=['Z (CGS)', r'$\varepsilon_I$'], directory=pm.dir + 'plots' + subfix)
         plot_quantity(cdt, cdt.zz, absortivity, names=['Z (CGS)', r'$\eta_I$'], directory=pm.dir + 'plots' + subfix)
 
+    rad_jqq = {}
+    for i in range(cdt.z_N):
+        rad_jqq[i] = st.radiation[i].jqq
+
+    datadir = pm.dir + 'out'
+    if not os.path.exists(datadir):
+        os.makedirs(datadir)
+    datadir = pm.dir + 'out/'
+
+    file = open(datadir + "jqq.json", "w")
+    json.dump(rad_jqq, file)
+    file.close()
+
     # Update the MRC and check wether we reached convergence
     st.update_mrc(cdt, itteration)
+
+    glob_pop = np.array([st.atomic[i].rho for i in range(cdt.z_N)])
+    np.savetxt(datadir + "rho_qq.csv")
+
+    rho_KQ = np.zeros((3, 5)) + 0j
+    rho_iKQ = {}
+    for i in range(cdt.z_N):
+        for K in [0, 1, 2]:
+            for Q in range(-K, K+1):
+                for M in [-1, 0, 1]:
+                    for Mp in [-1, 0, 1]:
+                        rho_KQ[K][Q+K] += ((-1)**(1-M) * np.sqrt(2*K + 1) * st.atomic[i].jsim.j3(1, 1, K, M, -Mp, Q) *
+                                           st.atomic[i].rho_call(1, 1, M, Mp))
+
+                rho_iKQ[i] = rho_KQ
+
+    file = open(datadir + "rho_KQ.json", "w")
+    json.dump(rho_iKQ, file)
+    file.close()
+
+    # file = open("data.json", "r")
+    # output = file.read()
+    # print(output)
+    # file.close()
 
     if (st.mrc.max() < pm.tolerance):
         break
