@@ -10,7 +10,7 @@ lamb0 = 1081.3 * u.nm             # Initial frequency (nm)
 lambf = 1085.3 * u.nm             # Final frequency (nm)
 wn = 64                        # Points in the frequency quadrature (grid)
 
-ray_quad = "gaussian_quadrature_2.dat"       # file where the angular quadrature is saved
+ray_quad = "gaussian_quadrature.dat"       # file where the angular quadrature is saved
 
 v_dop = 5.0 * u.km / u.s         # Dopler velocity
 a_voigt = 1                      # voigt width of the line profile

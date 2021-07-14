@@ -34,8 +34,8 @@ def plot_quadrature(cdt, mode='save', directory='plots'):
     inclinations_glob = np.array([ray.inc_glob.value for ray in cdt.rays])
     azimuts_glob = np.array([ray.az_glob.value for ray in cdt.rays])
 
-    plt.plot(inclinations_loc, azimuts_loc, 'o', label='local RF')
-    plt.plot(inclinations_glob, azimuts_glob, 'o', alpha=0.5, label='global RF')
+    plt.plot(azimuts_loc-180, inclinations_loc-90, 'o', label='local RF')
+    plt.plot(azimuts_glob-180, inclinations_glob-90, 'o', alpha=0.5, label='global RF')
     plt.grid(True)
     plt.title('Quadrature in the two reference frames')
     plt.legend()
