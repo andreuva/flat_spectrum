@@ -7,7 +7,7 @@ from plot_utils import *
 
 # Import needed libraries
 import numpy as np
-import json
+import pickle
 from astropy import units as u
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -19,7 +19,15 @@ cdt = conditions(pm)
 RT_coeficients = RTcoefs(cdt.nus)
 st = state(cdt)
 
-# plot_quadrature(cdt)
+if not os.path.exists(pm.dir):
+    os.makedirs(pm.dir)
+
+datadir = pm.dir + 'out'
+if not os.path.exists(datadir):
+    os.makedirs(datadir)
+datadir = pm.dir + 'out/'
+
+plot_quadrature(cdt, directory=pm.dir)
 
 # Start the main loop for the Lambda iteration
 for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
@@ -81,8 +89,14 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
             # Adding the ray contribution to the Jqq's
             point_O.radiation.sumStokes(ray)
 
-        # subfix = f'_itt{itteration}'
-        subfix = f'_ray_inc_{round(ray.inc.value, 1)}_az_{round(ray.az.value, 1)}'
+            if i == 0:
+                simetry = point_O.radiation.jqq
+                file = open(datadir + f"simetry_{itteration}_{round(ray.inc.value)}_{round(ray.az.value)}.pkl", "wb")
+                pickle.dump(simetry, file)
+                file.close()
+
+        subfix = f'_itt{itteration}'
+        # subfix = f'_ray_inc_{round(ray.inc.value, 1)}_az_{round(ray.az.value, 1)}'
         plot_z_profile(cdt, st, nu=int(cdt.nus_N/2), directory=pm.dir + 'plots_core_norm' + subfix)
         plot_z_profile(cdt, st, directory=pm.dir + 'plots_norm' + subfix)
         plot_stokes_im(cdt, st, directory=pm.dir + 'plots_norm' + subfix)
@@ -98,20 +112,31 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
     for i in range(cdt.z_N):
         rad_jqq[i] = st.radiation[i].jqq
 
-    datadir = pm.dir + 'out'
-    if not os.path.exists(datadir):
-        os.makedirs(datadir)
-    datadir = pm.dir + 'out/'
+    file = open(datadir + "jqq.pkl", "wb")
+    pickle.dump(rad_jqq, file)
+    file.close()
 
-    file = open(datadir + "jqq.json", "w")
-    json.dump(rad_jqq, file)
+    J_KQ = np.zeros((3, 5, cdt.nus_N)) + 0j
+    J_iKQ = {}
+    for i in range(cdt.z_N):
+        for K in [0, 1, 2]:
+            for Q in range(-K, K+1):
+                for q in [-1, 0, 1]:
+                    for qp in [-1, 0, 1]:
+                        J_KQ[K][Q+K] += ((-1)**(1-q) * np.sqrt(3*(2*K + 1)) * st.atomic[i].jsim.j3(1, 1, K, q, -qp, -Q) *
+                                         st.radiation[i].jqq[q][qp].value)
+
+                J_iKQ[i] = J_KQ
+
+    file = open(datadir + "J_KQ.pkl", "wb")
+    pickle.dump(J_iKQ, file)
     file.close()
 
     # Update the MRC and check wether we reached convergence
     st.update_mrc(cdt, itteration)
 
     glob_pop = np.array([st.atomic[i].rho for i in range(cdt.z_N)])
-    np.savetxt(datadir + "rho_qq.csv")
+    np.savetxt(datadir + "rho_qq.csv", glob_pop)
 
     rho_KQ = np.zeros((3, 5)) + 0j
     rho_iKQ = {}
@@ -125,12 +150,12 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
 
                 rho_iKQ[i] = rho_KQ
 
-    file = open(datadir + "rho_KQ.json", "w")
-    json.dump(rho_iKQ, file)
+    file = open(datadir + "rho_KQ.pkl", "wb")
+    pickle.dump(rho_iKQ, file)
     file.close()
 
-    # file = open("data.json", "r")
-    # output = file.read()
+    # file = open("data.pkl", "rb")
+    # output = pickle.load(file)
     # print(output)
     # file.close()
 
