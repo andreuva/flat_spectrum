@@ -1,24 +1,27 @@
 import matplotlib.pyplot as plt
 # from matplotlib.ticker import ScalarFormatter
+from matplotlib import cm, colors
+from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import os
 
 
+def unique_filename(directory, name, extension):
+    i = 0
+    path = directory + '/' + name + f'_{i}.' + extension
+    while os.path.exists(path):
+        i += 1
+        path = directory + '/' + name + f'_{i}.' + extension
+
+    return path
+
+
 def save_or_show(mode, file, directory):
     if mode == 'save':
-        dir = './' + directory + '/'
-        if not os.path.exists(dir):
-            os.makedirs(dir)
 
-        ext = '.png'
-        filename = dir+file+ext
-
-        i = 0
-        while os.path.exists(filename):
-            filename = dir + file + '_' + str(i) + ext
-            i += 1
-
-        plt.savefig(filename, bbox_inches='tight')
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        plt.savefig(unique_filename(directory, file, 'png'), bbox_inches='tight')
         plt.close()
     else:
         plt.show()
@@ -30,6 +33,7 @@ def plot_quadrature(cdt, mode='save', directory='plots'):
 
     inclinations_loc = np.array([ray.inc.value for ray in cdt.rays])
     azimuts_loc = np.array([ray.az.value for ray in cdt.rays])
+    weights = np.array([ray.weight.value for ray in cdt.rays])
 
     inclinations_glob = np.array([ray.inc_glob.value for ray in cdt.rays])
     azimuts_glob = np.array([ray.az_glob.value for ray in cdt.rays])
@@ -39,6 +43,42 @@ def plot_quadrature(cdt, mode='save', directory='plots'):
     plt.grid(True)
     plt.title('Quadrature in the two reference frames')
     plt.legend()
+    save_or_show(mode, 'quadrature', directory)
+
+    # Create a sphere
+    r = 0.95
+    phi, theta = np.mgrid[0.0:np.pi:100j, 0.0:2.0*np.pi:100j]
+    x = r*np.sin(phi)*np.cos(theta)
+    y = r*np.sin(phi)*np.sin(theta)
+    z = r*np.cos(phi)
+
+    # transform data
+    theta, phi, r = inclinations_loc, azimuts_loc, np.ones_like(azimuts_loc)
+    theta = theta * np.pi / 180.0
+    phi = phi * np.pi / 180.0
+    xx_loc = np.sin(phi)*np.cos(theta)
+    yy_loc = np.sin(phi)*np.sin(theta)
+    zz_loc = np.cos(phi)
+
+    theta, phi, r = inclinations_glob, azimuts_glob, np.ones_like(azimuts_loc)
+    theta = theta * np.pi / 180.0
+    phi = phi * np.pi / 180.0
+    xx_glob = np.sin(phi)*np.cos(theta)
+    yy_glob = np.sin(phi)*np.sin(theta)
+    zz_glob = np.cos(phi)
+
+    # Set colours and render
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot_surface(x, y, z,  rstride=1, cstride=1, color='c', alpha=0.5, linewidth=0)
+    ax.scatter(xx_glob, yy_glob, zz_glob, color="r", s=50, alpha=1)
+    ax.scatter(xx_loc, yy_loc, zz_loc, color="g", s=50, alpha=1)
+    ax.set_xlim([-1, 1])
+    ax.set_ylim([-1, 1])
+    ax.set_zlim([-1, 1])
+    ax.set_aspect("auto")
+
+    plt.tight_layout()
     save_or_show(mode, 'quadrature', directory)
 
 

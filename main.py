@@ -112,7 +112,7 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
     for i in range(cdt.z_N):
         rad_jqq[i] = st.radiation[i].jqq
 
-    file = open(datadir + "jqq.pkl", "wb")
+    file = open(unique_filename(datadir, "jqq", 'csv'), "wb")
     pickle.dump(rad_jqq, file)
     file.close()
 
@@ -128,7 +128,7 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
 
                 J_iKQ[i] = J_KQ
 
-    file = open(datadir + "J_KQ.pkl", "wb")
+    file = open(unique_filename(datadir, "J_KQ", 'pkl'), "wb")
     pickle.dump(J_iKQ, file)
     file.close()
 
@@ -136,7 +136,7 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
     st.update_mrc(cdt, itteration)
 
     glob_pop = np.array([st.atomic[i].rho for i in range(cdt.z_N)])
-    np.savetxt(datadir + "rho_qq.csv", glob_pop)
+    np.savetxt(unique_filename(datadir, "rho_qq", 'csv'), glob_pop)
 
     rho_KQ = np.zeros((3, 5)) + 0j
     rho_iKQ = {}
@@ -150,7 +150,7 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
 
                 rho_iKQ[i] = rho_KQ
 
-    file = open(datadir + "rho_KQ.pkl", "wb")
+    file = open(unique_filename(datadir, "rho_KQ", 'pkl'), "wb")
     pickle.dump(rho_iKQ, file)
     file.close()
 
