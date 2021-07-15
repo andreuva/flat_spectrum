@@ -2,10 +2,15 @@ import pickle
 import numpy as np
 from glob import glob
 from atom import ESE
+import parameters as pm
+from conditions import conditions
+import matplotlib.pyplot as plt
+
+cdts = conditions(pm)
 
 ese = ESE(None, None, None, None, None, None)
 
-directory = '20210715-084452_plots_ndens_1.0_dz_10.0/out/'
+directory = '20210715-125336_plots_ndens_1.0_dz_10.0/out/'
 
 jqq_rays = []
 for filename in sorted(glob(directory + 'sim*')):
@@ -22,7 +27,7 @@ file = open(directory + "J_KQ_1.pkl", "rb")
 J_KQ = pickle.load(file)
 file.close()
 
-file = open(directory + "rho_KQ_1.pkl", "rb")
+file = open(directory + "rho_KQ_after_ese_1.pkl", "rb")
 rho_KQ = pickle.load(file)
 file.close()
 
@@ -50,6 +55,31 @@ for i, jqq in enumerate(jqq_rays):
                 print(f'J^{K}_{Q} = {Jp_KQ[K][Q+K][int(len(Jp_KQ[K][Q+K])/2)]:1.2e}')
 
 print('------------------------------------')
+KQ = []
 for K in [0, 1, 2]:
     for Q in range(-K, K+1):
+        KQ.append((K, Q))
         print(f'J^{K}_{Q} = {J_KQ[0][K][Q+K][int(len(J_KQ[0][K][Q+K])/2)]:1.2e}')
+
+print('------------------------------------')
+print(' MAKING PLOTS ')
+print('------------------------------------')
+J_00_z = np.zeros(len(J_KQ)) + 0j
+J_20_z = np.zeros(len(J_KQ)) + 0j
+for i in range(len(J_KQ)):
+    J_00_z[i] = np.sum(J_KQ[i][0][0]*cdts.nus_weights.value)
+    J_20_z[i] = np.sum(J_KQ[i][2][2]*cdts.nus_weights.value)
+
+plt.plot(J_00_z)
+plt.plot(J_20_z)
+plt.show()
+
+rho_00_z = np.zeros(len(rho_KQ)) + 0j
+rho_20_z = np.zeros(len(rho_KQ)) + 0j
+for i in range(len(J_KQ)):
+    rho_00_z[i] = rho_KQ[i][0][0]
+    rho_20_z[i] = rho_KQ[i][2][2]
+
+plt.plot(rho_00_z)
+plt.plot(rho_20_z/rho_00_z)
+plt.show()

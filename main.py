@@ -90,9 +90,9 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
             point_O.radiation.sumStokes(ray)
 
             if i == 0:
-                simetry = point_O.radiation.jqq
-                file = open(datadir + f"simetry_{itteration}_{round(ray.inc.value)}_{round(ray.az.value)}.pkl", "wb")
-                pickle.dump(simetry, file)
+                jqq_base = point_O.radiation.jqq
+                file = open(datadir + f"jqq_base_{itteration}_{round(ray.inc.value)}_{round(ray.az.value)}.pkl", "wb")
+                pickle.dump(jqq_base, file)
                 file.close()
 
         subfix = f'_itt{itteration}'
@@ -112,7 +112,7 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
     for i in range(cdt.z_N):
         rad_jqq[i] = st.radiation[i].jqq
 
-    file = open(unique_filename(datadir, "jqq", 'csv'), "wb")
+    file = open(unique_filename(datadir, "jqq", 'pkl'), "wb")
     pickle.dump(rad_jqq, file)
     file.close()
 
@@ -123,13 +123,28 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
             for Q in range(-K, K+1):
                 for q in [-1, 0, 1]:
                     for qp in [-1, 0, 1]:
-                        J_KQ[K][Q+K] += ((-1)**(1-q) * np.sqrt(3*(2*K + 1)) * st.atomic[i].jsim.j3(1, 1, K, q, -qp, -Q) *
+                        J_KQ[K][Q+K] += ((-1)**(1+q) * np.sqrt(3*(2*K + 1)) * st.atomic[i].jsim.j3(1, 1, K, q, -qp, -Q) *
                                          st.radiation[i].jqq[q][qp].value)
 
-                J_iKQ[i] = J_KQ
+        J_iKQ[i] = J_KQ
 
     file = open(unique_filename(datadir, "J_KQ", 'pkl'), "wb")
     pickle.dump(J_iKQ, file)
+    file.close()
+
+    rho_KQ = np.zeros((3, 5)) + 0j
+    rho_iKQ = {}
+    for i in range(cdt.z_N):
+        for K in [0, 1, 2]:
+            for Q in range(-K, K+1):
+                for M in [-1, 0, 1]:
+                    for Mp in [-1, 0, 1]:
+                        rho_KQ[K][Q+K] += ((-1)**(1-M) * np.sqrt(2*K + 1) * st.atomic[i].jsim.j3(1, 1, K, M, -Mp, Q) *
+                                           st.atomic[i].rho_call(1, 1, M, Mp))
+        rho_iKQ[i] = rho_KQ
+
+    file = open(unique_filename(datadir, "rho_KQ_before_ese", 'pkl'), "wb")
+    pickle.dump(rho_iKQ, file)
     file.close()
 
     # Update the MRC and check wether we reached convergence
@@ -147,10 +162,9 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
                     for Mp in [-1, 0, 1]:
                         rho_KQ[K][Q+K] += ((-1)**(1-M) * np.sqrt(2*K + 1) * st.atomic[i].jsim.j3(1, 1, K, M, -Mp, Q) *
                                            st.atomic[i].rho_call(1, 1, M, Mp))
+        rho_iKQ[i] = rho_KQ
 
-                rho_iKQ[i] = rho_KQ
-
-    file = open(unique_filename(datadir, "rho_KQ", 'pkl'), "wb")
+    file = open(unique_filename(datadir, "rho_KQ_after_ese", 'pkl'), "wb")
     pickle.dump(rho_iKQ, file)
     file.close()
 
