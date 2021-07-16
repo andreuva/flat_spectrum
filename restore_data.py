@@ -1,85 +1,149 @@
 import pickle
 import numpy as np
 from glob import glob
-from atom import ESE
 import parameters as pm
-from conditions import conditions
 import matplotlib.pyplot as plt
+from physical_functions import jsymbols
+from plot_utils import save_or_show
 
-cdts = conditions(pm)
+# Definition of the files to load
+directory = '20210716-101509_plots_ndens_1.0_dz_15.0/out/'
+prefix = 'jqq_base*'
+files = sorted(glob(directory + prefix))
+looked_for = '_0_16_'
 
-ese = ESE(None, None, None, None, None, None)
+colors = ['coral', 'cornflowerblue', 'violet', 'seagreen', 'gray', 'gold']
 
-directory = '20210715-125336_plots_ndens_1.0_dz_10.0/out/'
+jqq_prefix = "jqq_[0-9].pkl"
+jqq_filenames = sorted(glob(directory + jqq_prefix))
+rho_qq_prefix = "rho_qq_after_*"
+rho_qq_filenames = sorted(glob(directory + rho_qq_prefix))
 
-jqq_rays = []
-for filename in sorted(glob(directory + 'sim*')):
-    print('open file:', filename)
+# Loading the data
+jqq_base_rays = []
+for filename in files:
+    print('opening and reading file:', filename)
     file = open(filename, "rb")
-    jqq_rays.append(pickle.load(file))
+    jqq_base_rays.append(pickle.load(file))
     file.close()
 
-file = open(directory + "jqq_1.pkl", "rb")
-jqq = pickle.load(file)
-file.close()
+jqq_itt_z = []
+for path in jqq_filenames:
+    file = open(path, "rb")
+    jqq_itt_z.append(pickle.load(file))
+    file.close()
 
-file = open(directory + "J_KQ_1.pkl", "rb")
-J_KQ = pickle.load(file)
-file.close()
+rho_itt_z_qq = []
+for path in rho_qq_filenames:
+    rho_itt_z_qq.append(np.loadtxt(path))
 
-file = open(directory + "rho_KQ_after_ese_1.pkl", "rb")
-rho_KQ = pickle.load(file)
-file.close()
-
-rho_qq = np.loadtxt(directory + "rho_qq_1.csv")
-
-for i, jqq in enumerate(jqq_rays):
-    if sorted(glob(directory + 'sim*'))[i][-14:-9] == '0_16_':
+for i in range(len(jqq_base_rays)):
+    if looked_for in files[i]:
         print('----------------------------------------------')
-        print(sorted(glob(directory + 'sim*'))[i], '\n')
-        print(f'{jqq[-1][-1].real.value.mean():1.2e}\t {jqq[0][0].real.value.mean():1.2e}\t {jqq[1][1].real.value.mean():1.2e}')
-        print(f'{jqq[0][-1].real.value.mean():1.2e}\t {jqq[-1][0].real.value.mean():1.2e}')
-        print(f'{jqq[0][1].real.value.mean():1.2e}\t  {jqq[1][0].real.value.mean():1.2e}')
-        print(f'{jqq[-1][1].real.value.mean():1.2e}\t {jqq[1][-1].real.value.mean():1.2e}')
-        print('')
-        Jp_KQ = np.zeros((3, 5, len(jqq[-1][1]))) + 0j
-        # J_iKQ = {}
+        print(sorted(glob(directory + prefix))[i], '\n\tMean of jqq,s:\n')
+        for q in [-1, 0, 1]:
+            for qp in [-1, 0, 1]:
+                print(f'J{q}{qp} = {jqq_base_rays[i][q][qp].real.value.mean():1.2e}', end='\t')
+            print('')
+
+#  Compute the JKQ and rhoKQ
+
+jsymb = jsymbols()
+nus_weights = np.ones_like(jqq_itt_z[0][0][0][0].value)
+nus_weights[0] = 0.5
+nus_weights[-1] = 0.5
+
+J_KQ_bar_itt = np.zeros((len(jqq_itt_z), len(jqq_itt_z[0]), 3, 5)) + 0j
+for it, jqq_z in enumerate(jqq_itt_z):
+    for i in range(len(jqq_itt_z[0])):
         for K in [0, 1, 2]:
             for Q in range(-K, K+1):
                 for q in [-1, 0, 1]:
                     for qp in [-1, 0, 1]:
-                        Jp_KQ[K][Q+K] += ((-1)**(1-q) * np.sqrt(3*(2*K + 1)) * ese.jsim.j3(1, 1, K, q, -qp, -Q) *
-                                          jqq[q][qp].value)
+                        J_KQ_nu = ((-1)**(1+q) * np.sqrt(3*(2*K + 1)) * jsymb.j3(1, 1, K, q, -qp, -Q) *
+                                   jqq_z[i][q][qp].value)
+                        J_KQ_bar_itt[it, i, K, Q+K] += np.sum(J_KQ_nu*nus_weights)
 
-                # J_iKQ[i] = Jp_KQ
-                print(f'J^{K}_{Q} = {Jp_KQ[K][Q+K][int(len(Jp_KQ[K][Q+K])/2)]:1.2e}')
-
-print('------------------------------------')
-KQ = []
-for K in [0, 1, 2]:
-    for Q in range(-K, K+1):
-        KQ.append((K, Q))
-        print(f'J^{K}_{Q} = {J_KQ[0][K][Q+K][int(len(J_KQ[0][K][Q+K])/2)]:1.2e}')
+rho_up_KQ_itt = np.zeros((len(rho_itt_z_qq), len(rho_itt_z_qq[0]), 3, 5)) + 0j
+rho_low_KQ_itt = np.zeros((len(rho_itt_z_qq), len(rho_itt_z_qq[0]))) + 0j
+for it, rho_qq in enumerate(rho_itt_z_qq):
+    for i in range(len(rho_qq)):
+        for K in [0, 1, 2]:
+            for Q in range(-K, K+1):
+                for M in [-1, 0, 1]:
+                    for Mp in [-1, 0, 1]:
+                        index_up = 1 + (M+1)*3 + (Mp+1)
+                        rho_up_KQ_itt[it, i, K, Q+K] += ((-1)**(1-M) * np.sqrt(2*K + 1) * jsymb.j3(1, 1, K, M, -Mp, Q) *
+                                                         rho_qq[i][index_up])
+                rho_low_KQ_itt[it, i] += (np.sqrt(2*K + 1) * jsymb.j3(1, 1, K, 0, 0, Q) *
+                                          rho_qq[i][0])
 
 print('------------------------------------')
 print(' MAKING PLOTS ')
 print('------------------------------------')
-J_00_z = np.zeros(len(J_KQ)) + 0j
-J_20_z = np.zeros(len(J_KQ)) + 0j
-for i in range(len(J_KQ)):
-    J_00_z[i] = np.sum(J_KQ[i][0][0]*cdts.nus_weights.value)
-    J_20_z[i] = np.sum(J_KQ[i][2][2]*cdts.nus_weights.value)
 
-plt.plot(J_00_z)
-plt.plot(J_20_z)
-plt.show()
+# Plots for JKQ
+for K in [0, 1, 2]:
+    for Q in range(-K, K+1):
+        plt.figure(figsize=(20, 20), dpi=300)
+        for i, J_KQ_bar in enumerate(J_KQ_bar_itt):
+            normalization = 1
+            if K != 0 or Q != 0:
+                normalization = J_KQ_bar[:, 0, 0]
 
-rho_00_z = np.zeros(len(rho_KQ)) + 0j
-rho_20_z = np.zeros(len(rho_KQ)) + 0j
-for i in range(len(J_KQ)):
-    rho_00_z[i] = rho_KQ[i][0][0]
-    rho_20_z[i] = rho_KQ[i][2][2]
+            plt.plot(J_KQ_bar[:, K, Q+K].real/normalization.real,
+                     color=colors[i],
+                     label=f'$Real(J^{K}_{Q})$'+f' itt = {i}')
+        for i, J_KQ_bar in enumerate(J_KQ_bar_itt):
+            plt.plot(J_KQ_bar[:, K, Q+K].imag,
+                     '-.', color=colors[i],
+                     label=f'$Imag(J^{K}_{Q})$'+f' itt = {i}')
+        plt.legend()
+        plt.xlabel('z')
+        if type(normalization) != int:
+            plt.ylabel(f'$J_{Q}^{K} / J_0^0$')
+            plt.title(f'$J_{Q}^{K}$ profile normaliced')
+            save_or_show('save', f'J{K}{Q}_norm', directory + 'plots/')
+        else:
+            plt.ylabel(f'$J^{K}_{Q}$')
+            plt.title(f'$J^{K}_{Q}$ profile')
+            save_or_show('save', f'J{K}{Q}', directory + 'plots/')
 
-plt.plot(rho_00_z)
-plt.plot(rho_20_z/rho_00_z)
-plt.show()
+# Plots for rhoKQ
+for K in [0, 1, 2]:
+    for Q in range(-K, K+1):
+        plt.figure(figsize=(20, 20), dpi=300)
+        for i, rho_up_KQ in enumerate(rho_up_KQ_itt):
+            normalization = 1
+            if K != 0 or Q != 0:
+                normalization = rho_up_KQ[:, 0, 0]
+            # else:
+                # plt.plot(rho_low_KQ_itt[i, :].real,
+                #          '--', linewidth=2, color=colors[i],
+                #          label=f'$Real(rho^{K}_{Q})$ LOW'+f' itt = {i}')
+                # plt.plot(rho_low_KQ_itt[i, :].imag,
+                #          ':', linewidth=2, color=colors[i],
+                #          label=f'$Im(rho^{K}_{Q})$ LOW'+f' itt = {i}')
+
+            plt.plot(rho_up_KQ[:, K, Q+K].real/normalization.real,
+                     color=colors[i],
+                     label=f'$Real(rho^{K}_{Q})$'+f' itt = {i}')
+        for i, rho_up_KQ in enumerate(rho_up_KQ_itt):
+            plt.plot(rho_up_KQ[:, K, Q+K].imag,
+                     '-.', color=colors[i],
+                     label=f'$Imag(rho^{K}_{Q})$'+f' itt = {i}')
+
+        plt.legend()
+        plt.xlabel('z')
+        if type(normalization) != int:
+            plt.ylabel(f'$rho_{Q}^{K} / rho_0^0$')
+            plt.title(f'$rho_{Q}^{K}$ profile normaliced')
+            save_or_show('save', f'rho{K}{Q}_norm', directory + 'plots/')
+        else:
+            plt.ylabel(f'$rho^{K}_{Q}$')
+            plt.title(f'$rho^{K}_{Q}$ profile')
+            save_or_show('save', f'rho{K}{Q}', directory + 'plots/')
+
+print('------------------------------------')
+print(' FINISHED ')
+print('------------------------------------')

@@ -116,62 +116,14 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
     pickle.dump(rad_jqq, file)
     file.close()
 
-    J_KQ = np.zeros((3, 5, cdt.nus_N)) + 0j
-    J_iKQ = {}
-    for i in range(cdt.z_N):
-        for K in [0, 1, 2]:
-            for Q in range(-K, K+1):
-                for q in [-1, 0, 1]:
-                    for qp in [-1, 0, 1]:
-                        J_KQ[K][Q+K] += ((-1)**(1+q) * np.sqrt(3*(2*K + 1)) * st.atomic[i].jsim.j3(1, 1, K, q, -qp, -Q) *
-                                         st.radiation[i].jqq[q][qp].value)
-
-        J_iKQ[i] = J_KQ
-
-    file = open(unique_filename(datadir, "J_KQ", 'pkl'), "wb")
-    pickle.dump(J_iKQ, file)
-    file.close()
-
-    rho_KQ = np.zeros((3, 5)) + 0j
-    rho_iKQ = {}
-    for i in range(cdt.z_N):
-        for K in [0, 1, 2]:
-            for Q in range(-K, K+1):
-                for M in [-1, 0, 1]:
-                    for Mp in [-1, 0, 1]:
-                        rho_KQ[K][Q+K] += ((-1)**(1-M) * np.sqrt(2*K + 1) * st.atomic[i].jsim.j3(1, 1, K, M, -Mp, Q) *
-                                           st.atomic[i].rho_call(1, 1, M, Mp))
-        rho_iKQ[i] = rho_KQ
-
-    file = open(unique_filename(datadir, "rho_KQ_before_ese", 'pkl'), "wb")
-    pickle.dump(rho_iKQ, file)
-    file.close()
+    glob_pop = np.array([st.atomic[i].rho for i in range(cdt.z_N)])
+    np.savetxt(unique_filename(datadir, "rho_qq_before", 'csv'), glob_pop)
 
     # Update the MRC and check wether we reached convergence
     st.update_mrc(cdt, itteration)
 
     glob_pop = np.array([st.atomic[i].rho for i in range(cdt.z_N)])
-    np.savetxt(unique_filename(datadir, "rho_qq", 'csv'), glob_pop)
-
-    rho_KQ = np.zeros((3, 5)) + 0j
-    rho_iKQ = {}
-    for i in range(cdt.z_N):
-        for K in [0, 1, 2]:
-            for Q in range(-K, K+1):
-                for M in [-1, 0, 1]:
-                    for Mp in [-1, 0, 1]:
-                        rho_KQ[K][Q+K] += ((-1)**(1-M) * np.sqrt(2*K + 1) * st.atomic[i].jsim.j3(1, 1, K, M, -Mp, Q) *
-                                           st.atomic[i].rho_call(1, 1, M, Mp))
-        rho_iKQ[i] = rho_KQ
-
-    file = open(unique_filename(datadir, "rho_KQ_after_ese", 'pkl'), "wb")
-    pickle.dump(rho_iKQ, file)
-    file.close()
-
-    # file = open("data.pkl", "rb")
-    # output = pickle.load(file)
-    # print(output)
-    # file.close()
+    np.savetxt(unique_filename(datadir, "rho_qq_after", 'csv'), glob_pop)
 
     if (st.mrc.max() < pm.tolerance):
         break
