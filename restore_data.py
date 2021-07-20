@@ -75,8 +75,7 @@ for it, rho_qq in enumerate(rho_itt_z_qq):
                         index_up = 1 + (M+1)*3 + (Mp+1)
                         rho_up_KQ_itt[it, i, K, Q+K] += ((-1)**(1-M) * np.sqrt(2*K + 1) * jsymb.j3(1, 1, K, M, -Mp, Q) *
                                                          rho_qq[i][index_up])
-                rho_low_KQ_itt[it, i] += (np.sqrt(2*K + 1) * jsymb.j3(1, 1, K, 0, 0, Q) *
-                                          rho_qq[i][0])
+        rho_low_KQ_itt[it, i] += (rho_qq[i][0])
 
 print('------------------------------------')
 print(' MAKING PLOTS ')
@@ -117,13 +116,13 @@ for K in [0, 1, 2]:
             normalization = 1
             if K != 0 or Q != 0:
                 normalization = rho_up_KQ[:, 0, 0]
-            # else:
-                # plt.plot(rho_low_KQ_itt[i, :].real,
-                #          '--', linewidth=2, color=colors[i],
-                #          label=f'$Real(rho^{K}_{Q})$ LOW'+f' itt = {i}')
-                # plt.plot(rho_low_KQ_itt[i, :].imag,
-                #          ':', linewidth=2, color=colors[i],
-                #          label=f'$Im(rho^{K}_{Q})$ LOW'+f' itt = {i}')
+            else:
+                plt.plot(rho_low_KQ_itt[i, :].real,
+                         '--', linewidth=2, color=colors[i],
+                         label=f'$Real(rho^{K}_{Q})$ LOW'+f' itt = {i}')
+                plt.plot(rho_low_KQ_itt[i, :].imag,
+                         ':', linewidth=2, color=colors[i],
+                         label=f'$Im(rho^{K}_{Q})$ LOW'+f' itt = {i}')
 
             plt.plot(rho_up_KQ[:, K, Q+K].real/normalization.real,
                      color=colors[i],
