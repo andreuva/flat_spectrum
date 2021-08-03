@@ -108,7 +108,7 @@ class ESE:
 
         self.N_rho = len(self.rho)
         self.coherences = self.N_rho - self.populations
-        self.ESE = np.zeros((self.N_rho, self.N_rho)).astype('complex128') / u.s
+        self.ESE = np.zeros((self.N_rho*2, self.N_rho*2)).astype('complex128') / u.s
 
     def solveESE(self, rad, cdt):
         """
@@ -117,7 +117,8 @@ class ESE:
         """
 
         for i, p_lev in enumerate(self.atom.dens_elmnt):
-            self.ESE[i] = np.zeros_like(self.ESE[i])
+            self.ESE[2*i] = np.zeros_like(self.ESE[2*i])
+            self.ESE[2*i+1] = np.zeros_like(self.ESE[2*i+1])
 
             Li = p_lev[0]
             M = p_lev[-2]
@@ -140,21 +141,82 @@ class ESE:
 
                     if Lj > Li:
                         # calculate the TE(q -> p) and add it to self.ESE[i][j]
-                        self.ESE[i][j] = self.ESE[i][j] + TE(self, JJ, M, Mp, Jp, N, Np, line.A_lu)\
-                                                        + TS(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt)
+                        if Np == N:
+                            self.ESE[2*i][2*j] = self.ESE[2*i][2*j] + np.real(TS(self, JJ, M, Mp, Jp, N, N, rad, line, cdt))
+                            self.ESE[2*i+1][2*j] = self.ESE[2*i+1][2*j] + np.imag(TS(self, JJ, M, Mp, Jp, N, N, rad, line, cdt))
+
+                            self.ESE[2*i][2*j] = self.ESE[2*i][2*j] + TE(self, JJ, M, Mp, Jp, N, N, line.A_lu)
+
+                        elif Np > M:
+                            # row of real rho (real and imag columns)
+                            self.ESE[2*i][2*j] = self.ESE[2*i][2*j] + np.real(TS(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt) +
+                                                                              TS(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt))
+                            self.ESE[2*i][2*j+1] = self.ESE[2*i][2*j+1] + np.imag(TS(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt) -
+                                                                                  TS(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt))
+
+                            # row of imaginary rho (real and imag columns)
+                            self.ESE[2*i+1][2*j] = self.ESE[2*i+1][2*j] + np.real(TS(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt) +
+                                                                                  TS(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt))
+                            self.ESE[2*i+1][2*j+1] = self.ESE[2*i+1][2*j+1] + np.imag(TS(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt) -
+                                                                                      TS(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt))
+
+                            # row of real rho (real and imag columns)
+                            self.ESE[2*i][2*j] = self.ESE[2*i][2*j] + 2*TE(self, JJ, M, Mp, Jp, N, Np, line.A_lu)
+
                     elif Lj < Li:
-                        # calculate the TA(q -> p) and add it to self.ESE[i][j]
-                        self.ESE[i][j] = self.ESE[i][j] + TA(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt)
+                        if Np == N:
+                            self.ESE[2*i][2*j] = self.ESE[2*i][2*j] + np.real(TA(self, JJ, M, Mp, Jp, N, N, rad, line, cdt))
+                            self.ESE[2*i+1][2*j] = self.ESE[2*i+1][2*j] + np.imag(TA(self, JJ, M, Mp, Jp, N, N, rad, line, cdt))
+
+                        elif Np > N:
+                            # calculate the TA(q -> p) and add it to self.ESE[i][j]
+                            # row of real rho (real and imag columns)
+                            self.ESE[2*i][2*j] = self.ESE[2*i][2*j] + np.real(TA(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt) +
+                                                                              TA(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt))
+                            self.ESE[2*i][2*j+1] = self.ESE[2*i][2*j+1] + np.imag(TA(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt) -
+                                                                                  TA(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt))
+
+                            # row of imaginary rho (real and imag columns)
+                            self.ESE[2*i+1][2*j] = self.ESE[2*i+1][2*j] + np.real(TA(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt) +
+                                                                                  TA(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt))
+                            self.ESE[2*i+1][2*j+1] = self.ESE[2*i+1][2*j+1] + np.imag(TA(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt) -
+                                                                                      TA(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt))
                     elif Lj == Li:
                         # calculate the RA and RE
                         if M == N:
-                            self.ESE[i][j] = self.ESE[i][j] - (RA(self, Li, JJ, Mp, Np, rad, cdt) +
-                                                               RE(self, Li, JJ, Np, Mp) +
-                                                               RS(self, Li, JJ, Np, Mp, rad, cdt))
+                            if Np == M:
+                                self.ESE[2*i][2*j] = self.ESE[2*i][2*j] - (np.real(RA(self, Li, JJ, Mp, M, rad, cdt)) +
+                                                                           RE(self, Li, JJ, M, Mp) +
+                                                                           np.real(RS(self, Li, JJ, M, Mp, rad, cdt)))
+
+                                self.ESE[2*i+1][2*j] = self.ESE[2*i+1][2*j] - (np.imag(RA(self, Li, JJ, Mp, M, rad, cdt)) +
+                                                                               np.imag(RS(self, Li, JJ, M, Mp, rad, cdt)))
+
+                            elif Np > M:
+                                self.ESE[2*i][2*j] = self.ESE[2*i][2*j] - (2*np.real(RA(self, Li, JJ, Mp, Np, rad, cdt)) +
+                                                                           2*RE(self, Li, JJ, Np, Mp) +
+                                                                           2*np.real(RS(self, Li, JJ, Np, Mp, rad, cdt)))
+
+                                self.ESE[2*i][2*j+1] = self.ESE[2*i][2*j+1] + (2*np.imag(RA(self, Li, JJ, Mp, Np, rad, cdt)) +
+                                                                               2*np.imag(RS(self, Li, JJ, Np, Mp, rad, cdt)))
+
                         if Mp == Np:
-                            self.ESE[i][j] = self.ESE[i][j] - (RA(self, Li, JJ, N, M, rad, cdt) +
-                                                               RE(self, Li, JJ, M, N) +
-                                                               RS(self, Li, JJ, M, N, rad, cdt))
+                            if N == Mp:
+                                self.ESE[2*i][2*j] = self.ESE[2*i][2*j] - (np.real(RA(self, Li, JJ, N, M, rad, cdt)) +
+                                                                           RE(self, Li, JJ, M, N) +
+                                                                           np.real(RS(self, Li, JJ, M, N, rad, cdt)))
+
+                                self.ESE[2*i+1][2*j] = self.ESE[2*i+1][2*j] + (np.imag(RA(self, Li, JJ, N, M, rad, cdt)) +
+                                                                               np.imag(RS(self, Li, JJ, M, N, rad, cdt)))
+
+                            elif N > Mp:
+                                self.ESE[2*i][2*j] = self.ESE[2*i][2*j] - (2*np.real(RA(self, Li, JJ, N, M, rad, cdt)) +
+                                                                           2*RE(self, Li, JJ, M, N) +
+                                                                           2*np.real(RS(self, Li, JJ, M, N, rad, cdt)))
+
+                                self.ESE[2*i][2*j+1] = self.ESE[2*i][2*j+1] + (2*np.imag(RA(self, Li, JJ, N, M, rad, cdt)) +
+                                                                               2*np.imag(RS(self, Li, JJ, M, N, rad, cdt)))
+
                         else:
                             continue
                     else:
@@ -162,34 +224,47 @@ class ESE:
                         exit()
 
             nu_L = 1.3996e6*np.linalg.norm(cdt.B.value)     # Eq 3.10 LL04 Larmor freq
-            self.ESE[i][i] = self.ESE[i][i] - 2j*np.pi*(M - Mp)*nu_L*self.atom.levels[Li].g
+            self.ESE[2*i][2*i+1] = self.ESE[2*i][2*i+1] + 2*np.pi*(M - Mp)*nu_L*self.atom.levels[Li].g
+            self.ESE[2*i+1][2*i] = self.ESE[2*i+1][2*i] - 2*np.pi*(M - Mp)*nu_L*self.atom.levels[Li].g
 
-        indep = np.zeros(self.N_rho)/u.s
+        indep = np.zeros(self.N_rho*2)/u.s
         indep[0] = 1/u.s
 
         for i, lev in enumerate(self.atom.dens_elmnt):
             Ml = lev[-2]
             Mlp = lev[-1]
             if Mlp == Ml:
-                self.ESE[0, i] = 1/u.s
+                self.ESE[0, 2*i] = 1/u.s
+                self.ESE[0, 2*i+1] = 0/u.s
+                self.ESE[1, 2*i] = 0/u.s
+                self.ESE[1, 2*i+1] = 0/u.s
             else:
-                self.ESE[0, i] = 0/u.s
+                self.ESE[0, 2*i] = 0/u.s
+                self.ESE[0, 2*i+1] = 0/u.s
+                self.ESE[1, 2*i] = 0/u.s
+                self.ESE[1, 2*i+1] = 0/u.s
 
-        LU = linalg.lu_factor(np.real(self.ESE))
-        rho_n = linalg.lu_solve(LU, indep)
-        change = np.abs(rho_n - self.rho)/np.abs((rho_n + 1e-40))
-        self.rho = rho_n.copy()
+        # Print the ESE matrix to a file
+        solve = np.real(self.ESE.value)
+        rows = len(solve)
+        cols = len(solve[0])
+        with open('ESE_matrix.txt', 'w') as f:
+            for i in range(rows):
+                print(f'Row {i+1}\t', end='', file=f)
+                for j in range(cols):
+                    if solve[i][j] >= 0:
+                        print(' ', end='', file=f)
+                    print(f'{solve[i][j]:.2E}', end='', file=f)
+                print(f'= {indep[i].value}', file=f)
 
-        # Printo the ESE matrix
-        solve = np.real(self.ESE)
-        # print('')
-        # for i in range(len(solve)):
-        #     print(f'Row {i}\t', end='')
-        #     for j in range(len(solve)):
-        #         if solve[i][j] >= 0:
-        #             print(' ', end='')
-        #         print(f'{solve[i][j]:.2E} ', end='')
-        #     print(f'= {indep[i]}')
+        # LU = linalg.lu_factor(self.ESE)
+        # rho_n = linalg.lu_solve(LU, indep)
+        rho_n = linalg.solve(self.ESE, indep)
+        rho_comp = self.rho.copy()
+        for i in range(len(self.rho)):
+            rho_comp[i] = rho_n[2*i] + 1j*rho_n[2*i+1]
+        change = np.abs(rho_comp - self.rho)/np.abs((rho_comp + 1e-40))
+        self.rho = rho_comp.copy()
 
         # Check for the populations to be > 0 and to be normaliced
         suma = 0
@@ -210,6 +285,7 @@ class ESE:
             # input("Press Enter to continue...")
 
         # print('----------------------')
+        # raise SystemExit(0)
 
         return np.max(change)
 
