@@ -20,6 +20,15 @@ class level():
             for Mp in range(-self.J, self.J+1):
                 self.MMp.append([self.E, self.J, M, Mp])
 
+        self.MMp_indep = []
+        for M in range(-self.J, self.J+1):
+            for Mp in range(-self.J, self.J+1):
+                if Mp == M:
+                    self.MMp_indep.append([self.J, M, Mp, False])
+                elif Mp > M:
+                    self.MMp_indep.append([self.J, M, Mp, False])
+                    self.MMp_indep.append([self.J, M, Mp, True])
+
 
 class line():
     """Class that defines the lines of the atomic model"""
@@ -62,6 +71,11 @@ class HeI_1083():
             for comb in lev.MMp:
                 self.dens_elmnt.append([i, *comb])
 
+        self.dens_elmnt_indep = []
+        for i, lev in enumerate(self.levels):
+            for comb in lev.MMp_indep:
+                self.dens_elmnt_indep.append([i, *comb])
+
         self.line_elmnt = []
         for i, ln in enumerate(self.lines):
             self.line_elmnt.append([i, *ln.levels])
@@ -87,7 +101,7 @@ class ESE:
         self.nus_weights = nus_weights
         self.B = B
         self.atom = HeI_1083()
-        self.rho = np.zeros(len(self.atom.dens_elmnt))
+        self.rho = np.zeros(len(self.atom.dens_elmnt)).astype('complex128')
         self.populations = 0
 
         if equilibrium:
@@ -108,7 +122,7 @@ class ESE:
 
         self.N_rho = len(self.rho)
         self.coherences = self.N_rho - self.populations
-        self.ESE = np.zeros((self.N_rho*2, self.N_rho*2)).astype('complex128') / u.s
+        self.ESE_indep = np.zeros((self.N_rho, self.N_rho)) / u.s
 
     def solveESE(self, rad, cdt):
         """
@@ -116,136 +130,194 @@ class ESE:
             return value: maximum relative change of the level population
         """
 
-        for i, p_lev in enumerate(self.atom.dens_elmnt):
-            self.ESE[2*i] = np.zeros_like(self.ESE[2*i])
-            self.ESE[2*i+1] = np.zeros_like(self.ESE[2*i+1])
+        for i, p_lev in enumerate(self.atom.dens_elmnt_indep):
+            self.ESE_indep[i] = np.zeros_like(self.ESE_indep[i])
 
             Li = p_lev[0]
-            M = p_lev[-2]
-            Mp = p_lev[-1]
-            JJ = p_lev[-3]
+            JJ = p_lev[1]
+            M = p_lev[2]
+            Mp = p_lev[3]
+            imag_row = p_lev[4]
 
             for line in self.atom.lines:
                 if Li not in line.levels:
                     continue
 
-                for j, q_lev in enumerate(self.atom.dens_elmnt):
+                for j, q_lev in enumerate(self.atom.dens_elmnt_indep):
 
                     Lj = q_lev[0]
-                    N = q_lev[-2]
-                    Np = q_lev[-1]
-                    Jp = q_lev[-3]
+                    Jp = q_lev[1]
+                    N = q_lev[2]
+                    Np = q_lev[3]
+                    imag_col = q_lev[4]
 
                     if Lj not in line.levels:
                         continue
 
                     if Lj > Li:
-                        # calculate the TE(q -> p) and add it to self.ESE[i][j]
                         if Np == N:
-                            self.ESE[2*i][2*j] = self.ESE[2*i][2*j] + np.real(TS(self, JJ, M, Mp, Jp, N, N, rad, line, cdt))
-                            self.ESE[2*i+1][2*j] = self.ESE[2*i+1][2*j] + np.imag(TS(self, JJ, M, Mp, Jp, N, N, rad, line, cdt))
-
-                            self.ESE[2*i][2*j] = self.ESE[2*i][2*j] + TE(self, JJ, M, Mp, Jp, N, N, line.A_lu)
+                            if not imag_row and not imag_col:
+                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + np.real(TS(self, JJ, M, Mp, Jp, N, N, rad, line, cdt))
+                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + TE(self, JJ, M, Mp, Jp, N, N, line.A_lu)
+                            elif imag_row and not imag_col:
+                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + np.imag(TS(self, JJ, M, Mp, Jp, N, N, rad, line, cdt))
 
                         elif Np > M:
-                            # row of real rho (real and imag columns)
-                            self.ESE[2*i][2*j] = self.ESE[2*i][2*j] + np.real(TS(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt) +
-                                                                              TS(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt))
-                            self.ESE[2*i][2*j+1] = self.ESE[2*i][2*j+1] + np.imag(TS(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt) -
-                                                                                  TS(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt))
+                            if imag_row and imag_col:
+                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.real(TS(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt))
+                                                                               - np.real(TS(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt)))
+                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + (TE(self, JJ, M, Mp, Jp, N, Np, line.A_lu)
+                                                                               - TE(self, JJ, M, Mp, Jp, N, Np, line.A_lu))
+                            elif imag_row and not imag_col:
+                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(TS(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt))
+                                                                               + np.imag(TS(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt)))
+                            elif not imag_row and imag_col:
+                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(TS(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt))
+                                                                               - np.imag(TS(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt)))
+                            elif not imag_row and not imag_col:
+                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.real(TS(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt))
+                                                                               + np.real(TS(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt)))
+                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + (TE(self, JJ, M, Mp, Jp, Np, N, line.A_lu)
+                                                                               + TE(self, JJ, M, Mp, Jp, N, Np, line.A_lu))
+                            else:
+                                print('ERROR IN FILLING ESE MATRIX')
+                                exit()
 
-                            # row of imaginary rho (real and imag columns)
-                            self.ESE[2*i+1][2*j] = self.ESE[2*i+1][2*j] + np.real(TS(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt) +
+                            self.ESE_indep[i][j] = self.ESE_indep[i][j] + np.real(TS(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt) +
                                                                                   TS(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt))
-                            self.ESE[2*i+1][2*j+1] = self.ESE[2*i+1][2*j+1] + np.imag(TS(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt) -
-                                                                                      TS(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt))
-
-                            # row of real rho (real and imag columns)
-                            self.ESE[2*i][2*j] = self.ESE[2*i][2*j] + 2*TE(self, JJ, M, Mp, Jp, N, Np, line.A_lu)
 
                     elif Lj < Li:
                         if Np == N:
-                            self.ESE[2*i][2*j] = self.ESE[2*i][2*j] + np.real(TA(self, JJ, M, Mp, Jp, N, N, rad, line, cdt))
-                            self.ESE[2*i+1][2*j] = self.ESE[2*i+1][2*j] + np.imag(TA(self, JJ, M, Mp, Jp, N, N, rad, line, cdt))
+                            if not imag_row and not imag_col:
+                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + np.real(TA(self, JJ, M, Mp, Jp, N, N, rad, line, cdt))
+                            elif imag_row and not imag_col:
+                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + np.imag(TA(self, JJ, M, Mp, Jp, N, N, rad, line, cdt))
 
                         elif Np > N:
-                            # calculate the TA(q -> p) and add it to self.ESE[i][j]
-                            # row of real rho (real and imag columns)
-                            self.ESE[2*i][2*j] = self.ESE[2*i][2*j] + np.real(TA(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt) +
-                                                                              TA(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt))
-                            self.ESE[2*i][2*j+1] = self.ESE[2*i][2*j+1] + np.imag(TA(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt) -
-                                                                                  TA(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt))
 
-                            # row of imaginary rho (real and imag columns)
-                            self.ESE[2*i+1][2*j] = self.ESE[2*i+1][2*j] + np.real(TA(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt) +
-                                                                                  TA(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt))
-                            self.ESE[2*i+1][2*j+1] = self.ESE[2*i+1][2*j+1] + np.imag(TA(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt) -
-                                                                                      TA(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt))
+                            if imag_row and imag_col:
+                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.real(TA(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt))
+                                                                               - np.real(TA(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt)))
+                            elif imag_row and not imag_col:
+                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(TA(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt))
+                                                                               + np.imag(TA(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt)))
+                            elif not imag_row and imag_col:
+                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(TA(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt))
+                                                                               - np.imag(TA(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt)))
+                            elif not imag_row and not imag_col:
+                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.real(TA(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt))
+                                                                               + np.real(TA(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt)))
+                            else:
+                                print('ERROR IN FILLING ESE MATRIX')
+                                exit()
+
                     elif Lj == Li:
                         # calculate the RA and RE
                         if M == N:
                             if Np == M:
-                                self.ESE[2*i][2*j] = self.ESE[2*i][2*j] - (np.real(RA(self, Li, JJ, Mp, M, rad, cdt)) +
-                                                                           RE(self, Li, JJ, M, Mp) +
-                                                                           np.real(RS(self, Li, JJ, M, Mp, rad, cdt)))
-
-                                self.ESE[2*i+1][2*j] = self.ESE[2*i+1][2*j] - (np.imag(RA(self, Li, JJ, Mp, M, rad, cdt)) +
-                                                                               np.imag(RS(self, Li, JJ, M, Mp, rad, cdt)))
+                                if not imag_row and not imag_col:
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RA(self, Li, JJ, M, Mp, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RS(self, Li, JJ, M, Mp, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RE(self, Li, JJ, M, Mp)))
+                                elif imag_row and not imag_col:
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RA(self, Li, JJ, M, Mp, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RS(self, Li, JJ, M, Mp, rad, cdt)))
 
                             elif Np > M:
-                                self.ESE[2*i][2*j] = self.ESE[2*i][2*j] - (2*np.real(RA(self, Li, JJ, Mp, Np, rad, cdt)) +
-                                                                           2*RE(self, Li, JJ, Np, Mp) +
-                                                                           2*np.real(RS(self, Li, JJ, Np, Mp, rad, cdt)))
+                                if imag_row and imag_col:
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RA(self, Li, JJ, Np, Mp, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RS(self, Li, JJ, Np, Mp, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RE(self, Li, JJ, M, Mp)))
+                                elif imag_row and not imag_col:
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RA(self, Li, JJ, Np, Mp, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RS(self, Li, JJ, Np, Mp, rad, cdt)))
+                                elif not imag_row and imag_col:
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.imag(RA(self, Li, JJ, Np, Mp, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.imag(RS(self, Li, JJ, Np, Mp, rad, cdt)))
+                                elif not imag_row and not imag_col:
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RA(self, Li, JJ, Np, Mp, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RS(self, Li, JJ, Np, Mp, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RE(self, Li, JJ, M, Mp)))
 
-                                self.ESE[2*i][2*j+1] = self.ESE[2*i][2*j+1] + (2*np.imag(RA(self, Li, JJ, Mp, Np, rad, cdt)) +
-                                                                               2*np.imag(RS(self, Li, JJ, Np, Mp, rad, cdt)))
+                            elif Np < M:
+
+                                if imag_row and imag_col:
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.real(RA(self, Li, JJ, Np, Mp, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.real(RS(self, Li, JJ, Np, Mp, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.real(RE(self, Li, JJ, M, Mp)))
+                                elif imag_row and not imag_col:
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RA(self, Li, JJ, Np, Mp, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RS(self, Li, JJ, Np, Mp, rad, cdt)))
+                                elif not imag_row and imag_col:
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RA(self, Li, JJ, Np, Mp, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RS(self, Li, JJ, Np, Mp, rad, cdt)))
+                                elif not imag_row and not imag_col:
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RA(self, Li, JJ, Np, Mp, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RS(self, Li, JJ, Np, Mp, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RE(self, Li, JJ, M, Mp)))
 
                         if Mp == Np:
                             if N == Mp:
-                                self.ESE[2*i][2*j] = self.ESE[2*i][2*j] - (np.real(RA(self, Li, JJ, N, M, rad, cdt)) +
-                                                                           RE(self, Li, JJ, M, N) +
-                                                                           np.real(RS(self, Li, JJ, M, N, rad, cdt)))
-
-                                self.ESE[2*i+1][2*j] = self.ESE[2*i+1][2*j] + (np.imag(RA(self, Li, JJ, N, M, rad, cdt)) +
-                                                                               np.imag(RS(self, Li, JJ, M, N, rad, cdt)))
+                                if not imag_row and not imag_col:
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RA(self, Li, JJ, M, Mp, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RS(self, Li, JJ, M, Mp, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RE(self, Li, JJ, M, Mp)))
+                                elif imag_row and not imag_col:
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RA(self, Li, JJ, M, Mp, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RS(self, Li, JJ, M, Mp, rad, cdt)))
 
                             elif N > Mp:
-                                self.ESE[2*i][2*j] = self.ESE[2*i][2*j] - (2*np.real(RA(self, Li, JJ, N, M, rad, cdt)) +
-                                                                           2*RE(self, Li, JJ, M, N) +
-                                                                           2*np.real(RS(self, Li, JJ, M, N, rad, cdt)))
+                                if imag_row and imag_col:
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.real(RA(self, Li, JJ, N, M, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.real(RS(self, Li, JJ, N, M, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.real(RE(self, Li, JJ, M, Mp)))
+                                elif imag_row and not imag_col:
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.imag(RA(self, Li, JJ, N, M, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.imag(RS(self, Li, JJ, N, M, rad, cdt)))
+                                elif not imag_row and imag_col:
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.imag(RA(self, Li, JJ, N, M, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.imag(RS(self, Li, JJ, N, M, rad, cdt)))
+                                elif not imag_row and not imag_col:
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RA(self, Li, JJ, N, M, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RS(self, Li, JJ, N, M, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RE(self, Li, JJ, M, Mp)))
 
-                                self.ESE[2*i][2*j+1] = self.ESE[2*i][2*j+1] + (2*np.imag(RA(self, Li, JJ, N, M, rad, cdt)) +
-                                                                               2*np.imag(RS(self, Li, JJ, M, N, rad, cdt)))
+                            elif N < Mp:
+                                if imag_row and imag_col:
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RA(self, Li, JJ, N, M, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RS(self, Li, JJ, N, M, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RE(self, Li, JJ, M, Mp)))
+                                elif imag_row and not imag_col:
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.imag(RA(self, Li, JJ, N, M, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.imag(RS(self, Li, JJ, N, M, rad, cdt)))
+                                elif not imag_row and imag_col:
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RA(self, Li, JJ, N, M, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RS(self, Li, JJ, N, M, rad, cdt)))
+                                elif not imag_row and not imag_col:
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RA(self, Li, JJ, N, M, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RS(self, Li, JJ, N, M, rad, cdt)))
+                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RE(self, Li, JJ, M, Mp)))
 
-                        else:
-                            continue
                     else:
                         print("Error in the ESE matrix calculation")
                         exit()
 
             nu_L = 1.3996e6*np.linalg.norm(cdt.B.value)     # Eq 3.10 LL04 Larmor freq
-            self.ESE[2*i][2*i+1] = self.ESE[2*i][2*i+1] + 2*np.pi*(M - Mp)*nu_L*self.atom.levels[Li].g
-            self.ESE[2*i+1][2*i] = self.ESE[2*i+1][2*i] - 2*np.pi*(M - Mp)*nu_L*self.atom.levels[Li].g
+            self.ESE_indep[i][i] = self.ESE_indep[i][i] + 2*np.pi*(M - Mp)*nu_L*self.atom.levels[Li].g
 
-        indep = np.zeros(self.N_rho*2)/u.s
+        indep = np.zeros(self.N_rho)/u.s
         indep[0] = 1/u.s
 
         for i, lev in enumerate(self.atom.dens_elmnt):
-            Ml = lev[-2]
-            Mlp = lev[-1]
+            Ml = lev[2]
+            Mlp = lev[3]
             if Mlp == Ml:
-                self.ESE[0, 2*i] = 1/u.s
-                self.ESE[0, 2*i+1] = 0/u.s
-                self.ESE[1, 2*i] = 0/u.s
-                self.ESE[1, 2*i+1] = 0/u.s
+                self.ESE_indep[0, i] = 1/u.s
             else:
-                self.ESE[0, 2*i] = 0/u.s
-                self.ESE[0, 2*i+1] = 0/u.s
-                self.ESE[1, 2*i] = 0/u.s
-                self.ESE[1, 2*i+1] = 0/u.s
+                self.ESE_indep[0, i] = 0/u.s
 
         # Print the ESE matrix to a file
-        solve = np.real(self.ESE.value)
+        solve = np.real(self.ESE_indep.value)
         rows = len(solve)
         cols = len(solve[0])
         with open('ESE_matrix.txt', 'w') as f:
@@ -259,10 +331,34 @@ class ESE:
 
         # LU = linalg.lu_factor(self.ESE)
         # rho_n = linalg.lu_solve(LU, indep)
-        rho_n = linalg.solve(self.ESE, indep)
+        rho_n = linalg.solve(self.ESE_indep, indep)
+        # Construct the full rho (complex)
         rho_comp = self.rho.copy()
-        for i in range(len(self.rho)):
-            rho_comp[i] = rho_n[2*i] + 1j*rho_n[2*i+1]
+
+        indexes = []
+        for i, lev in enumerate(self.atom.dens_elmnt_indep):
+            ll = lev[0]
+            JJ = lev[1]
+            M = lev[2]
+            Mp = lev[3]
+            imag = lev[4]
+
+            index = self.atom.dens_elmnt.index([ll, self.atom.levels[ll].E, JJ, M, Mp])
+            indexes.append(index)
+            if not imag:
+                rho_comp[index] += rho_n[i]
+            else:
+                rho_comp[index] += 1j*rho_n[i]
+
+        for index in indexes:
+            lev = self.atom.dens_elmnt[index]
+            ll = lev[0]
+            JJ = lev[-3]
+            M = lev[-2]
+            Mp = lev[-1]
+            op_index = self.atom.dens_elmnt.index([ll, self.atom.levels[ll].E, JJ, Mp, M])
+            rho_comp[op_index] = np.conjugate(rho_comp[index])
+
         change = np.abs(rho_comp - self.rho)/np.abs((rho_comp + 1e-40))
         self.rho = rho_comp.copy()
 
