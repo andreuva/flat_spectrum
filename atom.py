@@ -309,7 +309,7 @@ class ESE:
         indep = np.zeros(self.N_rho)/u.s
         indep[0] = 1/u.s
 
-        for i, lev in enumerate(self.atom.dens_elmnt):
+        for i, lev in enumerate(self.atom.dens_elmnt_indep):
             Ml = lev[2]
             Mlp = lev[3]
             if Mlp == Ml:
