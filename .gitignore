@@ -2,6 +2,7 @@
 *plots*
 *_matrix.txt
 *_array.txt
+checks/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
