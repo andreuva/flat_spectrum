@@ -1,6 +1,7 @@
 # Custom folders
 *plots*
-
+*_matrix.txt
+*_array.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
