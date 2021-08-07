@@ -345,7 +345,7 @@ class ESE:
         # rho_n = linalg.lu_solve(LU, indep)
         rho_n = linalg.solve(self.ESE_indep, indep)
         # Construct the full rho (complex)
-        rho_comp = self.rho.copy()
+        rho_comp = np.zeros_like(self.rho).astype('complex128')
 
         indexes = []
         for i, lev in enumerate(self.atom.dens_elmnt_indep):
@@ -396,6 +396,7 @@ class ESE:
 
         if not 0.98 < suma < 1.02:
             print("Warning: Not normaliced populations in this itteration")
+            print(f"With the sum of the populations rho = {suma}")
             # input("Press Enter to continue...")
 
         # print('----------------------')
