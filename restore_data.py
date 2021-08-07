@@ -7,7 +7,7 @@ from physical_functions import jsymbols
 from plot_utils import save_or_show
 
 # Definition of the files to load
-directory = '20210716-101509_plots_ndens_1.0_dz_15.0/out/'
+directory = '20210807-210338_plots_ndens_1.0_dz_10.0/out/'
 prefix = 'jqq_base*'
 files = sorted(glob(directory + prefix))
 looked_for = '_0_16_'
@@ -35,7 +35,7 @@ for path in jqq_filenames:
 
 rho_itt_z_qq = []
 for path in rho_qq_filenames:
-    rho_itt_z_qq.append(np.loadtxt(path))
+    rho_itt_z_qq.append(np.loadtxt(path, dtype=np.complex_))
 
 for i in range(len(jqq_base_rays)):
     if looked_for in files[i]:
