@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import scipy.linalg as linalg
 from astropy import units as u
 from astropy import constants as c
@@ -317,10 +318,21 @@ class ESE:
                 self.ESE_indep[0, i] = 0/u.s
 
         # Print the ESE matrix to a file
+        extension = 'txt'
+        ind = 0
+        dir = 'checks/'
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+
+        path = dir + 'ESE_matrix' + f'_{ind}.' + extension
+        while os.path.exists(path):
+            ind += 1
+            path = dir + 'ESE_matrix' + f'_{ind}.' + extension
+
         solve = np.real(self.ESE_indep.value)
         rows = len(solve)
         cols = len(solve[0])
-        with open('ESE_matrix.txt', 'w') as f:
+        with open(path, 'w') as f:
             for i in range(rows):
                 print(f'Row {i+1}\t', end='', file=f)
                 for j in range(cols):
@@ -361,6 +373,12 @@ class ESE:
 
         change = np.abs(rho_comp - self.rho)/np.abs((rho_comp + 1e-40))
         self.rho = rho_comp.copy()
+
+        path = dir + 'rho_array' + f'_{ind}.' + extension
+        with open(path, 'w') as f:
+            print('RHO\n----------\n', file=f)
+            for i in range(rows):
+                print(f'{self.rho[i]}', file=f)
 
         # Check for the populations to be > 0 and to be normaliced
         suma = 0
