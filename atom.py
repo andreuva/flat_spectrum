@@ -58,7 +58,7 @@ class HeI_1083():
     """
     def __init__(self):
         levels = [level(169_086.8428979/u.cm, 1, 3),      # MNIST data for HeI levels (2 level atom)
-                  level(159_855.9743297/u.cm, 0, 3)]
+                  level(159_855.9743297/u.cm, 0, 1)]
 
         indx = np.argsort([lev.E.value for lev in levels])
         self.levels = []
@@ -183,9 +183,6 @@ class ESE:
                             else:
                                 print('ERROR IN FILLING ESE MATRIX')
                                 exit()
-
-                            self.ESE_indep[i][j] = self.ESE_indep[i][j] + np.real(TS(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt) +
-                                                                                  TS(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt))
 
                     elif Lj < Li:
                         if Np == N:
