@@ -12,7 +12,7 @@ prefix = 'jqq_base*'
 files = sorted(glob(directory + prefix))
 looked_for = '_0_16_'
 
-colors = ['coral', 'cornflowerblue', 'violet', 'seagreen', 'gray', 'gold']
+colors = [f'C{i}' for i in range(20)]
 
 jqq_prefix = "jqq_[0-9].pkl"
 jqq_filenames = sorted(glob(directory + jqq_prefix))
