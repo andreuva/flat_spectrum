@@ -301,7 +301,13 @@ class ESE:
                         exit()
 
             nu_L = 1.3996e6*np.linalg.norm(cdt.B.value)     # Eq 3.10 LL04 Larmor freq
-            self.ESE_indep[i][i] = self.ESE_indep[i][i] + 2*np.pi*(M - Mp)*nu_L*self.atom.levels[Li].g
+            if M != Mp:
+                if not imag_row:
+                    self.ESE_indep[i][i+1] = self.ESE_indep[i][i+1] + 2*np.pi*(M - Mp)*nu_L*self.atom.levels[Li].g
+                else:
+                    self.ESE_indep[i][i-1] = self.ESE_indep[i][i-1] - 2*np.pi*(M - Mp)*nu_L*self.atom.levels[Li].g
+            else:
+                self.ESE_indep[i][i] = self.ESE_indep[i][i] + 2*np.pi*(M - Mp)*nu_L*self.atom.levels[Li].g
 
         indep = np.zeros(self.N_rho)/u.s
         indep[0] = 1/u.s
@@ -315,28 +321,28 @@ class ESE:
                 self.ESE_indep[0, i] = 0/u.s
 
         # Print the ESE matrix to a file
-        extension = 'txt'
-        ind = 0
-        dir = 'checks/'
-        if not os.path.exists(dir):
-            os.makedirs(dir)
+        # extension = 'txt'
+        # ind = 0
+        # dir = 'checks/'
+        # if not os.path.exists(dir):
+        #     os.makedirs(dir)
 
-        path = dir + 'ESE_matrix' + f'_{ind}.' + extension
-        while os.path.exists(path):
-            ind += 1
-            path = dir + 'ESE_matrix' + f'_{ind}.' + extension
+        # path = dir + 'ESE_matrix' + f'_{ind}.' + extension
+        # while os.path.exists(path):
+        #     ind += 1
+        #     path = dir + 'ESE_matrix' + f'_{ind}.' + extension
 
         solve = np.real(self.ESE_indep.value)
-        rows = len(solve)
-        cols = len(solve[0])
-        with open(path, 'w') as f:
-            for i in range(rows):
-                print(f'Row {i+1}\t', end='', file=f)
-                for j in range(cols):
-                    if solve[i][j] >= 0:
-                        print(' ', end='', file=f)
-                    print(f'{solve[i][j]:.2E}', end='', file=f)
-                print(f'= {indep[i].value}', file=f)
+        # rows = len(solve)
+        # cols = len(solve[0])
+        # with open(path, 'w') as f:
+        #     for i in range(rows):
+        #         print(f'Row {i+1}\t', end='', file=f)
+        #         for j in range(cols):
+        #             if solve[i][j] >= 0:
+        #                 print(' ', end='', file=f)
+        #             print(f'{solve[i][j]:.2E}', end='', file=f)
+        #         print(f'= {indep[i].value}', file=f)
 
         # LU = linalg.lu_factor(self.ESE)
         # rho_n = linalg.lu_solve(LU, indep)
@@ -371,11 +377,11 @@ class ESE:
         change = np.abs(rho_comp - self.rho)/np.abs((rho_comp + 1e-40))
         self.rho = rho_comp.copy()
 
-        path = dir + 'rho_array' + f'_{ind}.' + extension
-        with open(path, 'w') as f:
-            print('RHO\n----------\n', file=f)
-            for i in range(rows):
-                print(f'{self.rho[i]}', file=f)
+        # path = dir + 'rho_array' + f'_{ind}.' + extension
+        # with open(path, 'w') as f:
+        #     print('RHO\n----------\n', file=f)
+        #     for i in range(rows):
+        #         print(f'{self.rho[i]}', file=f)
 
         # Check for the populations to be > 0 and to be normaliced
         suma = 0
