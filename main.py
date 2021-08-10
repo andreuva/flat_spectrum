@@ -126,4 +126,7 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
     np.savetxt(unique_filename(datadir, "rho_qq_after", 'csv'), glob_pop)
 
     if (st.mrc.max() < pm.tolerance):
+        print('\n----------------------------------')
+        print(f'FINISHED WITH A TOLERANCE OF {st.mrc.max()}')
+        print('----------------------------------')
         break
