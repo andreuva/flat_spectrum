@@ -16,27 +16,28 @@ rad.make_IC(cdts.nus, cdts.temp)
 for j, ray in enumerate(cdts.rays):
     rad.sumStokes(ray)
 
-# rad.resetRadiation()
-# for q in [-1, 0, 1]:
-#     for qp in [-1, 0, 1]:
-#         rad.jqq[q][qp] += rad.stokes[0]*((-1)**(1+q) * np.sqrt(1/3) * atom.jsim.j3(1, 1, 0, q, -qp, 0) +
-#                                          # (-1)**(1+q) *                atom.jsim.j3(1, 1, 1, q, -qp, 0)*anis_frac)*u.sr
-#                                          (-1)**(1+q) * np.sqrt(5/3) * atom.jsim.j3(1, 1, 2, q, -qp, 0)*anis_frac)*u.sr
+rad.resetRadiation()
+for q in [-1, 0, 1]:
+    for qp in [-1, 0, 1]:
+        rad.jqq[q][qp] += rad.stokes[0]*((-1)**(1+q) * np.sqrt(1/3) * atom.jsim.j3(1, 1, 0, q, -qp, 0) +
+                                        #  (-1)**(1+q) *                atom.jsim.j3(1, 1, 1, q, -qp, 0)*0.2 +
+                                         (-1)**(1+q) * np.sqrt(5/3) * atom.jsim.j3(1, 1, 2, q, -qp, 0)*anis_frac)*u.sr
+
 
 mrc = atom.solveESE(rad, cdts)
 
 print('\nPopulations after the ESE solution:\n', np.array_str(atom.rho, precision=2))
 
-# print('\nrho_KQ:')
-# rho_KQ = np.zeros((3, 5)) + 0j
-# for K in [0, 1, 2]:
-#     for Q in range(-K, K+1):
-#         for M in [-1, 0, 1]:
-#             for Mp in [-1, 0, 1]:
-#                 rho_KQ[K][Q+K] += ((-1)**(1-M) * np.sqrt(2*K + 1) * atom.jsim.j3(1, 1, K, M, -Mp, Q)*atom.rho_call(1, 1, M, Mp))
+print('\nrho_KQ:')
+rho_KQ = np.zeros((3, 5)) + 0j
+for K in [0, 1, 2]:
+    for Q in range(-K, K+1):
+        for M in [-1, 0, 1]:
+            for Mp in [-1, 0, 1]:
+                rho_KQ[K][Q+K] += ((-1)**(1-M) * np.sqrt(2*K + 1) * atom.jsim.j3(1, 1, K, M, -Mp, Q)*atom.rho_call(1, 1, M, Mp))
 
-#         print(f'rho^{K}_{Q} = {rho_KQ[K][Q+K]}')
+        print(f'rho^{K}_{Q} = {rho_KQ[K][Q+K]}')
 
-#        # rho_KQ[K][Q+K] += ((-1)**(-M) * np.sqrt(2*K + 1) * atom.jsim.j3(0, 0, K, 0, 0, Q)*atom.rho_call(0, 0, 0, 0))
+       # rho_KQ[K][Q+K] += ((-1)**(-M) * np.sqrt(2*K + 1) * atom.jsim.j3(0, 0, K, 0, 0, Q)*atom.rho_call(0, 0, 0, 0))
 
 print("Finished")
