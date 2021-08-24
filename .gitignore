@@ -3,6 +3,7 @@
 *_matrix.txt
 *_array.txt
 checks/
+*.out*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
