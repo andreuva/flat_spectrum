@@ -12,6 +12,9 @@ from astropy import units as u
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
+# Measure time
+import time,sys
+
 # np.seterr(all='raise')
 
 # Initializating the conditions, state and RT coefficients
@@ -50,6 +53,57 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
             else:
                 z = i
                 step = 1
+
+            ####
+            # DEBUG
+            ####
+            NN = 50
+           #mod = 'original'
+           #mod = 'savevoigt'
+           #mod = 'rtcoefedit'
+            mod = 'savevoigtrtcoefedit'
+            start = time.time()
+            for ii in range(NN):
+                z = cdt.z_N//2
+                point_D = point(st.atomic[z],st.radiation[z],cdt.zz[z])
+                em, ab, sf, kk = RT_coeficients.getRTcoefs(point_D.atomic, ray, cdt)
+                if ii == 0:
+                    f = open('debugI-'+mod, 'w')
+                    f.write('em: ')
+                    f.write('{0:16.8e}\n'.format(em))
+                    f.write('ab: ')
+                    f.write('{0:16.8e}\n'.format(ab))
+                    f.write('KK,sf\n')
+                    for mm in range(sf.shape[1]):
+                        for jj in range(4):
+                            fmt = '{0:1d} {1:3d} -- {2:16.8e} {3:16.8e}'
+                            fmt += '{4:16.8e} {5:16.8e} {6:16.8e}\n'
+                            f.write(fmt.format(
+                                          jj,mm,kk[jj,0][mm],kk[jj,1][mm], \
+                                          kk[jj,2][mm],kk[jj,3][mm], \
+                                          sf[jj][mm]))
+                    f.close()
+                if ii == NN-1:
+                    f = open('debugF-'+mod, 'w')
+                    f.write('em: ')
+                    f.write('{0:16.8e}\n'.format(em))
+                    f.write('ab: ')
+                    f.write('{0:16.8e}\n'.format(ab))
+                    f.write('KK,sf\n')
+                    for mm in range(sf.shape[1]):
+                        for jj in range(4):
+                            fmt = '{0:1d} {1:3d} -- {2:16.8e} {3:16.8e}'
+                            fmt += '{4:16.8e} {5:16.8e} {6:16.8e}\n'
+                            f.write(fmt.format(
+                                          jj,mm,kk[jj,0][mm],kk[jj,1][mm], \
+                                          kk[jj,2][mm],kk[jj,3][mm], \
+                                          sf[jj][mm]))
+                    f.close()
+            end = time.time()
+            f = open('time-'+mod, 'w')
+            f.write('{0}'.format(end-start))
+            f.close()
+            sys.exit()
 
             # If we are in the boundaries, compute the CL for the IC (z=0)
             cent_limb_coef = 1

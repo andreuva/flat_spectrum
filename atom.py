@@ -44,8 +44,10 @@ class line():
         self.wavelength = 1/(levels[line_levels[1]].E - levels[line_levels[0]].E)
         self.energy = c.h.cgs * c.c.cgs / self.wavelength
         self.nu = self.energy/c.h.cgs
+        self.nu3 = self.nu*self.nu*self.nu
 
         self.A_lu = Alu
+        self.A_ul = Alu
         self.B_lu = Alu * (c.c.cgs**2/(2*c.h.cgs*self.nu**3))
         self.B_ul = self.B_lu * (levels[line_levels[1]].g/levels[line_levels[0]].g)
 
@@ -120,6 +122,33 @@ class ESE:
             self.rho = self.rho/self.populations
         else:
             self.rho[0] = 1
+
+        ####################################################
+        ####################################################
+        ####################################################
+        print('AD-HOC INITIALIZATION IN ESE')
+        for i, lev in enumerate(self.atom.dens_elmnt):
+
+            Ll = lev[0]
+            Ml = lev[-2]
+            Mlp = lev[-1]
+
+            if Mlp == Ml:   # If it's a population compute the Boltzman LTE ratio
+                self.rho[i] = np.exp(-c.h.cgs*c.c.cgs*self.atom.levels[Ll].E/c.k_B.cgs/T) / \
+                              len(self.atom.levels[Ll].M)
+                self.populations += self.rho[i]
+
+        self.rho = self.rho/self.populations
+
+        for i, lev in enumerate(self.atom.dens_elmnt):
+            Ll = lev[0]
+            Ml = lev[-2]
+            Mlp = lev[-1]
+            self.rho[i] += np.absolute(Ml-Mlp)*0.2
+            self.rho[i] += 1j*(Ml-Mlp)*0.33
+        ####################################################
+        ####################################################
+        ####################################################
 
         self.N_rho = len(self.rho)
         self.coherences = self.N_rho - self.populations
