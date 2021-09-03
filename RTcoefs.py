@@ -24,6 +24,7 @@ class RTcoefs:
 
         # Defining units to avoid quotients and some products later
         self.untrad = unt.erg/(unt.cm*unt.cm*unt.cm*unt.sr)
+        self.rtcprototype = np.zeros((4, nus.size)) * 1/(unt.cm)
         self.untcmm1 = 1/(unt.cm)
         self.hnu = 0.25*cts.h.cgs/(np.pi)
         self.hcm2 = 2.0*cts.h.cgs/(cts.c.cgs*cts.c.cgs*unt.sr)
@@ -171,7 +172,8 @@ class RTcoefs:
         hnuN = self.hnu*cdts.n_dens
 
         # Eq 7.10 of LL04
-        eta_a = np.zeros((4, cdts.nus_N)) * self.untcmm1
+       #eta_a = np.zeros((4, cdts.nus_N)) * self.untcmm1
+        eta_a = copy.copy(self.rtcprototype)
         eta_s = copy.copy(eta_a)
         rho_a = copy.copy(eta_a)
         rho_s = copy.copy(eta_a)

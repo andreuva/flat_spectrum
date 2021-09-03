@@ -111,8 +111,8 @@ class conditions:
         self.Id_tens = np.repeat(np.identity(4)[:, :, np.newaxis], self.nus_N, axis=2)
         self.identity = np.identity(4)
 
-        self.voigt_profile = self.voigt_profile_old
-       #self.voigt_profile = self.voigt_profile_new
+       #self.voigt_profile = self.voigt_profile_old
+        self.voigt_profile = self.voigt_profile_new
 
         self.cache = {}
 
