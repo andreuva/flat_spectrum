@@ -1,10 +1,10 @@
 import numpy as np
 from numpy import sin, cos, exp, sqrt, conj
-from numba import jit
+#from numba import jit
 import math
 
 
-@jit(nopython=True)
+#@jit(nopython=True)
 def voigt(v, a):
 
     ss = np.abs(v)+a
@@ -53,7 +53,7 @@ def voigt_custom(x, sigma, gamma, x0=0):
         / sigma / np.sqrt(2*np.pi)
 
 
-@jit(nopython=True)
+#@jit(nopython=True)
 def Tqq(q1, q2, i, theta, chi):
     t = 0.
     c = False

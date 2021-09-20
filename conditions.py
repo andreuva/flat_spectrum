@@ -111,7 +111,12 @@ class conditions:
         self.Id_tens = np.repeat(np.identity(4)[:, :, np.newaxis], self.nus_N, axis=2)
         self.identity = np.identity(4)
 
-    def voigt_profile(self, line, Mu=0, Ml=0, B=0):
+       #self.voigt_profile = self.voigt_profile_old
+        self.voigt_profile = self.voigt_profile_new
+
+        self.cache = {}
+
+    def voigt_profile_old(self, line, Mu=0, Ml=0, B=0):
         vs = self.nus
         v0 = line.nu + 1.3996*norm(B)*(line.gu*Mu - line.gl*Ml)*line.nu.unit
         vt = np.sqrt(2*constants.k_B.cgs*self.temp/self.mass).decompose().cgs
@@ -128,6 +133,46 @@ class conditions:
 
         return profile
 
+    def voigt_profile_calc(self, line, Mu=0, Ml=0, B=0):
+        vs = self.nus
+        v0 = line.nu + 1.3996*norm(B)*(line.gu*Mu - line.gl*Ml)*line.nu.unit
+        vt = np.sqrt(2*constants.k_B.cgs*self.temp/self.mass).decompose().cgs
+        delt_v = line.nu*vt/constants.c.cgs
+
+        profile = voigt((vs-v0)/delt_v, self.a_voigt)
+        profile = profile * units.s / (np.sqrt(np.pi))
+
+        normalization = np.sum(profile.real*self.nus_weights)
+        profile.real = profile.real/normalization
+
+        # plt.plot((vs-v0)/delt_v, profile.real)
+        # plt.show()
+
+        return profile
+
+    def voigt_profile_new(self, line, Mu=0, Ml=0, B=0):
+
+        b = norm(B)
+
+        try:
+            return self.cache[line][Mu][Ml][b]
+        except:
+
+            if line not in self.cache:
+                self.cache[line] = {Mu: {Ml: {b: self.voigt_profile_calc(line,Mu,Ml,B)}}}
+            else:
+                cache = self.cache[line]
+                if Mu not in cache:
+                    cache[Mu] = {Ml: {b: self.voigt_profile_calc(line,Mu,Ml,B)}}
+                else:
+                    cache = cache[Mu]
+                    if Ml not in cache:
+                        cache[Ml] = {b: self.voigt_profile_calc(line,Mu,Ml,B)}
+                    else:
+                        cache = cache[Ml]
+                        if b not in cache:
+                            cache[b] = self.voigt_profile_calc(line,Mu,Ml,B)
+            return self.cache[line][Mu][Ml][b]
 
 class state:
     """state class containing the current state of the solution, this include the

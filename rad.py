@@ -61,7 +61,7 @@ class RTE:
             It initializes the internal state."""
         for qq in [-1, 0, 1]:
             for qp in [-1, 0, 1]:
-                self.jqq[qq][qp] = self.jqq[qq][qp] * 0
+                self.jqq[qq][qp] = 0.
 
     def Jqq_nu(self, cdt, line, q, qp, Mu, Ml, B, nus_weights):
         jqqp = self.jqq[q][qp]
