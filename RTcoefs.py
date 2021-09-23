@@ -244,26 +244,22 @@ class RTcoefs:
                         # not even try, it will look more elegant for sure
                         # if it did work
                         Cfactor = Tqq(q, qp, 0, ray.inc.to('rad').value, 
-                                      ray.az.to('rad').value) * \
-                                  esevoigt
+                                      ray.az.to('rad').value) * esevoigt
                         sum_etaa0 += factor*np.real(Cfactor)
                         sum_rhoa0 += factor*np.imag(Cfactor)
 
                         Cfactor = Tqq(q, qp, 1, ray.inc.to('rad').value, 
-                                      ray.az.to('rad').value) * \
-                                  esevoigt
+                                      ray.az.to('rad').value) * esevoigt
                         sum_etaa1 += factor*np.real(Cfactor)
                         sum_rhoa1 += factor*np.imag(Cfactor)
 
                         Cfactor = Tqq(q, qp, 2, ray.inc.to('rad').value, 
-                                      ray.az.to('rad').value) * \
-                                  esevoigt
+                                      ray.az.to('rad').value) * esevoigt
                         sum_etaa2 += factor*np.real(Cfactor)
                         sum_rhoa2 += factor*np.imag(Cfactor)
 
                         Cfactor = Tqq(q, qp, 3, ray.inc.to('rad').value, 
-                                      ray.az.to('rad').value) * \
-                                  esevoigt
+                                      ray.az.to('rad').value) * esevoigt
                         sum_etaa3 += factor*np.real(Cfactor)
                         sum_rhoa3 += factor*np.imag(Cfactor)
 
@@ -281,26 +277,22 @@ class RTcoefs:
 
                         # Stokes parameters
                         Cfactor = Tqq(q, qp, 0, ray.inc.to('rad').value, 
-                                      ray.az.to('rad').value) * \
-                                  esevoigt
+                                      ray.az.to('rad').value) * esevoigt
                         sum_etas0 += factor*np.real(Cfactor)
                         sum_rhos0 += factor*np.imag(Cfactor)
 
                         Cfactor = Tqq(q, qp, 1, ray.inc.to('rad').value, 
-                                      ray.az.to('rad').value) * \
-                                  esevoigt
+                                      ray.az.to('rad').value) * esevoigt
                         sum_etas1 += factor*np.real(Cfactor)
                         sum_rhos1 += factor*np.imag(Cfactor)
 
                         Cfactor = Tqq(q, qp, 2, ray.inc.to('rad').value, 
-                                      ray.az.to('rad').value) * \
-                                  esevoigt
+                                      ray.az.to('rad').value) * esevoigt
                         sum_etas2 += factor*np.real(Cfactor)
                         sum_rhos2 += factor*np.imag(Cfactor)
 
                         Cfactor = Tqq(q, qp, 3, ray.inc.to('rad').value, 
-                                      ray.az.to('rad').value) * \
-                                  esevoigt
+                                      ray.az.to('rad').value) * esevoigt
                         sum_etas3 += factor*np.real(Cfactor)
                         sum_rhos3 += factor*np.imag(Cfactor)
 

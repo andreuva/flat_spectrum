@@ -126,26 +126,26 @@ class ESE:
         ####################################################
         ####################################################
         ####################################################
-        print('AD-HOC INITIALIZATION IN ESE')
-        for i, lev in enumerate(self.atom.dens_elmnt):
+        # print('AD-HOC INITIALIZATION IN ESE')
+        # for i, lev in enumerate(self.atom.dens_elmnt):
 
-            Ll = lev[0]
-            Ml = lev[-2]
-            Mlp = lev[-1]
+        #     Ll = lev[0]
+        #     Ml = lev[-2]
+        #     Mlp = lev[-1]
 
-            if Mlp == Ml:   # If it's a population compute the Boltzman LTE ratio
-                self.rho[i] = np.exp(-c.h.cgs*c.c.cgs*self.atom.levels[Ll].E/c.k_B.cgs/T) / \
-                              len(self.atom.levels[Ll].M)
-                self.populations += self.rho[i]
+        #     if Mlp == Ml:   # If it's a population compute the Boltzman LTE ratio
+        #         self.rho[i] = np.exp(-c.h.cgs*c.c.cgs*self.atom.levels[Ll].E/c.k_B.cgs/T) / \
+        #                       len(self.atom.levels[Ll].M)
+        #         self.populations += self.rho[i]
 
-        self.rho = self.rho/self.populations
+        # self.rho = self.rho/self.populations
 
-        for i, lev in enumerate(self.atom.dens_elmnt):
-            Ll = lev[0]
-            Ml = lev[-2]
-            Mlp = lev[-1]
-            self.rho[i] += np.absolute(Ml-Mlp)*0.2
-            self.rho[i] += 1j*(Ml-Mlp)*0.33
+        # for i, lev in enumerate(self.atom.dens_elmnt):
+        #     Ll = lev[0]
+        #     Ml = lev[-2]
+        #     Mlp = lev[-1]
+        #     self.rho[i] += np.absolute(Ml-Mlp)*0.2
+        #     self.rho[i] += 1j*(Ml-Mlp)*0.33
         ####################################################
         ####################################################
         ####################################################

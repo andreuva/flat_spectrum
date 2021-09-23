@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 # Measure time
-import time,sys
+# import time,sys
 
 # np.seterr(all='raise')
 
@@ -32,7 +32,7 @@ datadir = pm.dir + 'out/'
 
 plot_quadrature(cdt, directory=pm.dir)
 
-#''
+# ''
 # Start the main loop for the Lambda iteration
 for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
     # Reset the internal state for a new itteration
@@ -117,22 +117,23 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
             step = -1
             iz0 = -1
             iz1 = -cdt.z_N - 1
-            sign = 1
         else:
             step = 1
             iz0 = 0
             iz1 = cdt.z_N
-            sign = -1
 
         # Deal with very first point computing first and second
         z = iz0
-        point_O = point(st.space_atom, st.space_rad,         cdt.zf+sign*cdt.dz)
+        if iz0 == -1:
+            point_O = point(st.space_atom, st.space_rad, cdt.zf+cdt.dz)
+        elif iz0 == 0:
+            point_O = point(st.sun_atom, st.sun_rad, cdt.z0-cdt.dz)
         em_o, ab_o, sf_o, kk_o = RT_coeficients.getRTcoefs(point_O.atomic, ray, cdt)
-        point_P = point(st.atomic[z],      st.radiation[z],      cdt.zz[iz0])
-        em_p, ab_p, sf_p, kk_p = RT_coeficients.getRTcoefs(point_O.atomic, ray, cdt)
+        point_P = point(st.atomic[z], st.radiation[z], cdt.zz[z])
+        em_p, ab_p, sf_p, kk_p = RT_coeficients.getRTcoefs(point_P.atomic, ray, cdt)
 
         # Go through all the points (besides 0 and -1 for being IC)
-        for z in range(iz0,iz1,step):
+        for z in range(iz0, iz1, step):
 
             # Shift data
             point_M = point_O
@@ -356,7 +357,7 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
         plot_quantity(cdt, cdt.zz, tau_tot, names=['Z (CGS)', r'$\tau$'], directory=pm.dir + 'plots' + subfix)
         plot_quantity(cdt, cdt.zz, source, names=['Z (CGS)', r'$Sf_I$'], directory=pm.dir + 'plots' + subfix)
         plot_quantity(cdt, cdt.zz, emisivity, names=['Z (CGS)', r'$\varepsilon_I$'], directory=pm.dir + 'plots' + subfix)
-        plot_quantity(cdt, cdt.zz, absortivity, names=['Z (CGS)', r'$\eta_I$'], directory=pm.dir + 'plots' + subfix)
+        plot_quantity(cdt, cdt.zz, absortivity, names=['Z (CGS)', r'$eta_I$'], directory=pm.dir + 'plots' + subfix)
 
     ####
     # DEBUG

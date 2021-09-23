@@ -148,14 +148,14 @@ def BESSER_interp(tauMO, tauOP, sf_m, sf_o, sf_p):
     # For Stokes
     for j in range(4):
         # For frequency
-        for m,hm,hp,ym,yo,yp in zip(range(tauMO.size),tauMO,tauOP,sf_m[j,:],
-                                          sf_o[j,:],sf_p[j,:]):
+        for m, hm, hp, ym, yo, yp in zip(range(tauMO.size), tauMO, tauOP, sf_m[j, :],
+                                         sf_o[j, :], sf_p[j, :]):
 
             # If both greater than 0
             if hm > 0. and hm > 0.:
 
-                dm = (sf_o - sf_m)/hm
-                dp = (sf_p - sf_o)/hp
+                dm = (yo - ym)/hm
+                dp = (yp - yo)/hp
 
             else:
 
@@ -171,8 +171,8 @@ def BESSER_interp(tauMO, tauOP, sf_m, sf_o, sf_p):
             cm = yo - 0.5*hm*yder
             cp = yo + 0.5*hm*yder
 
-            condm = ybetwab(cm,ym,yo)
-            condp = ybetwab(cp,yo,yp)
+            condm = ybetwab(cm, ym, yo)
+            condp = ybetwab(cp, yo, yp)
 
             if condm and condp:
                 Cm[j,m] = cm
