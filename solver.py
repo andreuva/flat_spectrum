@@ -179,7 +179,7 @@ def BESSER_interp(tauMO, tauOP, sf_m, sf_o, sf_p):
             elif not condm:
                 Cm[j,m] = correctyab(cm,ym,yo)
             elif not condp:
-                cpp = correctyab(cp,y0,yp)
+                cpp = correctyab(cp,yo,yp)
                 yder = 2.0*(cpp - yo)/hp
                 cm = yo - 0.5*hm*yder
                 condpp = ybetwab(cm,ym,yo)

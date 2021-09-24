@@ -224,6 +224,7 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
     f.write('{0}'.format(end-start))
     f.close()
     sys.exit()
+    '''
 
     rad_jqq = {}
     for i in range(cdt.z_N):
@@ -247,7 +248,6 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
         print(f'FINISHED WITH A TOLERANCE OF {st.mrc.max()}')
         print('----------------------------------')
         break
-    '''
 
 '''
 # Start the main loop for the Lambda iteration
