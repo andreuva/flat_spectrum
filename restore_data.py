@@ -49,6 +49,7 @@ for i in range(len(jqq_base_rays)):
 #  Compute the JKQ and rhoKQ
 
 jsymb = jsymbols()
+print('WRONG WEIGHTS')
 nus_weights = np.ones_like(jqq_itt_z[0][0][0][0].value)
 nus_weights[0] = 0.5
 nus_weights[-1] = 0.5

@@ -45,12 +45,21 @@ class RTE:
             ray of propagation direction
             return value: None
         """
+       #f = open('debugJ','a')
+       #il = len(self.stokes[0])//2
+       #f.write('    Weight {0}\n'.format(ray.weight))
         for i in range(4):
+           #f.write('    Stokes {0}: {1}\n'.format(i,self.stokes[i][il]))
             for qq in [-1, 0, 1]:
                 for qp in [-1, 0, 1]:
+                   #f.write('      Contribution {0:2d}{1:2d}\n'.format(qq,qp))
+                   #f.write('        tqqp {0}\n'.format(Tqq(qq, qp, i, ray.inc.to('rad').value, ray.az.to('rad').value)))
+                   #f.write('        all {0}\n'.format(ray.weight*Tqq(qq, qp, i, ray.inc.to('rad').value, ray.az.to('rad').value)*self.stokes[i][il]))
                     self.jqq[qq][qp] = self.jqq[qq][qp] + \
                                        ray.weight*Tqq(qq, qp, i, ray.inc.to('rad').value, ray.az.to('rad').value)\
                                        * self.stokes[i]
+                   #f.write('        cumulative {0}\n'.format(self.jqq[qq][qp][il]))
+       #f.close()
 
     def resetStokes(self):
         for i in range(4):

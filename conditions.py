@@ -76,9 +76,10 @@ class conditions:
         self.w0 = (constants.c.cgs / parameters.lambf.cgs).to('Hz')
         self.nus_N = parameters.wn
         self.nus = np.linspace(self.w0, self.wf, self.nus_N)
-        self.nus_weights = np.ones(self.nus_N)*units.Hz
-        self.nus_weights[0] = 0.5*units.Hz
-        self.nus_weights[-1] = 0.5*units.Hz
+
+        self.nus_weights = np.ones(self.nus_N)*(self.nus[1] - self.nus[0])
+        self.nus_weights[0] = 0.5*(self.nus[1] - self.nus[0])
+        self.nus_weights[-1] = 0.5*(self.nus[1] - self.nus[0])
 
         # Parameters of the rotation of the slab and the global ref frame
         self.alpha = parameters.alpha
@@ -123,7 +124,8 @@ class conditions:
         delt_v = line.nu*vt/constants.c.cgs
 
         profile = voigt((vs-v0)/delt_v, self.a_voigt)
-        profile = profile * units.s / (np.sqrt(np.pi))
+       #profile = profile * units.s / (np.sqrt(np.pi))
+        profile = profile * units.s / (np.sqrt(np.pi) * delt_v * units.s)
 
         normalization = np.sum(profile.real*self.nus_weights)
         profile.real = profile.real/normalization
@@ -140,7 +142,8 @@ class conditions:
         delt_v = line.nu*vt/constants.c.cgs
 
         profile = voigt((vs-v0)/delt_v, self.a_voigt)
-        profile = profile * units.s / (np.sqrt(np.pi))
+       #profile = profile * units.s / (np.sqrt(np.pi))
+        profile = profile * units.s / (np.sqrt(np.pi) * delt_v * units.s)
 
         normalization = np.sum(profile.real*self.nus_weights)
         profile.real = profile.real/normalization
@@ -205,6 +208,36 @@ class state:
         maximum mrc over all points in z (computed in ESE method)"""
         for i, point in enumerate(self.atomic):
             self.mrc[itter][i] = point.solveESE(self.radiation[i], cdts)
+            '''
+            #######
+            # DEBUG
+            #######
+            print('\n')
+            print('Point {0}:'.format(i))
+            print('  Radiation')
+            JKQ = []
+            msg = ''
+            line = point.atom.lines[0]
+           #nus_weights = np.zeros(self.radiation[i].nus.shape)
+           #nus_weights = np.zeros(self.radiation[i].nus.shape)*0.0
+           #nus_weights[0:1] = 0.5*(self.radiation[i].nus[1:2] - self.radiation[i].nus[0:1])
+           #nus_weights[-1:] = 0.5*(self.radiation[i].nus[-1:] - self.radiation[i].nus[-2:-1])
+           #nus_weights[1:-1] = 0.5*(self.radiation[i].nus[2:] - self.radiation[i].nus[:-2])
+            for q in range(-1,2,1):
+                for qp in range(-1,2,1):
+                    Jqq = self.radiation[i].Jqq_nu(cdts, line, q, qp, None, None, None, nus_weights)
+                    msg += '  J{0:2d}{1:2d}: {2}'.format(q,qp,Jqq)
+            print(msg)
+            print('  Density')
+            rKQ = []
+            msg = ''
+            for i, lev in enumerate(point.atom.dens_elmnt):
+                Ll = lev[0]
+                Ml = lev[-2]
+                Mu = lev[-1]
+                msg += '  r({0}){1:2d}{2:2d}: {3}'.format(Ll,Ml,Mu,point.rho[i])
+            print(msg)
+            '''
 
     def new_itter(self):
         """Update the source funtions of all the points with the new radiation field

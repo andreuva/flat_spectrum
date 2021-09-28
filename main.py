@@ -48,8 +48,33 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
     f2 = open('debugI-'+mod, 'w')
     '''
 
+    '''
+    #
+    # DEBUG
+    #
+    norm = 0.
+    for j, ray in enumerate(tqdm(cdt.rays, desc='propagating rays', leave=False)):
+        norm += ray.weight
+    print('\n\n')
+    print('Norm angular:',norm)
+   #sys.exit()
+    '''
+
+    #
+    # DEBUG
+    #
+   #f = open('debugJ','w')
+   #f.close()
+
     # Go through all the rays in the cuadrature
     for j, ray in enumerate(tqdm(cdt.rays, desc='propagating rays', leave=False)):
+
+        #
+        # DEBUG
+        #
+       #f = open('debugJ','a')
+       #f.write('New ray: {0}\n'.format(j))
+       #f.close()
 
         '''
         # DEBUG for Voigt and getRTcoefs
@@ -134,6 +159,13 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
 
         # Go through all the points (besides 0 and -1 for being IC)
         for z in range(iz0, iz1, step):
+
+            #
+            # DEBUG
+            #
+           #f = open('debugJ','a')
+           #f.write('  New point: {0}\n'.format(z))
+           #f.close()
 
             # Shift data
             point_M = point_O
