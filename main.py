@@ -32,6 +32,8 @@ datadir = pm.dir + 'out/'
 
 plot_quadrature(cdt, directory=pm.dir)
 
+# Load data
+
 # ''
 # Start the main loop for the Lambda iteration
 for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
@@ -65,6 +67,9 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
     #
    #f = open('debugJ','w')
    #f.close()
+
+   #print('DEBUG main line 71')
+   #fd = open('jqq_debugging','w')
 
     # Go through all the rays in the cuadrature
     for j, ray in enumerate(tqdm(cdt.rays, desc='propagating rays', leave=False)):
@@ -200,6 +205,11 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
                 LinSC(point_M, point_O, sf_m, sf_o, kk_m, kk_o, ray, cdt)
 
             # Adding the ray contribution to the Jqq's
+           #if z == (iz1 - iz0 + 1)//2:
+           #    print('DEBUG main line 209')
+           #    point_O.radiation.sumStokes_debug(ray,fd)
+           #else:
+           #    point_O.radiation.sumStokes(ray)
             point_O.radiation.sumStokes(ray)
 
             '''
@@ -257,6 +267,8 @@ for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
     f.close()
     sys.exit()
     '''
+   #print('DEBUG main line 269')
+   #fd.close()
 
     rad_jqq = {}
     for i in range(cdt.z_N):

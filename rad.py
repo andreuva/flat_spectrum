@@ -61,6 +61,37 @@ class RTE:
                    #f.write('        cumulative {0}\n'.format(self.jqq[qq][qp][il]))
        #f.close()
 
+
+    def sumStokes_debug(self, ray, fd):
+        """
+            Called per every Lambda iteration, grid point, and ray direction.
+            stokes: list of 4 arrays of Stokes parameters [I,Q,U,V] in given
+            point and direction (all frequencies)
+            ray: object with .theta, .chi and weight variables defining the
+            ray of propagation direction
+            return value: None
+        """
+        fd.write(f'Direction {ray.inc} {ray.az}\n')
+        for i in range(4):
+            if np.max(np.absolute(self.stokes[i])) <= 0.:
+                continue
+            fd.write(f'  Stokes {i}\n')
+            for qq in [-1, 0, 1]:
+                for qp in [-1, 0, 1]:
+                    fd.write(f'    q {qq} qp {qp} jqqp {self.jqq[qq][qp]}')
+                    fd.write(f' W {ray.weight} Tqq {Tqq(qq,qp,i,ray.inc.to("rad").value,ray.az.to("rad").value)}\n')
+                    if isinstance(self.jqq[qq][qp], float):
+                        for j,s in enumerate(self.stokes[i]):
+                            fd.write(f'   {i} {0.0} {self.stokes[i][j]} ')
+                            fd.write(f'{ray.weight*Tqq(qq, qp, i, ray.inc.to("rad").value, ray.az.to("rad").value) * self.stokes[i][j]}\n')
+                    else:
+                        for j,s in enumerate(self.stokes[i]):
+                            fd.write(f'   {i} {self.jqq[qq][qp][j]} {self.stokes[i][j]} ')
+                            fd.write(f'{self.jqq[qq][qp][j] + ray.weight*Tqq(qq, qp, i, ray.inc.to("rad").value, ray.az.to("rad").value) * self.stokes[i][j]}\n')
+                    self.jqq[qq][qp] = self.jqq[qq][qp] + \
+                                       ray.weight*Tqq(qq, qp, i, ray.inc.to('rad').value, ray.az.to('rad').value)\
+                                       * self.stokes[i]
+
     def resetStokes(self):
         for i in range(4):
             self.stokes[i] = 0
@@ -75,5 +106,16 @@ class RTE:
     def Jqq_nu(self, cdt, line, q, qp, Mu, Ml, B, nus_weights):
         jqqp = self.jqq[q][qp]
         # profile = cdt.voigt_profile(line, Mu, Ml, B)
-        profile = cdt.voigt_profile(line)
+        profile = (cdt.voigt_profile(line).real + 0j)
+        return np.sum(jqqp*profile*nus_weights)
+
+    def Jqq_nu_debug(self, cdt, line, q, qp, Mu, Ml, B, nus_weights):
+        jqqp = self.jqq[q][qp]
+        # profile = cdt.voigt_profile(line, Mu, Ml, B)
+        profile = (cdt.voigt_profile(line).real + 0j)
+        f = open(f'jqq_integral_debug_{q}-{qp}','w')
+        for i in range(nus_weights.size):
+            f.write('{0} {1} {2} {3}\n'.format(i,nus_weights[i],profile[i],jqqp[i]))
+        f.write('{0}\n'.format(np.sum(jqqp*profile*nus_weights)))
+        f.close()
         return np.sum(jqqp*profile*nus_weights)

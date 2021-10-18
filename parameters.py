@@ -2,7 +2,8 @@ from astropy import units as u
 import time
 
 z0 = 100 * u.km                 # height of the slav over the surfave
-zf = 110 * u.km                # geometrical height of the slav
+#zf = 110 * u.km                # geometrical height of the slav
+zf = 1000 * u.km                # geometrical height of the slav
 zn = 32                         # Points in z in the slav
 alpha = 0 * u.deg              # angle between the vertical of the slav and the radial line
 

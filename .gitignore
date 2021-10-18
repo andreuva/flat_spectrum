@@ -134,3 +134,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Quadratures
+gaussian_quadrature_2x8.dat
+
+# Debug
+8x8_quad/
+error_analisis.py

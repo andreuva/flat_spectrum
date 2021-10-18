@@ -191,6 +191,18 @@ class state:
         # Initialicing the atomic state instanciating ESE class for each point
         self.atomic = [ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, np.linalg.norm(vec), cdts.temp) for vec in cdts.B]
 
+        ###
+        # LOADING
+        ###
+       #print('Ad-hoc loading of rhoqqp in ESE initializer, for debugging')
+       #filename = '8x8_quad/rhoqq/rho_qq_before_12.csv'
+       #rhoqqin = np.loadtxt(filename, dtype=np.complex_)
+       #for iz in range(len(self.atomic)):
+       #    self.atomic[iz].rho = rhoqqin[iz,:]
+        ###
+        # Ended loading
+        ###
+
         # Define the IC for the downward and upward rays as an atomic class
         self.space_atom = ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, np.zeros(3)*units.G, cdts.temp)
         self.sun_atom = ESE(cdts.v_dop, cdts.a_voigt, cdts.nus, cdts.nus_weights, np.zeros(3)*100*units.G, cdts.temp, equilibrium=True)
@@ -206,6 +218,12 @@ class state:
     def update_mrc(self, cdts, itter):
         """Update the mrc of the current state by finding the
         maximum mrc over all points in z (computed in ESE method)"""
+
+       #i = len(self.atomic)//2
+       #self.mrc[itter][i] = self.atomic[i].solveESE_old(self.radiation[i], cdts)
+       #self.mrc[itter][i] = self.atomic[i].solveESE_new(self.radiation[i], cdts)
+       #sys.exit()
+
         for i, point in enumerate(self.atomic):
             self.mrc[itter][i] = point.solveESE(self.radiation[i], cdts)
             '''
