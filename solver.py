@@ -20,12 +20,12 @@ def BESSER(point_M, point_O, point_P, \
     # Compute exponentials
     exp_tauMO = np.zeros(tauMO.shape)
     # Small linear
-   #small = (tauMO < 1e-7)
-    small = (tauMO < 1e-299)
+    small = (tauMO < 1e-7)
+   #small = (tauMO < 1e-299)
     exp_tauMO[small] = 1. - tauMO[small] + 0.5*tauMO[small]*tauMO[small]
     # Normal
-   #normal = (tauMO >= 1e-7) & (tauMO < 300.)
-    normal = (tauMO < 300.)
+    normal = (tauMO >= 1e-7) & (tauMO < 300.)
+   #normal = (tauMO < 300.)
     exp_tauMO[normal] = np.exp(-tauMO[normal])
 
     # Compute linear coeff
