@@ -31,12 +31,12 @@ def plot_quadrature(cdt, mode='save', directory='plots'):
     plt.figure()
     plt.subplot(projection="aitoff")
 
-    inclinations_loc = np.array([ray.inc.value for ray in cdt.rays])
-    azimuts_loc = np.array([ray.az.value for ray in cdt.rays])
-    weights = np.array([ray.weight.value for ray in cdt.rays])
+    inclinations_loc = np.array([ray.inc for ray in cdt.rays])
+    azimuts_loc = np.array([ray.az for ray in cdt.rays])
+    weights = np.array([ray.weight for ray in cdt.rays])
 
-    inclinations_glob = np.array([ray.inc_glob.value for ray in cdt.rays])
-    azimuts_glob = np.array([ray.az_glob.value for ray in cdt.rays])
+    inclinations_glob = np.array([ray.inc_glob for ray in cdt.rays])
+    azimuts_glob = np.array([ray.az_glob for ray in cdt.rays])
 
     plt.plot(azimuts_loc-180, inclinations_loc-90, 'o', label='local RF')
     plt.plot(azimuts_glob-180, inclinations_glob-90, 'o', alpha=0.5, label='global RF')

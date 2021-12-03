@@ -1,12 +1,11 @@
 import parameters as pm
-from physical_functions import Tqq, jsymbols
+from physical_functions import Tqq_all
 from plot_utils import plot_quantity
 
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
-from astropy import constants as cts
-from astropy import units as unt
+import constants as cts
 # from py3nj import wigner3j
 
 
@@ -15,178 +14,70 @@ class RTcoefs:
         Just one instance of the class needs to be created in the program.
     """
 
-    def __init__(self, nus):
+    def __init__(self, nus, nus_weights, mode):
         """
             nus: array of the line frequencies
+            nus_weights: array of the line frequency weights
             return value: None
         """
-        self.jsim = jsymbols()
 
         # Defining units to avoid quotients and some products later
-        self.untrad = unt.erg/(unt.cm*unt.cm*unt.cm*unt.sr)
-        self.rtcprototype = np.zeros((4, nus.size)) * 1/(unt.cm)
-        self.untcmm1 = 1/(unt.cm)
-        self.hnu = 0.25*cts.h.cgs/(np.pi)
-        self.hcm2 = 2.0*cts.h.cgs/(cts.c.cgs*cts.c.cgs*unt.sr)
+        self.rtc4prototype = np.zeros((4, nus.size))
+        self.rtc3prototype = np.zeros((3, nus.size))
+        self.hnu = 0.25*cts.h/(np.pi)
+        self.hcm2 = 2.0*cts.h/(cts.c*cts.c)
 
-       #self.getRTcoefs = self.getRTcoefs_old
-        self.getRTcoefs = self.getRTcoefs_new
+        # Multi-level atom
+        if mode == 0:
+            self.getRTcoefs = self.getRTcoefs_ML
+        elif mode == 1:
+            self.getRTcoefs = self.getRTcoefs_MT
 
-    def getRTcoefs_old(self, ese, ray, cdts):
+
+    def getRTcoefs_ML(self, ese, ray, cdts):
         """ Provides the 4-vector of epsilon and the 4x4 K-matrix for the point
             with given ESE state and ray direction.
-            ese: the local instance of the ESE class
-            ray: object with .theta and .chi variables defining the ray
-            of propagation direction
-            return value: [S (source function vector in frequencies), K (4x4 list of
-            vectors in frequencies)]
+            Multi-level atom case in standard representation.
+            Eqs. 7.10 of LL04.
+              ese: the local instance of the ESE class
+              ray: object with .theta and .chi variables defining the ray
+                   of propagation direction
+              return value: [S (source function vector in frequencies), K (4x4 list of
+                             vectors in frequencies)]
         """
 
-        # Eq 7.10 of LL04
-        eta_a = np.zeros((4, cdts.nus_N)) * 1/(unt.cm)
-        eta_s = np.zeros((4, cdts.nus_N)) * 1/(unt.cm)
-        rho_a = np.zeros((4, cdts.nus_N)) * 1/(unt.cm)
-        rho_s = np.zeros((4, cdts.nus_N)) * 1/(unt.cm)
+        # Point to J symbols
+        jsim = cdts.JS
 
-        # eta_a_LTE = 0
-        # eta_s_LTE = 0
-        # emision = 0
-        # for q in [-1, 0, 1]:
-        #     eta_a_LTE += cts.h.cgs*cdts.nus.cgs/(4*np.pi)*cdts.n_dens*ese.atom.lines[0].B_lu *\
-        #         3*self.jsim.j3(1, 0, 1, q, 0, -q)**2 *\
-        #         np.real(ese.rho[0]*cdts.voigt_profile(ese.atom.lines[0], -q, 0, cdts.B.value) *
-        #                 Tqq(q, q, 0, ray.inc.to('rad').value, ray.az.to('rad').value))
+        # Get all Tqq
+        TQQ = Tqq_all(ray.rinc,ray.raz)
 
-        #     for qp in [-1, 0, 1]:
-        #         eta_s_LTE += cts.h.cgs*cdts.nus.cgs/(4*np.pi)*cdts.n_dens*ese.atom.lines[0].B_ul *\
-        #             9*self.jsim.j3(1, 0, 1, q, 0, -q)*self.jsim.j3(1, 0, 1, qp, 0, -qp) *\
-        #             np.real(ese.rho_call(1, 1, -qp, -q) * cdts.voigt_profile(ese.atom.lines[0], -q, 0, cdts.B.value) *
-        #                     Tqq(q, qp, 0, ray.inc.to('rad').value, ray.az.to('rad').value))
-        #         emision += cts.h.cgs*cdts.nus.cgs/(4*np.pi)*cdts.n_dens*ese.atom.lines[0].A_lu *\
-        #             9*self.jsim.j3(1, 0, 1, q, 0, -q)*self.jsim.j3(1, 0, 1, qp, 0, -qp) *\
-        #             np.real(ese.rho_call(1, 1, -qp, -q) * cdts.voigt_profile(ese.atom.lines[0], -q, 0, cdts.B.value) *
-        #                     Tqq(q, qp, 0, ray.inc.to('rad').value, ray.az.to('rad').value))
-
-        for i in range(4):
-
-            sum_etaa = 0
-            sum_etas = 0
-            sum_rhoa = 0
-            sum_rhos = 0
-
-            for line in ese.atom.lines:
-
-                Ll = line.levels[0]
-                Jl = line.jlju[0]
-                Lu = line.levels[1]
-                Ju = line.jlju[1]
-
-                for _, _, Ml, Mlp in ese.atom.levels[Ll].MMp:
-
-                    for Mu in ese.atom.levels[Lu].M:
-                        q = int(Ml - Mu)
-                        qp = int(Mlp - Mu)
-
-
-                        sum_etaa += (3*(-1)**(Ml - Mlp)*(2*Jl + 1)*line.B_lu *
-                                     self.jsim.j3(Ju, Jl, 1, -Mu, Ml, -q) *
-                                     self.jsim.j3(Ju, Jl, 1, -Mu, Mlp, -qp) *
-                                     np.real(Tqq(q, qp, i, ray.inc.to('rad').value, ray.az.to('rad').value)*ese.rho_call(Ll, Jl, Ml, Mlp) *
-                                     cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
-
-                        sum_rhoa += (3*(-1)**(Ml - Mlp)*(2*Jl + 1)*line.B_lu *
-                                     self.jsim.j3(Ju, Jl, 1, -Mu, Ml, -q) *
-                                     self.jsim.j3(Ju, Jl, 1, -Mu, Mlp, -qp) *
-                                     np.imag(Tqq(q, qp, i, ray.inc.to('rad').value, ray.az.to('rad').value)*ese.rho_call(Ll, Jl, Ml, Mlp) *
-                                     cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
-
-                for _, _, Mu, Mup in ese.atom.levels[Lu].MMp:
-
-                    for Ml in ese.atom.levels[Ll].M:
-                        q = int(Ml - Mu)
-                        qp = int(Ml - Mup)
-
-
-                        sum_etas += (3*(2*Ju + 1)*line.B_ul *
-                                     self.jsim.j3(Ju, Jl, 1, -Mu, Ml, -q) *
-                                     self.jsim.j3(Ju, Jl, 1, -Mup, Ml, -qp) *
-                                     np.real(Tqq(q, qp, i, ray.inc.to('rad').value, ray.az.to('rad').value)*ese.rho_call(Lu, Ju, Mup, Mu) *
-                                     cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
-
-                        sum_rhos += (3*(2*Ju + 1)*line.B_ul *
-                                     self.jsim.j3(Ju, Jl, 1, -Mu, Ml, -q) *
-                                     self.jsim.j3(Ju, Jl, 1, -Mup, Ml, -qp) *
-                                     np.imag(Tqq(q, qp, i, ray.inc.to('rad').value, ray.az.to('rad').value)*ese.rho_call(Lu, Ju, Mup, Mu) *
-                                     cdts.voigt_profile(line, Mu, Ml, cdts.B.value)))
-
-            eta_a[i, :] = cts.h.cgs*line.nu.cgs/(4*np.pi) * cdts.n_dens * sum_etaa
-            eta_s[i, :] = cts.h.cgs*line.nu.cgs/(4*np.pi) * cdts.n_dens * sum_etas
-            rho_a[i, :] = cts.h.cgs*line.nu.cgs/(4*np.pi) * cdts.n_dens * sum_rhoa
-            rho_s[i, :] = cts.h.cgs*line.nu.cgs/(4*np.pi) * cdts.n_dens * sum_rhos
-
-        eta = eta_a - eta_s
-        rho = rho_a - rho_s
-
-        if np.any(eta[0] < 0):
-            print("Warning: eta_I < 0")
-            # plot_quantity(cdts, cdts.nus, eta[0], names=['ww', 'negative_eta_I'])
-
-        KK = np.array([[eta[0],  eta[1],  eta[2],  eta[3]],
-                       [eta[1],  eta[0],  rho[3], -rho[2]],
-                       [eta[2], -rho[3],  eta[0],  rho[1]],
-                       [eta[3],  rho[2], -rho[1],  eta[0]]])*eta.unit
-
-        # KK = np.array([[eta[0] + 1e-4*eta[0].unit,  eta[1],  eta[2],  eta[3]],
-        #                [eta[1],  eta[0] + 1e-4*eta[0].unit,  rho[3], -rho[2]],
-        #                [eta[2], -rho[3],  eta[0] + 1e-4*eta[0].unit,  rho[1]],
-        #                [eta[3],  rho[2], -rho[1],  eta[0] + 1e-4*eta[0].unit]])*eta.unit
-
-        eps = 2*cts.h.cgs*cdts.nus.cgs**3/(cts.c.cgs**2)*eta_s
-        SS = eps/(eta[0]+1e-30*eta[0].unit) / unt.s / unt.Hz / unt.sr
-
-        EM = eps[0][int(cdts.nus_N/2)].value
-        ABS = eta[0][int(cdts.nus_N/2)].value
-
-        # plt.plot(eps[0])
-        # plt.plot(emision)
-        # plt.show()
-        # plt.plot(eta_a[0])
-        # plt.plot(eta_a_LTE)
-        # plt.show()
-        # plt.plot(eta_s[0])
-        # plt.plot(eta_s_LTE)
-        # plt.show()
-
-        return EM, ABS, SS, KK
-
-    def getRTcoefs_new(self, ese, ray, cdts):
-        """ Provides the 4-vector of epsilon and the 4x4 K-matrix for the point
-            with given ESE state and ray direction.
-            ese: the local instance of the ESE class
-            ray: object with .theta and .chi variables defining the ray
-            of propagation direction
-            return value: [S (source function vector in frequencies), K (4x4 list of
-            vectors in frequencies)]
-        """
-
+        # Add density to global constant
         hnuN = self.hnu*cdts.n_dens
 
-        # Eq 7.10 of LL04
-       #eta_a = np.zeros((4, cdts.nus_N)) * self.untcmm1
-        eta_a = copy.copy(self.rtcprototype)
-        eta_s = copy.copy(eta_a)
-        rho_a = copy.copy(eta_a)
-        rho_s = copy.copy(eta_a)
-        eps = np.zeros((4, cdts.nus_N)) * self.untrad
+        # Get factor for Zeeman splitting later
+        dB = 1.3996*ese.B
+
+        # Initialize RT coefficients
+       #eta_a = copy.copy(self.rtc4prototype)
+       #eta_s = copy.copy(eta_a)
+       #rho_a = copy.copy(self.rtc3prototype)
+       #rho_s = copy.copy(rho_a)
+       #eps = copy.copy(eta_a)
 
         # For each transition
         for line in ese.atom.lines:
 
+            # Initialize profiles
+            line.initialize_profiles(cdts.nus_N)
+
+            # Get levels quantum numbers
             Ll = line.levels[0]
             Jl = line.jlju[0]
             Lu = line.levels[1]
             Ju = line.jlju[1]
 
+            # Initialize line contributions
             sum_etaa0 = 0
             sum_etaa1 = 0
             sum_etaa2 = 0
@@ -195,11 +86,9 @@ class RTcoefs:
             sum_etas1 = 0
             sum_etas2 = 0
             sum_etas3 = 0
-            sum_rhoa0 = 0
             sum_rhoa1 = 0
             sum_rhoa2 = 0
             sum_rhoa3 = 0
-            sum_rhos0 = 0
             sum_rhos1 = 0
             sum_rhos2 = 0
             sum_rhos3 = 0
@@ -208,148 +97,702 @@ class RTcoefs:
             sum_eps2  = 0
             sum_eps3  = 0
 
+            # Get global factors which depend on the line
             lfactor = 3*(2*Jl + 1)*line.B_lu
             ufactor = 3*(2*Ju + 1)*line.B_ul
 
             # For each pair of Ml, Mu
             for Ml in ese.atom.levels[Ll].M:
-                for Mu in ese.atom.levels[Lu].M:
+              for Mu in ese.atom.levels[Lu].M:
 
-                    # Get q value and check valid
-                    q = int(Ml - Mu)
-                    if np.absolute(q) > 1:
-                        continue
+                # Get q value and check valid
+                q = int(round(Ml - Mu))
+                if np.absolute(q) > 1:
+                  continue
 
-                    # Get voigt profile
-                    voigt = cdts.voigt_profile(line, Mu, Ml, cdts.B.value)
+                # Get voigt profile with Zeeman splitting
+                voigt = cdts.voigt_profile(line, \
+                                            dB*(line.gu*Mu - \
+                                                line.gl*Ml)*\
+                                            line.nu.unit)
 
-                    # Get first 3J
-                    j3 = self.jsim.j3(Ju, Jl, 1, -Mu, Ml, -q)
+                # Get first 3J
+                j3 = jsim.j3(Ju, Jl, 1, -Mu, Ml, -q)
 
-                    # Absorption, run over Ml'
-                    for Mlp in ese.atom.levels[Ll].M:
+                # Absorption, run over Ml'
+                for Mlp in ese.atom.levels[Ll].M:
 
-                        # Get q' value and check valid
-                        qp = int(Mlp - Mu)
-                        if np.absolute(qp) > 1:
-                            continue
+                  # Get q' value and check valid
+                  qp = int(round(Mlp - Mu))
+                  if np.absolute(qp) > 1:
+                    continue
 
-                        factor = lfactor*self.jsim.sign(Ml-Mlp) * \
-                                 j3 * self.jsim.j3(Ju, Jl, 1, -Mu, Mlp, -qp)
-                        esevoigt = voigt * ese.rho_call(Ll, Jl, Ml, Mlp)
+                  # Get 3J factors
+                  factor = lfactor*jsim.sign(Ml-Mlp) * \
+                           j3 * jsim.j3(Ju, Jl, 1, -Mu, Mlp, -qp)
 
-                        # Stokes parameters
-                        # This ugly unrolling is to avoid astropy errors
-                        # It may work if sum_* are lists? Maybe, but did
-                        # not even try, it will look more elegant for sure
-                        # if it did work
-                        Cfactor = Tqq(q, qp, 0, ray.inc.to('rad').value, 
-                                      ray.az.to('rad').value) * esevoigt
-                        sum_etaa0 += factor*np.real(Cfactor)
-                        sum_rhoa0 += factor*np.imag(Cfactor)
+                  # Product of Voigt profile and rhomm'
+                  esevoigt = voigt * ese.rho_call(Ll, Jl, Ml, Mlp)
 
-                        Cfactor = Tqq(q, qp, 1, ray.inc.to('rad').value, 
-                                      ray.az.to('rad').value) * esevoigt
-                        sum_etaa1 += factor*np.real(Cfactor)
-                        sum_rhoa1 += factor*np.imag(Cfactor)
+                  # Stokes parameters
+                  # This ugly unrolling is to avoid astropy errors
+                  # It may work if sum_* are lists? Maybe, but did
+                  # not even try, it will look more elegant for sure
+                  # if it did work
+                  tag = f'{q}{qp}'
+                  Cfactor = TQQ[0][tag]*esevoigt
+                  sum_etaa0 += factor*np.real(Cfactor)
 
-                        Cfactor = Tqq(q, qp, 2, ray.inc.to('rad').value, 
-                                      ray.az.to('rad').value) * esevoigt
-                        sum_etaa2 += factor*np.real(Cfactor)
-                        sum_rhoa2 += factor*np.imag(Cfactor)
+                  Cfactor = TQQ[1][tag]*esevoigt
+                  sum_etaa1 += factor*np.real(Cfactor)
+                  sum_rhoa1 += factor*np.imag(Cfactor)
 
-                        Cfactor = Tqq(q, qp, 3, ray.inc.to('rad').value, 
-                                      ray.az.to('rad').value) * esevoigt
-                        sum_etaa3 += factor*np.real(Cfactor)
-                        sum_rhoa3 += factor*np.imag(Cfactor)
+                  Cfactor = TQQ[2][tag]*esevoigt
+                  sum_etaa2 += factor*np.real(Cfactor)
+                  sum_rhoa2 += factor*np.imag(Cfactor)
 
-                    # Emission, run over Mu'
-                    for Mup in ese.atom.levels[Lu].M:
+                  Cfactor = TQQ[3][tag]*esevoigt
+                  sum_etaa3 += factor*np.real(Cfactor)
+                  sum_rhoa3 += factor*np.imag(Cfactor)
 
-                        # Get q' value and check valid
-                        qp = int(Ml - Mup)
-                        if np.absolute(qp) > 1:
-                            continue
+                # Emission, run over Mu'
+                for Mup in ese.atom.levels[Lu].M:
 
-                        factor = ufactor * j3 * \
-                                 self.jsim.j3(Ju, Jl, 1, -Mup, Ml, -qp)
-                        esevoigt = voigt * ese.rho_call(Lu, Ju, Mup, Mu)
+                  # Get q' value and check valid
+                  qp = int(round(Ml - Mup))
+                  if np.absolute(qp) > 1:
+                    continue
 
-                        # Stokes parameters
-                        Cfactor = Tqq(q, qp, 0, ray.inc.to('rad').value, 
-                                      ray.az.to('rad').value) * esevoigt
-                        sum_etas0 += factor*np.real(Cfactor)
-                        sum_rhos0 += factor*np.imag(Cfactor)
+                  # Get 3J factors
+                  factor = ufactor * j3 * \
+                           jsim.j3(Ju, Jl, 1, -Mup, Ml, -qp)
 
-                        Cfactor = Tqq(q, qp, 1, ray.inc.to('rad').value, 
-                                      ray.az.to('rad').value) * esevoigt
-                        sum_etas1 += factor*np.real(Cfactor)
-                        sum_rhos1 += factor*np.imag(Cfactor)
+                  # Product of Voigt profile and rhomm'
+                  esevoigt = voigt * ese.rho_call(Lu, Ju, Mup, Mu)
 
-                        Cfactor = Tqq(q, qp, 2, ray.inc.to('rad').value, 
-                                      ray.az.to('rad').value) * esevoigt
-                        sum_etas2 += factor*np.real(Cfactor)
-                        sum_rhos2 += factor*np.imag(Cfactor)
+                  # Stokes parameters
+                  tag = f'{q}{qp}'
+                  Cfactor = TQQ[0][tag]*esevoigt
+                  sum_etas0 += factor*np.real(Cfactor)
 
-                        Cfactor = Tqq(q, qp, 3, ray.inc.to('rad').value, 
-                                      ray.az.to('rad').value) * esevoigt
-                        sum_etas3 += factor*np.real(Cfactor)
-                        sum_rhos3 += factor*np.imag(Cfactor)
+                  Cfactor = TQQ[1][tag]*esevoigt
+                  sum_etas1 += factor*np.real(Cfactor)
+                  sum_rhos1 += factor*np.imag(Cfactor)
 
-            hnu = hnuN*line.nu.cgs
+                  Cfactor = TQQ[2][tag]*esevoigt
+                  sum_etas2 += factor*np.real(Cfactor)
+                  sum_rhos2 += factor*np.imag(Cfactor)
+
+                  Cfactor = TQQ[3][tag]*esevoigt
+                  sum_etas3 += factor*np.real(Cfactor)
+                  sum_rhos3 += factor*np.imag(Cfactor)
+
+            # Add to the profile in the line and normalize it
+            line.add_contribution_profiles(sum_etaa0.real*cdts.nus_weights)
+            line.normalize_profiles()
+
+            # Get final constants for the RT coefficients
+            hnu = hnuN*line.nu
             hnu3 = hnu * self.hcm2*line.nu3
-            eta_a[0, :] += hnu * sum_etaa0
-            eta_a[1, :] += hnu * sum_etaa1
-            eta_a[2, :] += hnu * sum_etaa2
-            eta_a[3, :] += hnu * sum_etaa3
-            eta_s[0, :] += hnu * sum_etas0
-            eta_s[1, :] += hnu * sum_etas1
-            eta_s[2, :] += hnu * sum_etas2
-            eta_s[3, :] += hnu * sum_etas3
-            rho_a[0, :] += hnu * sum_rhoa0
-            rho_a[1, :] += hnu * sum_rhoa1
-            rho_a[2, :] += hnu * sum_rhoa2
-            rho_a[3, :] += hnu * sum_rhoa3
-            rho_s[0, :] += hnu * sum_rhos0
-            rho_s[1, :] += hnu * sum_rhos1
-            rho_s[2, :] += hnu * sum_rhos2
-            rho_s[3, :] += hnu * sum_rhos3
-            eps[0, :]   += hnu3 * sum_etas0
-            eps[1, :]   += hnu3 * sum_etas1
-            eps[2, :]   += hnu3 * sum_etas2
-            eps[3, :]   += hnu3 * sum_etas3
 
+            # Add to line contribution
+            # rho U is negative because is the upper part of the triangular
+            # propagation matrix
+            try:
+                eta_a[0, :] += hnu * sum_etaa0
+                eta_a[1, :] += hnu * sum_etaa1
+                eta_a[2, :] += hnu * sum_etaa2
+                eta_a[3, :] += hnu * sum_etaa3
+                eta_s[0, :] += hnu * sum_etas0
+                eta_s[1, :] += hnu * sum_etas1
+                eta_s[2, :] += hnu * sum_etas2
+                eta_s[3, :] += hnu * sum_etas3
+                rho_a[0, :] += hnu * sum_rhoa1
+                rho_a[1, :] -= hnu * sum_rhoa2
+                rho_a[2, :] += hnu * sum_rhoa3
+                rho_s[0, :] += hnu * sum_rhos1
+                rho_s[1, :] -= hnu * sum_rhos2
+                rho_s[2, :] += hnu * sum_rhos3
+                eps[0, :]   += hnu3 * sum_etas0
+                eps[1, :]   += hnu3 * sum_etas1
+                eps[2, :]   += hnu3 * sum_etas2
+                eps[3, :]   += hnu3 * sum_etas3
+            except NameError:
+                pass
+            except:
+                pass
+
+        # Correct for stimulated emission
         eta = eta_a - eta_s
         rho = rho_a - rho_s
 
+        # Check physical absorption
         if np.any(eta[0] < 0):
             print("Warning: eta_I < 0")
-            # plot_quantity(cdts, cdts.nus, eta[0], names=['ww', 'negative_eta_I'])
 
-        KK = np.array([[eta[0],  eta[1],  eta[2],  eta[3]],
-                       [eta[1],  eta[0],  rho[3], -rho[2]],
-                       [eta[2], -rho[3],  eta[0],  rho[1]],
-                       [eta[3],  rho[2], -rho[1],  eta[0]]])*eta.unit
+        # Scale eta and rho
+        for ii in range(1,4):
+            eta[ii] /= (eta[0]+cts.vacuum)
+            rho[ii] /= (eta[0]+cts.vacuum)
 
-        # KK = np.array([[eta[0] + 1e-4*eta[0].unit,  eta[1],  eta[2],  eta[3]],
-        #                [eta[1],  eta[0] + 1e-4*eta[0].unit,  rho[3], -rho[2]],
-        #                [eta[2], -rho[3],  eta[0] + 1e-4*eta[0].unit,  rho[1]],
-        #                [eta[3],  rho[2], -rho[1],  eta[0] + 1e-4*eta[0].unit]])*eta.unit
+        # Build propagation matrix
+        KK = [eta,rho]
+       #KK = np.array([[eta[0],  eta[1],  eta[2],  eta[3]],
+       #               [eta[1],  eta[0],  rho[2], -rho[1]],
+       #               [eta[2], -rho[2],  eta[0],  rho[0]],
+       #               [eta[3],  rho[1], -rho[0],  eta[0]]])
 
-        eps = 2*cts.h.cgs*cdts.nus.cgs**3/(cts.c.cgs**2)*eta_s
-        SS = eps/(eta[0]+1e-30*eta[0].unit) / unt.s / unt.Hz / unt.sr
+        # Build source function
+        SS = eps/(eta[0]+cts.vacuum)
 
-        EM = eps[0][int(cdts.nus_N/2)].value
-        ABS = eta[0][int(cdts.nus_N/2)].value
+        return SS, KK
 
-        # plt.plot(eps[0])
-        # plt.plot(emision)
-        # plt.show()
-        # plt.plot(eta_a[0])
-        # plt.plot(eta_a_LTE)
-        # plt.show()
-        # plt.plot(eta_s[0])
-        # plt.plot(eta_s_LTE)
-        # plt.show()
 
-        return EM, ABS, SS, KK
+    def getRTcoefs_MT(self, ese, ray, cdts):
+        """ Provides the 4-vector of epsilon and the 4x4 K-matrix for the point
+            with given ESE state and ray direction.
+            Multi-term atom case in standard representation.
+            Eqs. 7.35 of LL04.
+              ese: the local instance of the ESE class
+              ray: object with .theta and .chi variables defining the ray
+                   of propagation direction
+              return value: [S (source function vector in frequencies), K (4x4 list of
+                             vectors in frequencies)]
+        """
+
+        # Point to J symbols
+        jsim = cdts.JS
+
+        # Get all Tqq
+        TQQ = Tqq_all(ray.rinc,ray.raz)
+
+        # Add density to global constant
+        hnuN = self.hnu*cdts.n_dens
+
+        # Initialize RT coefficients
+       #eta_a = copy.copy(self.rtc4prototype)
+       #eta_s = copy.copy(eta_a)
+       #rho_a = copy.copy(self.rtc3prototype)
+       #rho_s = copy.copy(rho_a)
+       #eps = copy.copy(eta_a)
+
+        # For each transition
+        for line in ese.atom.lines:
+
+          # Initialize profiles
+          line.initialize_profiles(cdts.nus_N)
+
+          # Initialize line contributions
+          sum_etaa0 = 0
+          sum_etaa1 = 0
+          sum_etaa2 = 0
+          sum_etaa3 = 0
+          sum_etas0 = 0
+          sum_etas1 = 0
+          sum_etas2 = 0
+          sum_etas3 = 0
+          sum_rhoa1 = 0
+          sum_rhoa2 = 0
+          sum_rhoa3 = 0
+          sum_rhos1 = 0
+          sum_rhos2 = 0
+          sum_rhos3 = 0
+          sum_eps0  = 0
+          sum_eps1  = 0
+          sum_eps2  = 0
+          sum_eps3  = 0
+
+          # Point to terms involved
+          termu = ese.atom.terms[line.terms[1]]
+          terml = ese.atom.terms[line.terms[0]]
+
+          # Get quantum numbers
+          Ll = terml.L
+          Lu = termu.L
+          SS = termu.S
+
+          # Frequency constant
+          hnu = hnuN*line.nu
+
+          # Proportionality factors that are line dependent
+          lfactor = 3*(2*Ll + 1)*line.B_lu*hnu
+          ufactor = 3*(2*Lu + 1)*line.B_ul*hnu
+
+          # For each Ml
+          for iMl,Mlblock in enumerate(terml.index_muM):
+
+            # Get Ml
+            Ml = Mlblock[0][-1]
+
+            # For each Mu
+            for iMu,Mublock in enumerate(termu.index_muM):
+
+              # Get Mu
+              Mu = Mublock[0][-1]
+
+              # Get q value and check valid
+              q = int(round(Ml - Mu))
+              if np.absolute(q) > 1:
+                continue
+
+              # For each jl
+              for mul_index in Mlblock:
+
+                # Get index
+                imul = mul_index[-2]
+
+                # Get energy and index for rho
+                el = terml.eigval[mul_index[0]]
+                il0 = mul_index[0]
+
+                # For each ju
+                for muu_index in Mublock:
+
+                  # Get index
+                  imuu = muu_index[-2]
+
+                  # Get energy and index for rho
+                  eu = termu.eigval[muu_index[0]]
+                  iu1 = muu_index[0]
+
+                  # Resonance for Voigt profile (need to subtract line.nu
+                  # to get just displacement)
+                  nu0 = (eu - el)*cts.c - line.nu
+
+                  # Get Voigt profile
+                  voigt = cdts.voigt_profile(line, nu0)
+
+                  '''
+                  try:
+                      import matplotlib.pyplot as plt
+                  except:
+                      pass
+                  lamb = cts.c.cgs*(1e7*unt.nm/unt.cm)/cdts.nus
+                  plt.plot(lamb,voigt.real)
+                  plt.plot(lamb,voigt.real,marker='*')
+                  plt.plot(lamb,voigt.imag)
+                  plt.plot(lamb,voigt.imag,marker='*')
+                  print('Plot Voigt')
+                  plt.show()
+                  '''
+
+                  # For each Jl
+                  for Jl_index in Mlblock:
+
+                    # Get quantum number, index, and eigenvector
+                    Jl = Jl_index[2]
+                    iJl = Jl_index[1]
+                    CjlJl = terml.eigvec[mul_index[0]][iJl]
+
+                    # For each Ju
+                    for Ju_index in Mublock:
+
+                      # Get quantum number, index, and eigenvector
+                      Ju = Ju_index[2]
+                      iJu = Ju_index[1]
+                      Clu = CjlJl*termu.eigvec[muu_index[0]][iJu]
+
+                      # Common 3J and 6J with eigenvectors
+                      j36 = jsim.j3(Ju,Jl,1.,-Mu,Ml,-q)* \
+                            jsim.j6(Lu,Ll,1.,Jl,Ju,SS)* \
+                            Clu
+
+                      # Check non-zero
+                      if np.absolute(j36) <= 0.:
+                        continue
+
+                      # Factors
+                      j36 *= np.sqrt((2.*Jl + 1.)*(2.*Ju + 1.))
+
+                      #
+                      # Absorption
+                      #
+
+                      # For each Ju'
+                      for Ju1_index in Mublock:
+
+                        # Get quantum number, index, and eigenvector
+                        Ju1 = Ju1_index[2]
+                        iJu1 = Ju1_index[1]
+                        CC = j36*termu.eigvec[muu_index[0]][iJu1]*lfactor
+
+                        # Eigenvec value
+                        if np.absolute(CC) <= 0.:
+                            continue
+
+                        # Common 3J and 6J with eigenvectors
+                        CC *= np.sqrt(2.*Ju1 + 1.)
+
+                        # For Ml'
+                        for iMl1,Ml1block in enumerate(terml.index_muM):
+
+                          # Get Ml'
+                          Ml1 = Ml1block[0][-1]
+
+                          # Get q1 value and check valid
+                          q1 = int(round(Ml1 - Mu))
+                          if np.absolute(q1) > 1:
+                            continue
+
+                          # Multiply Tqq and voigt
+                          tag = f'{q}{q1}'
+                          Tqq0voigt = TQQ[0][tag]*voigt
+                          Tqq1voigt = TQQ[1][tag]*voigt
+                          Tqq2voigt = TQQ[2][tag]*voigt
+                          Tqq3voigt = TQQ[3][tag]*voigt
+
+                          '''
+                          try:
+                              import matplotlib.pyplot as plt
+                          except:
+                              pass
+                          lamb = cts.c.cgs*(1e7*unt.nm/unt.cm)/cdts.nus
+                          plt.plot(lamb,Tqq0voigt.real)
+                          plt.plot(lamb,Tqq0voigt.real,marker='*')
+                          plt.plot(lamb,Tqq0voigt.imag)
+                          plt.plot(lamb,Tqq0voigt.imag,marker='*')
+                          print('Plot T00*Voigt')
+                          plt.show()
+                          '''
+
+                          # Get jl'
+                          for mul1_index in Ml1block:
+
+                            # Get index
+                            imul1 = mul1_index[-2]
+                            il1 = mul1_index[0]
+
+                            # Get Jl'
+                            for Jl1_index in Ml1block:
+
+                              # Get quantum number, index, and eigenvector
+                              Jl1 = Jl1_index[2]
+                              iJl1 = Jl1_index[1]
+                              CCb = CC*terml.eigvec[mul1_index[0]][iJl1]* \
+                                    jsim.sign(q+q1)* \
+                                    jsim.j3(Ju1,Jl1,1.,-Mu,Ml1,-q1)* \
+                                    jsim.j6(Lu,Ll,1.,Jl1,Ju1,SS)
+
+                              # Check magnitude
+                              if np.absolute(CCb) <= 0.:
+                                  continue
+
+                              # Factor
+                              CCb *= np.sqrt(2.*Jl1 + 1.)
+
+                              # If il1 < il0, conjugate
+                              if il1 < il0:
+                                jl0 = il1
+                                jl1 = il0
+                                conj = True
+                              else:
+                                jl0 = il0
+                                jl1 = il1
+                                conj = False
+
+                              # Find rho index
+                              for index in terml.index:
+
+                                # jlMl,jl1Ml1
+                                if index[1] == jl0 and index[2] == jl1:
+
+                                  # Get rho
+                                  rho = ese.rho[index[0]]
+
+                                  # Get imaginary
+                                  imag = index[-1]
+
+                                  # If imaginary rho component
+                                  if imag:
+
+                                    # If conjugate
+                                    if conj:
+
+                                      # Eta0 contribution
+                                      contr = CCb*np.imag(Tqq0voigt)*rho
+
+                                      # Add to RT
+                                      sum_etaa0 += contr
+                                      sum_etaa1 += CCb*np.imag(Tqq1voigt)*rho
+                                      sum_etaa2 += CCb*np.imag(Tqq2voigt)*rho
+                                      sum_etaa3 += CCb*np.imag(Tqq3voigt)*rho
+                                      sum_rhoa1 -= CCb*np.real(Tqq1voigt)*rho
+                                      sum_rhoa2 -= CCb*np.real(Tqq2voigt)*rho
+                                      sum_rhoa3 -= CCb*np.real(Tqq3voigt)*rho
+
+                                    # Not conjugate
+                                    else:
+
+                                      # Eta0 contribution
+                                      contr = -CCb*np.imag(Tqq0voigt)*rho
+
+                                      # Add to RT
+                                      sum_etaa0 -= CCb*np.imag(Tqq0voigt)*rho
+                                      sum_etaa1 -= CCb*np.imag(Tqq1voigt)*rho
+                                      sum_etaa2 -= CCb*np.imag(Tqq2voigt)*rho
+                                      sum_etaa3 -= CCb*np.imag(Tqq3voigt)*rho
+                                      sum_rhoa1 += CCb*np.real(Tqq1voigt)*rho
+                                      sum_rhoa2 += CCb*np.real(Tqq2voigt)*rho
+                                      sum_rhoa3 += CCb*np.real(Tqq3voigt)*rho
+
+                                    # And break because imaginary always comes
+                                    # later
+                                    break
+
+                                  # If real rho component
+                                  else:
+
+                                    # Eta0 contribution
+                                    contr = CCb*np.real(Tqq0voigt)*rho
+
+                                    # Add to RT
+                                    sum_etaa0 += CCb*np.real(Tqq0voigt)*rho
+                                    sum_etaa1 += CCb*np.real(Tqq1voigt)*rho
+                                    sum_etaa2 += CCb*np.real(Tqq2voigt)*rho
+                                    sum_etaa3 += CCb*np.real(Tqq3voigt)*rho
+                                    sum_rhoa1 += CCb*np.imag(Tqq1voigt)*rho
+                                    sum_rhoa2 += CCb*np.imag(Tqq2voigt)*rho
+                                    sum_rhoa3 += CCb*np.imag(Tqq3voigt)*rho
+
+
+                                  '''
+                                  try:
+                                      import matplotlib.pyplot as plt
+                                  except:
+                                      pass
+                                  lamb = cts.c.cgs*(1e7*unt.nm/unt.cm)/cdts.nus
+                                  plt.plot(lamb,contr.real)
+                                  plt.plot(lamb,contr.real,marker='*')
+                                  plt.plot(lamb,contr.imag)
+                                  plt.plot(lamb,contr.imag,marker='*')
+                                  print('Plot no_weight contribution')
+                                  plt.show()
+
+                                  try:
+                                      import matplotlib.pyplot as plt
+                                  except:
+                                      pass
+                                  lamb = cts.c.cgs*(1e7*unt.nm/unt.cm)/cdts.nus
+                                  plt.plot(lamb,cdts.nus_weights)
+                                  plt.plot(lamb,cdts.nus_weights,marker='*')
+                                  print('Plot weight')
+                                  plt.show()
+                                  '''
+
+                                  # Add contribution to profile
+                                  contr = contr.real*cdts.nus_weights
+                                  line.add_contribution_profiles(contr, nu0)
+                                 #line.add_contribution_profiles(contr, cdts.nus, nu0)
+
+                      #
+                      # Emission
+                      #
+
+                      # For each Jl'
+                      for Jl1_index in Mlblock:
+
+                        # Get quantum number, index, and eigenvector
+                        Jl1 = Jl1_index[2]
+                        iJl1 = Jl1_index[1]
+                        CC = j36*terml.eigvec[mul_index[0]][iJl1]*ufactor
+
+                        # Eigenvec value
+                        if np.absolute(CC) <= 0.:
+                            continue
+
+                        # Common 3J and 6J with eigenvectors
+                        CC *= np.sqrt(2.*Jl1 + 1.)
+
+                        # For Mu'
+                        for iMu1,Mu1block in enumerate(termu.index_muM):
+
+                          # Get Ml'
+                          Mu1 = Mu1block[0][-1]
+
+                          # Get q1 value and check valid
+                          q1 = int(round(Ml - Mu1))
+                          if np.absolute(q1) > 1:
+                            continue
+
+                          # Multiply Tqq and voigt
+                          tag = f'{q}{q1}'
+                          Tqq0voigt = TQQ[0][tag]*voigt
+                          Tqq1voigt = TQQ[1][tag]*voigt
+                          Tqq2voigt = TQQ[2][tag]*voigt
+                          Tqq3voigt = TQQ[3][tag]*voigt
+
+                          # Get ju'
+                          for muu1_index in Mu1block:
+
+                            # Get index
+                            imuu1 = muu1_index[-2]
+                            iu0 = muu1_index[0]
+
+                            # Get Ju'
+                            for Ju1_index in Mu1block:
+
+                              # Get quantum number, index, and eigenvector
+                              Ju1 = Ju1_index[2]
+                              iJu1 = Ju1_index[1]
+                              CCb = CC*termu.eigvec[muu1_index[0]][iJu1]* \
+                                    jsim.j3(Ju1,Jl1,1.,-Mu1,Ml,-q1)* \
+                                    jsim.j6(Lu,Ll,1.,Jl1,Ju1,SS)
+
+                              # Check magnitude
+                              if np.absolute(CCb) <= 0.:
+                                  continue
+
+                              # Factor
+                              CCb *= np.sqrt(2.*Ju1 + 1.)
+
+                              # If iu1 < iu0, conjugate
+                              if iu1 < iu0:
+                                ju0 = iu1
+                                ju1 = iu0
+                                conj = True
+                              else:
+                                ju0 = iu0
+                                ju1 = iu1
+                                conj = False
+
+                              # Find rho index
+                              for index in termu.index:
+
+                                # juMu,ju1Mu1
+                                if index[1] == ju0 and index[2] == ju1:
+
+                                  # Get rho
+                                  rho = ese.rho[index[0]]
+
+                                  # Get imaginary
+                                  imag = index[-1]
+
+                                  # If imaginary rho component
+                                  if imag:
+
+                                    # If conjugate
+                                    if conj:
+
+                                      # Add to RT
+                                      sum_etas0 += CCb*np.imag(Tqq0voigt)*rho
+                                      sum_etas1 += CCb*np.imag(Tqq1voigt)*rho
+                                      sum_etas2 += CCb*np.imag(Tqq2voigt)*rho
+                                      sum_etas3 += CCb*np.imag(Tqq3voigt)*rho
+                                      sum_rhos1 -= CCb*np.real(Tqq1voigt)*rho
+                                      sum_rhos2 -= CCb*np.real(Tqq2voigt)*rho
+                                      sum_rhos3 -= CCb*np.real(Tqq3voigt)*rho
+
+                                    # Not conjugate
+                                    else:
+
+                                      # Add to RT
+                                      sum_etas0 -= CCb*np.imag(Tqq0voigt)*rho
+                                      sum_etas1 -= CCb*np.imag(Tqq1voigt)*rho
+                                      sum_etas2 -= CCb*np.imag(Tqq2voigt)*rho
+                                      sum_etas3 -= CCb*np.imag(Tqq3voigt)*rho
+                                      sum_rhos1 += CCb*np.real(Tqq1voigt)*rho
+                                      sum_rhos2 += CCb*np.real(Tqq2voigt)*rho
+                                      sum_rhos3 += CCb*np.real(Tqq3voigt)*rho
+
+                                    # And break because imaginary always comes
+                                    # later
+                                    break
+
+                                  # If real rho component
+                                  else:
+
+                                    # Add to RT
+                                    sum_etas0 += CCb*np.real(Tqq0voigt)*rho
+                                    sum_etas1 += CCb*np.real(Tqq1voigt)*rho
+                                    sum_etas2 += CCb*np.real(Tqq2voigt)*rho
+                                    sum_etas3 += CCb*np.real(Tqq3voigt)*rho
+                                    sum_rhos1 += CCb*np.imag(Tqq1voigt)*rho
+                                    sum_rhos2 += CCb*np.imag(Tqq2voigt)*rho
+                                    sum_rhos3 += CCb*np.imag(Tqq3voigt)*rho
+
+          # Get final constants for the RT coefficients
+         #hnu3 = hnu * self.hcm2*line.nu3
+          hnutohnu3 = self.hcm2*line.nu3
+
+          # Normalize line profile
+          line.normalize_profiles()
+         ## For debug
+         #line.normalize_profiles(cdts.nus)
+
+          # Add to line contribution
+          # rho U is negative because is the upper part of the triangular
+          # propagation matrix
+          try:
+              eta_a0 += sum_etaa0
+              eta_a1 += sum_etaa1
+              eta_a2 += sum_etaa2
+              eta_a3 += sum_etaa3
+              eta_s0 += sum_etas0
+              eta_s1 += sum_etas1
+              eta_s2 += sum_etas2
+              eta_s3 += sum_etas3
+              rho_a0 += sum_rhoa1
+              rho_a1 -= sum_rhoa2
+              rho_a2 += sum_rhoa3
+              rho_s0 += sum_rhos1
+              rho_s1 -= sum_rhos2
+              rho_s2 += sum_rhos3
+              eps0   += hnutohnu3 * sum_etas0
+              eps1   += hnutohnu3 * sum_etas1
+              eps2   += hnutohnu3 * sum_etas2
+              eps3   += hnutohnu3 * sum_etas3
+          except NameError:
+              eta_a0 = sum_etaa0
+              eta_a1 = sum_etaa1
+              eta_a2 = sum_etaa2
+              eta_a3 = sum_etaa3
+              eta_s0 = sum_etas0
+              eta_s1 = sum_etas1
+              eta_s2 = sum_etas2
+              eta_s3 = sum_etas3
+              rho_a0 = sum_rhoa1
+              rho_a1 = sum_rhoa2
+              rho_a2 = sum_rhoa3
+              rho_s0 = sum_rhos1
+              rho_s1 = sum_rhos2
+              rho_s2 = sum_rhos3
+              eps0   = hnutohnu3 * sum_etas0
+              eps1   = hnutohnu3 * sum_etas1
+              eps2   = hnutohnu3 * sum_etas2
+              eps3   = hnutohnu3 * sum_etas3
+          except:
+              raise
+
+        # Correct for stimulated emission
+        eta0 = eta_a0 - eta_s0
+        eta1 = eta_a1 - eta_s1
+        eta2 = eta_a2 - eta_s2
+        eta3 = eta_a3 - eta_s3
+        rho0 = rho_a0 - rho_s0
+        rho1 = rho_a1 - rho_s1
+        rho2 = rho_a2 - rho_s2
+
+        # Scale eta and rho
+        eta1 /= (eta0 + cts.vacuum)
+        eta2 /= (eta0 + cts.vacuum)
+        eta3 /= (eta0 + cts.vacuum)
+        rho0 /= (eta0 + cts.vacuum)
+        rho1 /= (eta0 + cts.vacuum)
+        rho2 /= (eta0 + cts.vacuum)
+        eps0 /= (eta0 + cts.vacuum)
+        eps1 /= (eta0 + cts.vacuum)
+        eps2 /= (eta0 + cts.vacuum)
+        eps3 /= (eta0 + cts.vacuum)
+
+        # Check physical absorption
+        if np.any(eta0 < 0):
+            print("Warning: eta_I < 0")
+
+        # Build propagation matrix
+        KK = [[eta0,eta1,eta2,eta3],[rho0,rho1,rho2]]
+
+
+        # Build source function
+        SS = np.array([eps0,eps1,eps2,eps3])
+
+        return SS, KK

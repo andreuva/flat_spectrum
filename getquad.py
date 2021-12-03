@@ -88,9 +88,9 @@ def main():
     '''
 
     # Params
-    ng = 8
-    nt = 8
-    filename = 'gaussian_quadrature_2x8.dat'
+    ng = 2
+    nt = 1
+    filename = 'gaussian_quadrature_2x1.dat'
 
     # Get each quadrature
     GQuad = gaussianQ(ng)
@@ -100,7 +100,7 @@ def main():
     f = open(filename, 'w')
     for i in range(ng):
         for j in range(nt):
-            f.write('{0} {1} {2}\n'.format(GQuad['w'][i]*TQuad['w'][j], 180.0*np.arccos(GQuad['x'][i])/np.pi, 180.0*TQuad['x'][j]/np.pi))
+            f.write(f"{GQuad['w'][i]*TQuad['w'][j]} {180.0*np.arccos(GQuad['x'][i])/np.pi} {180.0*TQuad['x'][j]/np.pi}\n")
     f.close()
 
 if __name__ == '__main__':
