@@ -142,22 +142,22 @@ def psi_lin(ex,t):
     """
 
     big = t > 0.11
-   #small = t <= 0.11
+    small = t <= 0.11
 
-   #psi_m = np.empty(t.shape)
-   #psi_o = np.empty(t.shape)
+    psi_m = np.empty(t.shape)
+    psi_o = np.empty(t.shape)
 
-   #psi_m[small] = ((t[small]*(t[small]*(t[small]*(t[small]*(t[small]*(t[small]* \
-   #                ((63e0 - 8e0*t[small])*t[small] - 432e0) + 2520e0) - \
-   #                12096e0) + 45360e0) - 120960e0) + 181440e0))/362880e0)
-   #psi_o[small] = ((t[small]*(t[small]*(t[small]*(t[small]*(t[small]*(t[small]* \
-   #               ((9e0 - t[small])*t[small] - 72e0) + 504e0) - \
-   #                3024e0) + 15120e0) - 60480e0) + 181440e0))/362880e0)
+    psi_m[small] = ((t[small]*(t[small]*(t[small]*(t[small]*(t[small]*(t[small]* \
+                    ((63e0 - 8e0*t[small])*t[small] - 432e0) + 2520e0) - \
+                    12096e0) + 45360e0) - 120960e0) + 181440e0))/362880e0)
+    psi_o[small] = ((t[small]*(t[small]*(t[small]*(t[small]*(t[small]*(t[small]* \
+                   ((9e0 - t[small])*t[small] - 72e0) + 504e0) - \
+                    3024e0) + 15120e0) - 60480e0) + 181440e0))/362880e0)
 
-   #psi_m[big] = (1.-ex[big]*(1.+t[big]))/t[big]
-   #psi_o[big] = (ex[big]+t[big]-1.)/t[big]
-    psi_m = (1.-ex*(1.+t))/t
-    psi_o = (ex+t-1.)/t
+    psi_m[big] = (1.-ex[big]*(1.+t[big]))/t[big]
+    psi_o[big] = (ex[big]+t[big]-1.)/t[big]
+   #psi_m = (1.-ex*(1.+t))/t
+   #psi_o = (ex+t-1.)/t
 
     return psi_m,psi_o
 
