@@ -1,19 +1,331 @@
 import numpy as np
-import os
+import os,sys
 import scipy.linalg as linalg
-from astropy import units as u
-from astropy import constants as c
+import constants as c
 from astropy.modeling.models import BlackBody as bb
-from physical_functions import Tqq, jsymbols
+from physical_functions import Tqq_all, jsymbols, rotate_ist
 
+################################################################################
+################################################################################
+################################################################################
+
+class term_class():
+    """Class that defines the energy term of the atomic model
+    """
+
+    def __init__(self, LL, SS, JJ, energy, Energy, JS, B=0, i0=0):
+        """ Initialize the term class
+        """
+
+        # Debug mode
+        self.debug = False
+
+        # Save term energy
+        self.TE = energy
+
+        # Save quantum numbers
+        self.L = LL
+        self.S = SS
+
+        # Get number of levels
+        minJ = np.absolute(LL-SS)
+        maxJ = LL + SS
+        self.nJ = int(round(maxJ - minJ + 1))
+
+        # Multiplicity
+        self.g = (2.*SS + 1.)*(2.*LL + 1.)
+
+        # Initialize number of components rhojmj'm'
+        self.NN = 0
+
+        # Initialize block size for each M
+        self.Mblock = []
+
+        # Initialize eigenvalues and eigenvectors
+        self.eigval = []
+        self.eigvec = []
+
+        # Save modified index
+        self.i0 = i0
+
+        # Sanity check
+        if self.nJ != len(Energy) or self.nJ != len(JJ):
+            print('Critical error, number of energy levels different ' + \
+                  'than number of levels in term class initialization')
+            sys.exit()
+
+        # Save energies (fine structure)
+        self.LE = Energy
+
+        # J values
+        self.J = np.array(JJ)
+        if np.absolute(np.max(self.J) - maxJ) > 1e-6:
+            print('Critical error, maximum total angular momentum in input ' + \
+                  'list in term different to maximum possible angular momentum')
+        if np.absolute(np.min(self.J) - minJ) > 1e-6:
+            print('Critical error, minimum total angular momentum in input ' + \
+                  'list in term different to minimum possible angular momentum')
+
+        # M Values
+        self.nM = int(round(2*maxJ + 1))
+        self.M = np.linspace(-maxJ,maxJ,self.nM,endpoint=True,dtype=np.float32)
+
+        #
+        # Diagonalize
+        #
+
+        if self.debug:
+            print('\n\n======================')
+            print(f'\nTerm S={SS} L={LL} E={Energy}')
+            if maxJ != minJ:
+                print(f'J c [{minJ},{maxJ}]')
+            else:
+                print(f'J = {minJ}')
+
+        # Get magnetic field modulus
+        Bnorm = B
+
+        # Spin factor
+        pS = np.sqrt(SS*(SS + 1.0)*(2.0*SS + 1.0))
+
+        # Block size
+        nM = self.nM
+
+        # Max size
+        smax = nM*nM
+
+        # Initialize muM indexing
+        self.index_muM = []
+        ii = -1
+
+        if self.debug:
+            print(f'M c [{-maxJ},{maxJ}] ({nM})')
+
+        # For each M
+        for M in self.M:
+
+            if self.debug:
+                print(f'\n\nM={M}\n')
+
+            # Initialize matrices
+            matr = np.zeros((smax,smax))
+            ene = np.zeros((smax))
+
+            # Minimum J
+            Jm = np.max([np.absolute(M), minJ])
+
+            if self.debug:
+                print(f'Minimum J={Jm}')
+
+            # Append a new block
+            self.index_muM.append([])
+
+            # Initialize column index
+            i = -1
+
+            # For each level J
+            for k,J,E in zip(range(self.nJ),self.J,self.LE):
+
+                # Check above minimum
+                if J < Jm:
+                    continue
+
+                # J factor
+                pJ = np.sqrt(2.0*J + 1.0)
+
+                # Row index
+                i1 = i
+
+                # Advance column
+                i += 1
+
+                # Append to indexing
+                ii += 1
+                mu = i
+                self.index_muM[-1].append([ii,k,J,mu,M])
+                if self.debug:
+                    print(f'Added index: [{ii},{k},{J},{mu},{M}]')
+
+                # For each J
+                for J1 in self.J[i:]:
+
+                    # Check above minimum
+                    if J1 < Jm:
+                        continue
+
+                    # J difference
+                    dJ = int(round(np.absolute(J1 - J)))
+
+                    # Selection rules
+                    if dJ > 1:
+                        continue
+
+                    if self.debug:
+                        print(f'Level J ={J}')
+                        print(f"Level J'={J1}")
+
+                    # J1 factor
+                    pJ1 = np.sqrt(2.0*J1 + 1.0)
+
+                    # B atomic part
+                    comm = (-1.0)**(int(round(maxJ+J+J1+M)))* \
+                           pJ*pJ1*pS* \
+                           JS.j3(J1,J,1.0,-M,M,0.0)* \
+                           JS.j6(J1,J,1.0,SS,SS,LL)
+
+                    # Advance row
+                    i1 += 1
+
+                    # Put matrix element in its place
+                    matr[i1,i] = comm
+
+                    if self.debug:
+                        print(f'comm [{i1},{i}]={comm}')
+
+                    # If diagonal
+                    if i == i1:
+                        matr[i,i] += M
+                        ene[i] = E
+                    else:
+                        matr[i,i1] = matr[i1,i]
+
+                    if self.debug:
+                        print(f'Component [{i1},{i}]={matr[i1,i]}')
+
+            # Size of this block
+            nblock = i + 1
+            self.Mblock.append(nblock)
+
+            if self.debug:
+                print(f'Block size={nblock}')
+
+            # Reset local solutions
+            ly = []
+
+            # Real matrix to diagonalize
+            rmatr = np.zeros((nblock,nblock))
+
+            # Compute larmor
+            larmor = c.nuL*Bnorm
+
+            # Multiply by larmor
+            rmatr = matr[:nblock,:nblock]*larmor
+
+            # Add energy
+            for j in range(nblock):
+                rmatr[j,j] += ene[j]
+
+            # Diagonalize
+            w, v = np.linalg.eigh(rmatr)
+           #w = np.linalg.eigvalsh(rmatr)
+           #v = None
+
+            # Store in term data
+            for iv in range(nblock):
+                self.eigval.append(w[iv])
+                self.eigvec.append(v[:,iv])
+
+            if self.debug:
+                print(f'\nB={Bnorm} L={larmor}')
+                print('Matrix:')
+                print(rmatr)
+                print('Diagonal:')
+                print(w)
+                if v is not None:
+                    for i in range(len(w)):
+                        print(w[i],v[:,i])
+
+        #
+        # Index the density matrix elements
+        #
+
+        # Initialize indexes matrix and running index
+        self.index = []
+        ii = -1
+
+        # Initialize left index
+        i1 = -1
+
+        # For each "left" M
+        for iM,M,Mblock in zip(range(self.nM),self.M,self.Mblock):
+            # For each "left" mu
+            for mu in range(Mblock):
+
+                # Get mu, M index
+                i1 += 1
+
+                # Initialize right index
+                i2 = -1
+
+                # For each "right" M
+                for iM1,M1,Mblock1 in zip(range(self.nM),self.M,self.Mblock):
+
+                    # If dM > 1, skip
+                    if int(round(np.absolute(M1 - M))) > int(round(2.*maxJ)):
+
+                        # Advance the index anyways
+                        i2 += Mblock1
+
+                        # And skip
+                        continue
+
+                    # For each "right" mu
+                    for mu1 in range(Mblock1):
+
+                        # Get mu1, M1 index
+                        i2 += 1
+
+                        # Only if i2 >= i1
+                        if i2 >= i1:
+
+                            # If diagonal
+                            if i1 == i2:
+                                ii += 1
+                                self.index.append([ii+self.i0,i1,i2,iM,M,mu,iM1,M1,mu1,False])
+                            else:
+                                ii += 1
+                                self.index.append([ii+self.i0,i1,i2,iM,M,mu,iM1,M1,mu1,False])
+                                ii += 1
+                                self.index.append([ii+self.i0,i1,i2,iM,M,mu,iM1,M1,mu1,True])
+
+        # Debug
+        if self.debug:
+            for iM,Mindex in enumerate(self.index_muM):
+                print(f'Mblock {iM}:')
+                for index in Mindex:
+                    vec = f'({self.eigvec[index[0]][0]})'
+                    for i in range(1,self.eigvec[index[0]].size):
+                        vec += f',{self.eigvec[index[0]][i]}'
+                    vec += f')'
+                    print(f'  i {index[0]} mu iJ {index[1]} J {index[2]} ' + \
+                          f'mu {index[3]} M {index[4]} -> E ' + \
+                          f'{self.eigval[index[0]]} Ev ' + vec)
+            for index in self.index:
+                print(f'Index {index[0]:2d}: ' + \
+                      f'({index[5]:1d}{index[4]:2d},{index[8]:1d}{index[7]:2d}) ' + \
+                      f'{index[9]}  ;  {index[1]},{index[2]}  ; {index[3]},{index[6]}')
+
+        # Save number of independent density matrix elements
+        self.NN = ii + 1
+        self.NN_next = self.NN + self.i0
+
+################################################################################
+################################################################################
+################################################################################
 
 class level():
     """Class that defines the energy level of the atomic model"""
+
     def __init__(self, energy, JJ, g):
+        """ Initialize the level class
+        """
+
+        # Save atomic data: energy, degeneracy, total angular momentum
         self.E = energy
         self.g = g
         self.J = JJ
 
+        # Index the MM' combinations
         self.MMp = []
         self.M = []
         for M in range(-self.J, self.J+1):
@@ -21,6 +333,7 @@ class level():
             for Mp in range(-self.J, self.J+1):
                 self.MMp.append([self.E, self.J, M, Mp])
 
+        # Index the density matrix elements
         self.MMp_indep = []
         for M in range(-self.J, self.J+1):
             for Mp in range(-self.J, self.J+1):
@@ -30,9 +343,14 @@ class level():
                     self.MMp_indep.append([self.J, M, Mp, False])
                     self.MMp_indep.append([self.J, M, Mp, True])
 
+################################################################################
+################################################################################
+################################################################################
 
-class line():
-    """Class that defines the lines of the atomic model"""
+class line_FS():
+    """Class that defines the lines of the atomic model for a multi-term atom
+    """
+
     def __init__(self, levels, line_levels, jlju, Alu):
 
         self.levels = line_levels
@@ -42,30 +360,534 @@ class line():
         self.gu = levels[line_levels[1]].g
 
         self.wavelength = 1/(levels[line_levels[1]].E - levels[line_levels[0]].E)
-        self.energy = c.h.cgs * c.c.cgs / self.wavelength
-        self.nu = self.energy/c.h.cgs
+        self.energy = c.h * c.c / self.wavelength
+        self.nu = self.energy/c.h
+        self.nu3 = self.nu*self.nu*self.nu
 
         self.A_lu = Alu
-        self.B_lu = Alu * (c.c.cgs**2/(2*c.h.cgs*self.nu**3))
+        self.A_ul = Alu
+        self.B_lu = Alu * (c.c**2/(2*c.h*self.nu**3))
         self.B_ul = self.B_lu * (levels[line_levels[1]].g/levels[line_levels[0]].g)
 
         self.dJ = levels[line_levels[1]].J - levels[line_levels[0]].J
 
+################################################################################
+################################################################################
+################################################################################
 
-class HeI_1083():
+class line_class():
+    """Class that defines the lines of the atomic model
     """
-    Class to acces the atomic model
+
+    def __init__(self, multiterm, data, JS):
+
+        # Distinguish
+        self.multiterm = multiterm
+
+        # Debugging
+        self.debug = False
+
+        # If multi-term
+        if self.multiterm:
+
+            # Get data
+            terms, line_terms, lllu, Aul, nw, nwc, dw, dwc = data
+
+            # Get indexes of involved terms
+            self.terms = line_terms
+            self.jlju = lllu
+
+            # Store line parameters
+            self.nw = nw
+            self.nwc = nwc
+            self.dw = dw
+            self.dwc = dwc
+
+            # Get degeneracies
+            self.gl = terms[line_terms[0]].g
+            self.gu = terms[line_terms[1]].g
+
+            # Compute resonance
+            self.wavelength = 1/(terms[line_terms[1]].TE - terms[line_terms[0]].TE)
+            self.energy = c.h * c.c / self.wavelength
+            self.nu = self.energy/c.h
+            self.nu3 = self.nu*self.nu*self.nu
+
+            # Compute Einstein coefficients
+            self.A_ul = Aul
+            self.B_ul = Aul * (c.c*c.c/(2*c.h*self.nu3))
+            self.B_lu = self.B_ul * (terms[line_terms[1]].g/terms[line_terms[0]].g)
+
+            # Get L jump
+            self.dL = terms[line_terms[1]].L - terms[line_terms[0]].L
+
+            # Initialize fine structure components
+            self.lines = []
+
+            # Fill fine structure components
+           #Lu = terms[line_terms[1]].L
+           #Ll = terms[line_terms[0]].L
+           #S = terms[line_terms[1]].S
+           #for Ju,Eu in zip(terms[line_terms[1]].J,terms[line_terms[1]].LE):
+           #    for Jl,El in zip(terms[line_terms[0]].J,terms[line_terms[0]].LE):
+
+           #        # Check dipole
+           #        if np.absolute(Ju - Jl) > 1.25 or np.absolute(Jl + Ju) < 0.25:
+           #            continue
+
+           #        self.lines.append(line_FS(Lu,Ll,S,Ju,Jl,Eu,El,Alu))
+
+            # Especial treatment
+            self.especial = False
+
+            # Define profile
+            self.prof = None
+
+            # Defining the Jqq as nested dictionaries'
+            self.jqq = {}
+            for qq in [-1, 0, 1]:
+                self.jqq[qq] = {}
+                for qp in [-1, 0, 1]:
+                    self.jqq[qq][qp] = 0.0
+
+        # If multi-level
+        else:
+
+            Lu, Ll, S, Ju, Jl, Eu, El, Alu, nw, nwc, dw, dwc = data
+
+            self.nw = nw
+            self.nwc = nwc
+            self.dw = dw
+            self.dwc = dwc
+
+            self.gl = 2.*Jl + 1.
+            self.gu = 2.*Ju + 1
+
+            self.wavelength = 1/(Eu - El)
+            self.energy = c.h * c.c / self.wavelength
+            self.nu = self.energy/c.h
+            self.nu3 = self.nu*self.nu*self.nu
+
+            W6 = JS.j6(Lu,Ll,1,Jl,Ju,S)
+            W6 *= W6
+
+            self.A_lu = Alu*(2.*Lu + 1.)*(2.*Jl + 1.)*W6
+            self.A_ul = Alu
+            self.B_lu = Alu * (c.c*c.c/(2*c.h*self.nu3))
+            self.B_ul = self.B_lu * ((2.*Ju + 1.)/(2.*Jl + 1.))
+
+            self.dJ = Ju - Jl
+
+            self.especial = False
+
+            # Define profile
+            self.prof = None
+
+            # Defining the Jqq as nested dictionaries'
+            self.jqq = {}
+            for qq in [-1, 0, 1]:
+                self.jqq[qq] = {}
+                for qp in [-1, 0, 1]:
+                    self.jqq[qq][qp] = 0.0
+
+################################################################################
+
+    def initialize_profiles(self, nus_N):
+        """ Initialize to zero the profiles
+        """
+
+        # If special Helium case
+        if self.especial:
+            for comp in self.prof:
+                self.prof[comp] = np.zeros((nus_N))
+        # Usual multi-term
+        else:
+            self.prof = np.zeros((nus_N))
+
+################################################################################
+
+    def add_contribution_profiles(self, contr, nu0=None):
+   #def add_contribution_profiles(self, contr, nus, nu0=None):
+        """ Add Contritubion to profile
+        """
+
+        # If special Helium case
+        if self.especial:
+
+            # Get difference between components and resonance
+            dd = np.absolute(self.resos - n0)
+
+            # Get component closest to this resonance
+            comp = self.resos[np.argmin(dd)]
+
+            # Add contribution
+            self.prof[comp] += contr
+
+        # Usual contribution
+        else:
+
+            '''
+            try:
+                import matplotlib.pyplot as plt
+            except:
+                pass
+            lamb = c.c.cgs*(1e7*u.nm/u.cm)/nus
+            plt.plot(lamb,contr)
+            plt.plot(lamb,contr,marker='*')
+            print('Plot contribution')
+            plt.show()
+            '''
+
+            self.prof += contr
+
+################################################################################
+
+    def normalize_profiles(self):
+   #def normalize_profiles(self,nus):
+        """ Normalizes the profiles to its integral
+        """
+
+        # If special Helium case
+        if self.especial:
+            for comp in self.prof:
+                self.prof[comp] /= self.prof[comp].sum()
+        # Usual multi-term
+        else:
+            self.prof /= self.prof.sum()
+
+            '''
+            print(f'Profile normalized to: {self.prof.sum()}')
+            try:
+                import matplotlib.pyplot as plt
+            except:
+                pass
+            lamb = c.c.cgs*(1e7*u.nm/u.cm)/nus
+            plt.plot(lamb,self.prof)
+            plt.plot(lamb,self.prof,marker='*')
+            print('Plot normalized')
+            plt.show()
+            '''
+
+################################################################################
+
+    def reset_radiation(self):
+        """ Initialize to zero the profiles
+        """
+
+        # If special Helium case
+        if self.especial:
+            for comp in self.jqq:
+                for qq in [-1, 0, 1]:
+                    self.jqq[comp][qq] = {}
+                    for qp in [-1, 0, 1]:
+                        self.jqq[comp][qq][qp] = (0. + 0j)
+        # Usual multi-term
+        else:
+            for qq in [-1, 0, 1]:
+                self.jqq[qq] = {}
+                for qp in [-1, 0, 1]:
+                    self.jqq[qq][qp] = (0. + 0j)
+
+################################################################################
+
+    def sumStokes(self, ray, stokes, nus_weights):
+        """ Method to add Jqq contribution
+        """
+
+        # If special Helium case
+        if self.especial:
+
+            # For each component
+            for comp in self.jqq:
+
+                # Call the actual sum
+                self.jqq[comp] = self.actually_sumStokes(self.jqq[comp], \
+                                                         self.prof[comp], \
+                                                         ray,stokes,nus_weights)
+
+        # Usual multi-term
+        else:
+
+            # Debug
+            if self.debug:
+                print('Summing Stokes in line, no especial')
+
+            # Call the actual sum
+            self.jqq = self.actually_sumStokes(self.jqq, self.prof, \
+                                               ray,stokes,nus_weights)
+
+################################################################################
+
+    def actually_sumStokes(self, jqq, prof, ray, stokes, nus_weights):
+        """ Method to add Jqq contribution, but seriously now
+        """
+
+        # Get Tqq
+        TQQ = Tqq_all(ray.rinc,ray.raz)
+
+        # For each Stokes parameter
+        for i in range(4):
+
+            # Debug
+            if self.debug:
+                print(f'  Adding Stokes {i}, angular weight {ray.weight}')
+
+            # Get profile
+            contr = (stokes[i]*prof*ray.weight).sum()
+
+            # Debug
+            if self.debug:
+                print(f'  Computed contribution to add {contr}')
+
+            # If no contribution, skip
+            if np.absolute(contr) <= 0.:
+                continue
+
+            # For each q and q'
+            for qq in range(-1,2):
+                for qp in range(qq,2):
+
+                    # Debug
+                    if self.debug:
+                        print(f'    T{qq}{qp} {TQQ[i][f"{qq}{qp}"]}')
+                        print(f'    Previous value J{qq}{qp} {jqq[qq][qp]}')
+
+                    jqq[qq][qp] += contr*TQQ[i][f'{qq}{qp}']
+
+                    # Debug
+                    if self.debug:
+                        print(f'    New value J{qq}{qp} {jqq[qq][qp]}')
+
+        return jqq
+
+################################################################################
+
+    def fill_Jqq(self):
+        """ Get the q q' components that have not been computed yet
+        """
+
+        # If special Helium case
+        if self.especial:
+
+            # For each component
+            for comp in self.jqq:
+
+                # Call the actual sum
+                self.jqq[comp] = self.actually_fill_Jqq(self.jqq[comp])
+
+        # Usual multi-term
+        else:
+
+            # Call the actual sum
+            self.jqq = self.actually_fill_Jqq(self.jqq)
+
+################################################################################
+
+    def actually_fill_Jqq(self,jqq):
+        """ Get the q q0 components that have not been computed yet, but seriously now
+        """
+
+        # For each q and q'
+        for qq in range(-1,2):
+            for qp in range(-1,qq):
+
+                jqq[qq][qp] = np.conjugate(jqq[qp][qq])
+
+        return jqq
+
+################################################################################
+
+    def rotate_Jqq(self, DKQQ, JS):
+        """ Method to rotate the Jqq for the line
+        """
+
+        # If special Helium case
+        if self.special:
+
+            # For each component
+            for comp in self.jqq:
+
+                # Call the actual sum
+                self.jqq[comp] = actually_rotate_Jqq(self.jqq[comp], DKQQ, JS)
+
+        # Usual rotation
+        else:
+
+            # Call the actual sum
+            self.jqq = actually_rotate_Jqq(self.jqq, DKQQ, JS)
+
+################################################################################
+
+    def actually_rotate_Jqq(self, jqq, DKQQ, JS):
+        """ Method to rotate the Jqq for the line, but seriously now
+        """
+
+        #
+        # Build JKQ tensors
+        #
+
+        # Create JKQ dictionary
+        JKQ = {}
+
+        # For each multipole
+        for K in range(3):
+
+            # Initialize this multipole
+            JKQ[K] = {}
+
+            # Compute positive Q
+            for Q in range(0,K+1):
+
+                # Initialize
+                JKQ[K][Q] = 0.
+
+                # Factor for K
+                f1 = np.sqrt(3.*(2.*K + 1.))
+
+                # For each q and q'
+                for qq in range(-1,2):
+
+                    # Factor for q
+                    f2 = f1*JS.sign(1+qq)
+
+                    # Only contribution from q' from 3J symbol
+                    qp = qq - Q
+
+                    # Control qp
+                    if np.absolute(qp) > 1:
+                        continue
+
+                    # Add contribution for qq'
+                    JKQ[K][Q] += jqq[qq][qp]*f2*JS.j3(1.,1.,K,q,-qp,-Q)
+
+            # Compute negative Q
+            if K > 0:
+                JKQ[K][-1] = -1.0*np.conjugate(JKQ[K][1])
+            if K > 1:
+                JKQ[K][-2] =      np.conjugate(JKQ[K][2])
+
+        #
+        # Rotate JKQ
+        #
+
+        # Initialize rotated JKQ tensor
+        JKQ_n = {}
+
+        # K == 0 does not change
+        JKQ_n[0] = JKQ[0]
+
+        # For each multipole
+        for K in range(1,3):
+
+            # Initialize this multipole
+            JKQ_n[K] = {}
+
+            # Compute positive Q
+            for Q in range(0,Q+1):
+
+                # Initialize component
+                JKQ_n[K][Q] = 0.
+
+                # For Q' in old JKQ
+                for Qp in range(-K,K+1):
+
+                    # Add contribution
+                    JKQ_n[K][Q] += D[K][Q][Qp]*JKQ[K][Qp]
+
+            # Compute negative Q
+            if K > 0:
+                JKQ_n[K][-1] = -1.0*np.conjugate(JKQ_n[K][1])
+            if K > 1:
+                JKQ_n[K][-2] =      np.conjugate(JKQ_n[K][2])
+
+        #
+        # Get the new q q' back
+        #
+
+        jqq = {}
+
+        # For each q
+        for qq in range(-1,2):
+
+            # Factor for q
+            f1 = JS.sign(1+qq)
+
+            # Initialize jqq
+            jqq[qq] = {}
+
+            # For each q'
+            for qp in range(-1,2):
+
+                # Initialize
+                jqq[qq][qp] = 0.
+
+                # For each K
+                for K in range(3):
+
+                    # K factor
+                    f2 = f1*np.sqrt((2.*K+1.)/3.)
+
+                    # Get Q from 3J
+                    Q = qq - qp
+
+                    # Control Q
+                    if np.absolute(Q) > K:
+                        continue
+
+                    # Add contribution
+                    jqq[qq][qp] += f2*JS.j3(1,1,K,qq,-qp,-Q)*JKQ_n[K][Q]
+
+        # And back
+        return jqq
+
+################################################################################
+
+    def get_Jqq(self, nu0=None):
+        """ Get the proper Jqq back
+        """
+
+        # If special Helium case
+        if self.especial:
+
+            # Get difference between components and resonance
+            dd = np.absolute(self.resos - n0)
+
+            # Get component closest to this resonance
+            comp = self.resos[np.argmin(dd)]
+
+            # Add contribution
+            return self.jqq[comp]
+
+        # Usual contribution
+        else:
+
+            return self.jqq
+
+################################################################################
+################################################################################
+################################################################################
+
+class HeI_1083_2Ltest():
+    """ Class to acces the atomic model
     """
-    def __init__(self):
-        levels = [level(169_086.8428979/u.cm, 1, 3),      # MNIST data for HeI levels (2 level atom)
-                  level(159_855.9743297/u.cm, 0, 1)]
+
+    def __init__(self,JS):
+
+        # Set as multiterm atom
+        self.multiterm = False
+
+        # MNIST data for HeI levels (2 level atom), energy cm^-1
+        levels = [level(169_086.8428979, 1, 3),
+                  level(159_855.9743297, 0, 1)]
 
         indx = np.argsort([lev.E.value for lev in levels])
         self.levels = []
         for i, ord in enumerate(indx):
             self.levels.append(levels[ord])
 
-        self.lines = [line(self.levels, (0, 1), (0, 1), 1.0216e+07 / u.s), ]
+        # Line inverse lifetime s^-1
+        self.lines = [line(self.multiterm,[self.levels, (0, 1), (0, 1), 1.0216e+07, \
+                                           125,85,30.,5.],JS)]
 
         self.dens_elmnt = []
         for i, lev in enumerate(self.levels):
@@ -81,6 +903,139 @@ class HeI_1083():
         for i, ln in enumerate(self.lines):
             self.line_elmnt.append([i, *ln.levels])
 
+################################################################################
+################################################################################
+################################################################################
+
+class HeI_1083():
+    """ Class to acces the atomic model. 2-term atom Helium 10830
+    """
+    def __init__(self,JS,B=0.0,especial=False):
+
+        # Set as multiterm atom
+        self.multiterm = True
+
+        # Multi-term helium 10830 atom
+        self.terms = []
+
+        # Add the two terms. Energy cm^-1
+        self.terms.append(term_class(0.0,1.0,      [1.], \
+                     159855.9743297,[159855.9743297],JS,B,0))
+        self.terms.append(term_class(1.0,1.0,[2.,1.,0.], \
+                     169086.9102   ,[169086.7664725, \
+                                     169086.8428979, \
+                                     169087.8308131],JS,B, \
+                                     self.terms[-1].NN_next))
+        # Get dimension of rho vector
+        self.ndim = self.terms[-1].NN_next
+
+        # Add 10830 line. Inverse lifetime in s^-1
+        self.lines = [line_class(self.multiterm,[self.terms, (0, 1), (0, 1), \
+                                                 1.0216e+07, \
+                                                 125, 55, 15., 2.5], JS) ]
+#                                                 15,  5, 15., 2.5], JS) ]
+
+        # Set mass
+        self.mass = 4.002602 * c.amu
+
+        # Initialize forbidden density matrix elements
+        self.forbidden = []
+
+        # If especial Helium case
+        if especial:
+
+            # Flag the line as especial
+            self.lines[0].especial = True
+
+            # Get energies for red and blue components
+            red = 0.5*(self.terms[1].LE[0] + self.terms[1].LE[1]) - \
+                  self.terms[0].LE[0]
+            blue = self.terms[1].LE[2] - self.terms[0].LE[0]
+            self.lines[0].resos = [red,blue]
+
+            # Define profiles
+            self.lines[0].prof = {}
+            for reso in self.lines[0].resos:
+                self.lines[0].prof[reso] = None
+
+            self.lines[0].resos = np.array(self.lines[0].resos)
+
+            # Defining the Jqq as nested dictionaries'
+            self.lines[0].jqq = {red: {}, blue: {}}
+            for comp in self.lines[0].jqq:
+                for qq in [-1, 0, 1]:
+                    self.lines[0].jqq[comp][qq] = {}
+                    for qp in [-1, 0, 1]:
+                        self.lines[0].jqq[comp][qq][qp] = 0.0
+
+            # For the upper term
+            term = self.terms[1]
+
+            # Jump in energy to cover mid distance between components
+            GAM = 0.5*np.absolute(0.5*(self.terms[1].LE[0] + \
+                                       self.terms[1].LE[1]) - \
+                                  self.terms[1].LE[2])
+
+            # Go by every density matrix element
+            for index in term.index:
+
+                # If not diagonal
+                if index[1] != index[2]:
+
+                    # Get energies
+                    E1 = term.eigval[index[1]]
+                    E2 = term.eigval[index[2]]
+
+                    # If too far in energy, forbid it
+                    if np.absolute(E1 - E2) > GAM:
+                        self.forbidden.append(index[0])
+
+################################################################################
+
+    def reset_jqq(self, nus_N):
+        """ Method to reset Jqq and profiles for atom
+        """
+
+        # For each line
+        for line in self.lines:
+            # Reset Jqq
+            line.reset_radiation()
+            # Reset profile
+            line.initialize_profiles(nus_N)
+
+################################################################################
+
+    def sumStokes(self, ray, stokes, nus_weights):
+        """ Method to add Jqq contribution
+        """
+
+        # For each line
+        for line in self.lines:
+            line.sumStokes(ray, stokes, nus_weights)
+
+################################################################################
+
+    def fill_Jqq(self):
+        """ Method to fill the missing Jqq
+        """
+
+        # For each line
+        for line in self.lines:
+            line.fill_Jqq()
+
+################################################################################
+
+    def rotate_Jqq(self, DKQQ, JS):
+        """ Method to rotate the Jqq
+        """
+
+        # For each line
+        for line in self.lines:
+            line.rotate_Jqq(DKQQ, JS)
+
+################################################################################
+################################################################################
+################################################################################
 
 class ESE:
     """ A class that stores the atomic state and needs to be constantly updated
@@ -90,310 +1045,1127 @@ class ESE:
         This class needs to be instantiated at every grid point.
     """
 
-    jsim = jsymbols()
-
-    def __init__(self, v_dop, a_voigt, nus, nus_weights, B, T, equilibrium=False):
-        """
-            nus_weights: array of the frequency quadrature weights
+    def __init__(self, v_dop, a_voigt, B, T, jsim, equilibrium=False):
+        """ Initialize ESE class instance
+            v_dop: Atom's Doppler width
+            a_voigt: Damping parameter
             B: object of the magnetic field vector with xyz components (gauss)
+            T: Temperature
+            equilibrium: Decices the initialization
             return value: None
         """
 
-        self.nus_weights = nus_weights
-        self.B = B
-        self.atom = HeI_1083()
-        self.rho = np.zeros(len(self.atom.dens_elmnt)).astype('complex128')
-        self.populations = 0
+        # Flag for debugging prints in the SEE
+        self.debug = False
 
-        if equilibrium:
-            for i, lev in enumerate(self.atom.dens_elmnt):
+        # Keep here the magnetic field vector [G]
+        self.B = B[0]
 
-                Ll = lev[0]
-                Ml = lev[-2]
-                Mlp = lev[-1]
+        # If magnetic field > 0, get rotation matrix for JKQ
+        if self.B > 0:
 
-                if Mlp == Ml:   # If it's a population compute the Boltzman LTE ratio
-                    self.rho[i] = np.exp(-c.h.cgs*c.c.cgs*self.atom.levels[Ll].E/c.k_B.cgs/T) / \
-                                  len(self.atom.levels[Ll].M)
-                    self.populations += self.rho[i]
+            # Get rotation matrixes
+            self.calc_DKQQ(B[1],B[2])
+            self.rotate = True
 
-            self.rho = self.rho/self.populations
         else:
-            self.rho[0] = 1
 
-        self.N_rho = len(self.rho)
-        self.coherences = self.N_rho - self.populations
-        self.ESE_indep = np.zeros((self.N_rho, self.N_rho)) / u.s
+            # No need of rotation matrices
+            self.DKQQ = None
+            self.rotate = False
 
-    def solveESE(self, rad, cdt):
+        # Initialize atom
+        self.atom = HeI_1083(jsim,B=self.B,especial=False)
+
+        # If multi-term atom
+        if self.atom.multiterm:
+
+            # Allocate density matrix
+            self.rho = np.zeros((self.atom.ndim))
+
+            # Allocate SEE
+            self.ESE_indep = np.zeros((self.atom.ndim, self.atom.ndim))
+
+            # LTE
+            if equilibrium:
+
+                # Debug
+                if self.debug:
+                    print('Initializing Multi-term atom in equilibrium')
+
+                # Initialize total population
+                populations = 0
+
+                # Run over terms
+                for term in self.atom.terms:
+
+                    # Run over elements
+                    for index in term.index:
+
+                        # Debug
+                        if self.debug:
+                            print('Index',index)
+
+                        # If diagonal
+                        if self.isdiag(index):
+
+                            # Get energy
+                            E = term.eigval[index[1]]
+
+                            # Debug
+                            if self.debug:
+                                print('DIAGONAL',E)
+
+                            # Add numerator LTE
+                            self.rho[index[0]] = \
+                                np.exp(-c.h*c.c*E/c.k_B/T) / term.g
+
+                            # Add to normalize later
+                            populations += self.rho[index[0]]
+
+                # Normalize
+                self.rho = self.rho/populations
+
+                # Debug
+                if self.debug:
+                    print('rho')
+                    print(self.rho)
+
+            # Full ground term
+            else:
+
+                # Debug
+                if self.debug:
+                    print('Initializing Multi-term atom to ground term')
+
+                # Run over indexes in first term
+                for index in self.atom.terms[0].index:
+
+                    # Debug
+                    if self.debug:
+                        print('Index',index)
+
+                    # If diagonal
+                    if self.isdiag(index):
+
+                        # Debug
+                        if self.debug:
+                            print('DIAGONAL')
+
+                        self.rho[index[0]] = 1.
+
+                # Normalize
+                self.rho /= self.rho.sum()
+
+                # Debug
+                if self.debug:
+                    print('rho')
+                    print(self.rho)
+
+            # Point the solver function to multi-term
+            self.solveESE = self.solveESE_MT
+
+        # If multi-level atom
+        else:
+
+            # Allocate density matrix
+            self.rho = np.zeros(len(self.atom.dens_elmnt)).astype('complex128')
+
+            # Initialize populations
+            populations = 0
+
+            # Initialize in LTE
+            if equilibrium:
+
+                # For each level
+                for i, lev in enumerate(self.atom.dens_elmnt):
+
+                    # Get quantum numbers
+                    Ll = lev[0]
+                    Ml = lev[-2]
+                    Mlp = lev[-1]
+
+                    # If population (diagonal)
+                    if Mlp == Ml:
+
+                        # Get LTE numerator
+                        self.rho[i] = np.exp(-c.h*c.c* \
+                                             self.atom.levels[Ll].E/c.k_B/T) / \
+                                      len(self.atom.levels[Ll].M)
+
+                        # Add to populations to normalize later
+                        populations += self.rho[i]
+
+                # Normalize
+                self.rho = self.rho/populations
+
+            # Full ground term
+            else:
+
+                # Ad-hoc for just one magnetic component
+                self.rho[0] = 1
+
+            # Point solver to multi-level
+            self.solveESE = self.solveESE_ML
+
+            # Define other variables
+            self.N_rho = len(self.rho)
+            self.coherences = self.N_rho - self.populations
+            self.ESE_indep = np.zeros((self.N_rho, self.N_rho))
+
+################################################################################
+
+    def reset_jqq(self, nus_N):
+        """ Just calls the same method for the atom
+        """
+        self.atom.reset_jqq(nus_N)
+
+################################################################################
+
+    def sumStokes(self, ray, stokes, nus_weights):
+        """ Just calls the same method for the atom
+        """
+        self.atom.sumStokes(ray, stokes, nus_weights)
+
+################################################################################
+
+    def fill_Jqq(self):
+        """ Just calls the same method for the atom
+        """
+
+        # For each line
+        self.atom.fill_Jqq()
+
+################################################################################
+
+    def rotate_Jqq(self, JS):
+        """ Just calls the same method for the atom
+        """
+
+        # For each line
+        self.atom.rotate_Jqq(self.DKQQ, JS)
+
+################################################################################
+
+    def isdiag(self, index):
+        """ Returns true if the rho element is diagonal in mu and M
+            in a multi-term atom
+        """
+        return (index[1] == index[2])
+
+################################################################################
+
+    def rho_call(self, lev, JJ, M, Mp):
+        """ Return the rho element (ML) for a given combination of quantum
+            numbers
+        """
+        index = self.atom.dens_elmnt.index([lev, self.atom.levels[lev].E, JJ, M, Mp])
+        return self.rho[index]
+
+################################################################################
+
+    def calc_DKQQ(self, theta, chi, conj=False, back=False):
+        """ Compute DKQQ rotation matrix from B vector
+        """
+
+        # Get instance of rotation class
+        rota = rotate_ist()
+
+        # Get rotation matrix
+        self.DKQQ = rota.get_DKQQ(2,theta,chi,conj,back)
+
+################################################################################
+
+    def solveESE_ML(self, rad, cdt):
         """
             Called at every grid point at the end of the Lambda iteration.
+            Solves the SEE for a multi-level atom in standard representation
+            Eqs. 7.5 in LL04
             return value: maximum relative change of the level population
         """
 
+        # Shortcut to J symbols
+        JS = cdt.JS
+
+        # Fill the missing Jqq
+        self.fill_Jqq()
+
+        # Get magnetic field strength
+        Bnorm = self.B
+
+        # If there is magnetic field, need to rotate Jqq
+        if Bnorm > 0.:
+            self.rotate_Jqq(JS)
+
+        # Initialize to zero the coefficients
         for i, p_lev in enumerate(self.atom.dens_elmnt_indep):
             self.ESE_indep[i] = np.zeros_like(self.ESE_indep[i])
 
-            Li = p_lev[0]
-            JJ = p_lev[1]
-            M = p_lev[2]
-            Mp = p_lev[3]
-            imag_row = p_lev[4]
+        # Magnetic term
+        if Bnorm > 0.:
 
-            for line in self.atom.lines:
-                if Li not in line.levels:
-                    continue
+            # Row
+            for i, p_lev in enumerate(self.atom.dens_elmnt_indep):
 
+                # Get level data
+                Li = p_lev[0]
+                Ji = p_lev[1]
+                M = p_lev[2]
+                Mp = p_lev[3]
+                imag = p_lev[4]
+                q = M - Mp
+
+                # Get magnetic contribution
+                nu_L = c.nu_L*Bnorm
+                gamma = 2.0*np.pi*nu_L*self.atom.levels[p_level[0]]
+
+                # Column
                 for j, q_lev in enumerate(self.atom.dens_elmnt_indep):
 
+                    # Get level data
                     Lj = q_lev[0]
-                    Jp = q_lev[1]
-                    N = q_lev[2]
-                    Np = q_lev[3]
-                    imag_col = q_lev[4]
-
-                    if Lj not in line.levels:
+                    if Lj != Li:
+                        continue
+                    Jj = q_lev[1]
+                    if Jj != Ji:
+                        continue
+                    cM = q_lev[2]
+                    if cM != M:
+                        continue
+                    cMp = q_lev[3]
+                    if cMp != Mp:
+                        continue
+                    cimag = q_lev[4]
+                    if cimag == imag:
                         continue
 
-                    if Lj > Li:
-                        if Np == N:
-                            if not imag_row and not imag_col:
-                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + np.real(TS(self, JJ, M, Mp, Jp, N, N, rad, line, cdt))
-                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + TE(self, JJ, M, Mp, Jp, N, N, line.A_lu)
-                            elif imag_row and not imag_col:
-                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + np.imag(TS(self, JJ, M, Mp, Jp, N, N, rad, line, cdt))
-
-                        elif Np > M:
-                            if imag_row and imag_col:
-                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.real(TS(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt))
-                                                                               - np.real(TS(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt)))
-                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + (TE(self, JJ, M, Mp, Jp, N, Np, line.A_lu)
-                                                                               - TE(self, JJ, M, Mp, Jp, N, Np, line.A_lu))
-                            elif imag_row and not imag_col:
-                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(TS(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt))
-                                                                               + np.imag(TS(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt)))
-                            elif not imag_row and imag_col:
-                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(TS(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt))
-                                                                               - np.imag(TS(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt)))
-                            elif not imag_row and not imag_col:
-                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.real(TS(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt))
-                                                                               + np.real(TS(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt)))
-                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + (TE(self, JJ, M, Mp, Jp, Np, N, line.A_lu)
-                                                                               + TE(self, JJ, M, Mp, Jp, N, Np, line.A_lu))
-                            else:
-                                print('ERROR IN FILLING ESE MATRIX')
-                                exit()
-
-                    elif Lj < Li:
-                        if Np == N:
-                            if not imag_row and not imag_col:
-                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + np.real(TA(self, JJ, M, Mp, Jp, N, N, rad, line, cdt))
-                            elif imag_row and not imag_col:
-                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + np.imag(TA(self, JJ, M, Mp, Jp, N, N, rad, line, cdt))
-
-                        elif Np > N:
-
-                            if imag_row and imag_col:
-                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.real(TA(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt))
-                                                                               - np.real(TA(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt)))
-                            elif imag_row and not imag_col:
-                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(TA(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt))
-                                                                               + np.imag(TA(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt)))
-                            elif not imag_row and imag_col:
-                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(TA(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt))
-                                                                               - np.imag(TA(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt)))
-                            elif not imag_row and not imag_col:
-                                self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.real(TA(self, JJ, M, Mp, Jp, N, Np, rad, line, cdt))
-                                                                               + np.real(TA(self, JJ, M, Mp, Jp, Np, N, rad, line, cdt)))
-                            else:
-                                print('ERROR IN FILLING ESE MATRIX')
-                                exit()
-
-                    elif Lj == Li:
-                        # calculate the RA and RE
-                        if M == N:
-                            if Np == M:
-                                if not imag_row and not imag_col:
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RA(self, Li, JJ, M, Mp, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RS(self, Li, JJ, M, Mp, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RE(self, Li, JJ, M, Mp)))
-                                elif imag_row and not imag_col:
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RA(self, Li, JJ, M, Mp, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RS(self, Li, JJ, M, Mp, rad, cdt)))
-
-                            elif Np > M:
-                                if imag_row and imag_col:
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RA(self, Li, JJ, Np, Mp, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RS(self, Li, JJ, Np, Mp, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RE(self, Li, JJ, M, Mp)))
-                                elif imag_row and not imag_col:
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RA(self, Li, JJ, Np, Mp, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RS(self, Li, JJ, Np, Mp, rad, cdt)))
-                                elif not imag_row and imag_col:
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.imag(RA(self, Li, JJ, Np, Mp, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.imag(RS(self, Li, JJ, Np, Mp, rad, cdt)))
-                                elif not imag_row and not imag_col:
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RA(self, Li, JJ, Np, Mp, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RS(self, Li, JJ, Np, Mp, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RE(self, Li, JJ, M, Mp)))
-
-                            elif Np < M:
-
-                                if imag_row and imag_col:
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.real(RA(self, Li, JJ, Np, Mp, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.real(RS(self, Li, JJ, Np, Mp, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.real(RE(self, Li, JJ, M, Mp)))
-                                elif imag_row and not imag_col:
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RA(self, Li, JJ, Np, Mp, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RS(self, Li, JJ, Np, Mp, rad, cdt)))
-                                elif not imag_row and imag_col:
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RA(self, Li, JJ, Np, Mp, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RS(self, Li, JJ, Np, Mp, rad, cdt)))
-                                elif not imag_row and not imag_col:
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RA(self, Li, JJ, Np, Mp, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RS(self, Li, JJ, Np, Mp, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RE(self, Li, JJ, M, Mp)))
-
-                        if Mp == Np:
-                            if N == Mp:
-                                if not imag_row and not imag_col:
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RA(self, Li, JJ, M, Mp, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RS(self, Li, JJ, M, Mp, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RE(self, Li, JJ, M, Mp)))
-                                elif imag_row and not imag_col:
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RA(self, Li, JJ, M, Mp, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RS(self, Li, JJ, M, Mp, rad, cdt)))
-
-                            elif N > Mp:
-                                if imag_row and imag_col:
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.real(RA(self, Li, JJ, N, M, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.real(RS(self, Li, JJ, N, M, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.real(RE(self, Li, JJ, M, Mp)))
-                                elif imag_row and not imag_col:
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.imag(RA(self, Li, JJ, N, M, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.imag(RS(self, Li, JJ, N, M, rad, cdt)))
-                                elif not imag_row and imag_col:
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.imag(RA(self, Li, JJ, N, M, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.imag(RS(self, Li, JJ, N, M, rad, cdt)))
-                                elif not imag_row and not imag_col:
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RA(self, Li, JJ, N, M, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RS(self, Li, JJ, N, M, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RE(self, Li, JJ, M, Mp)))
-
-                            elif N < Mp:
-                                if imag_row and imag_col:
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RA(self, Li, JJ, N, M, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RS(self, Li, JJ, N, M, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RE(self, Li, JJ, M, Mp)))
-                                elif imag_row and not imag_col:
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.imag(RA(self, Li, JJ, N, M, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.imag(RS(self, Li, JJ, N, M, rad, cdt)))
-                                elif not imag_row and imag_col:
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RA(self, Li, JJ, N, M, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] + (np.imag(RS(self, Li, JJ, N, M, rad, cdt)))
-                                elif not imag_row and not imag_col:
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RA(self, Li, JJ, N, M, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RS(self, Li, JJ, N, M, rad, cdt)))
-                                    self.ESE_indep[i][j] = self.ESE_indep[i][j] - (np.real(RE(self, Li, JJ, M, Mp)))
-
+                    # Add contribution
+                    if imag:
+                        self.ESE_indep[i][j] -= q*gamma
                     else:
-                        print("Error in the ESE matrix calculation")
-                        exit()
+                        self.ESE_indep[i][j] += q*gamma
 
-            nu_L = 1.3996e6*np.linalg.norm(cdt.B.value)     # Eq 3.10 LL04 Larmor freq
-            if M != Mp:
-                if not imag_row:
-                    self.ESE_indep[i][i+1] = self.ESE_indep[i][i+1] + 2*np.pi*(M - Mp)*nu_L*self.atom.levels[Li].g
-                else:
-                    self.ESE_indep[i][i-1] = self.ESE_indep[i][i-1] - 2*np.pi*(M - Mp)*nu_L*self.atom.levels[Li].g
-            else:
-                self.ESE_indep[i][i] = self.ESE_indep[i][i] + 2*np.pi*(M - Mp)*nu_L*self.atom.levels[Li].g
+        # For each radiative transition
+        for line in self.atom.lines:
 
-        indep = np.zeros(self.N_rho)/u.s
-        indep[0] = 1/u.s
+            # Get levels
+            ll = line.levels[0]
+            lu = line.levels[1]
 
+            # Get Jqq
+            Jqq = line.get_Jqq()
+
+            #
+            # Get rates
+            #
+
+            lMu = -1000
+            lMl = -1000
+
+            # Get upper level
+            for i, u_lev in enumerate(self.atom.dens_elmnt_indep):
+
+                # Get level info and check with line
+                li = u_lev[0]
+                if li != lu:
+                    continue
+                Ju = u_lev[1]
+                Mu = u_lev[2]
+                Mup = u_lev[3]
+                imagu = u_lev[4]
+                if imagu and Mu == Mup:
+                    continue
+
+                # Get lower level
+                for j, l_lev in enumerate(self.atom.dens_elmnt_indep):
+
+                    # Get level info and check with line
+                    lj = l_lev[0]
+                    if lj != ll:
+                        continue
+                    Jl = l_lev[1]
+                    Ml = l_lev[2]
+                    Mlp = l_lev[3]
+                    imagl = l_lev[4]
+                    if imagl and Ml == Mlp:
+                        continue
+
+                    #
+                    # Get transfer rates
+                    #
+
+                    # Absorption transfer
+                    TA  = TA_ML(self,Ju,Mu,Mup,Jl,Ml,Mlp,Jqq,line,JS)
+                    if Mlp != Ml:
+                        TAp = TA_ML(self,Ju,Mu,Mup,Jl,Mlp,Ml,Jqq,line,JS)
+                    # Stimulated emission transfer
+                    TS  = TS_ML(self,Jl,Ml,Mlp,Ju,Mu,Mup,Jqq,line,JS)
+                    if Mup != Mu:
+                        TSp = TS_ML(self,Jl,Ml,Mlp,Ju,Mup,Mu,Jqq,line,JS)
+                    # Espontaneous emission transfer
+                    TE  = TE_ML(self,Jl,Ml,Mlp,Ju,Mu,Mup,line,JS)
+                    if Mup != Mu:
+                        TEp = TE_ML(self,Jl,Ml,Mlp,Ju,Mup,Mu,line,JS)
+
+                    #
+                    # Add to ESE
+                    #
+
+                    # Imaginary upper level (row TA | column TS, TE))
+                    if imagu:
+
+                        # Imaginary lower level (row TS, TE | column TA)
+                        if imagl:
+
+                            self.ESE_indep[i][j] += TA.real - TAp.real
+
+                            self.ESE_indep[j][i] += TS.real - TSp.real
+
+                            self.ESE_indep[j][i] += TE.real - TEp.real
+
+                            # Debug
+                            if self.debug:
+                                f.write(f'TA {i} {j}  {TA.real-TAp.real}\n')
+                                f.write(f'TS {j} {i}  {TS.real-TSp.real}\n')
+                                f.write(f'TE {j} {i}  {TE.real-TEp.real}\n')
+
+                        # Real lower level (row TS, TE | column TA)
+                        else:
+
+                            self.ESE_indep[i][j] += TA.imag
+                            if Ml != Mlp:
+                                self.ESE_indep[i][j] += TAp.imag
+
+                            # Debug
+                            if self.debug:
+                                if Ml != Mlp:
+                                    f.write(f'TA {i} {j}  {TA.imag+TAp.imag}\n')
+                                else:
+                                    f.write(f'TA {i} {j}  {TA.imag}\n')
+
+                            self.ESE_indep[j][i] += TSp.imag - TS.imag
+
+                            # Debug
+                            if self.debug:
+                                f.write(f'TS {j} {i}  {TSp.imag-TS.imag}\n')
+
+                    # Real upper level (row TA | columns TS, TE)
+                    else:
+
+                        # Imaginary lower level (row TS, TE | column TA)
+                        if imagl:
+
+                            self.ESE_indep[i][j] += TAp.imag - TA.imag
+
+                            # Debug
+                            if debug:
+                                f.write(f'TA {i} {j}  {TAp.imag-TA.imag}\n')
+
+                            self.ESE_indep[j][i] += TS.imag
+                            if Mu != Mup:
+                                self.ESE_indep[j][i] += TSp.imag
+
+                            # Debug
+                            if self.debug:
+                                if Mu != Mup:
+                                    f.write(f'TS {j} {i}  {TS.imag+Tsp.imag}\n')
+                                else:
+                                    f.write(f'TS {j} {i}  {TS.imag}\n')
+
+                        # Real lower level (row TS, TE | column TA)
+                        else:
+
+                            self.ESE_indep[i][j] += TA.real
+                            if Ml != Mlp:
+                                self.ESE_indep[i][j] += TAp.real
+
+                            # Debug
+                            if self.debug:
+                                if Ml != Mlp:
+                                    f.write(f'TA {i} {j}  {TA.real+TAp.real}\n')
+                                else:
+                                    f.write(f'TA {i} {j}  {TA.real}\n')
+
+                            self.ESE_indep[j][i] += TS.real
+                            self.ESE_indep[j][i] += TE.real
+                            if Mu != Mup:
+                                self.ESE_indep[j][i] += TSp.real
+                                self.ESE_indep[j][i] += TEp.real
+
+                            # Debug
+                            if self.debug:
+                                if Mu != Mup:
+                                    f.write(f'TS {j} {i}  {TS.real+TSp.real}\n')
+                                    f.write(f'TE {j} {i}  {TE.real+TEp.real}\n')
+                                else:
+                                    f.write(f'TS {j} {i}  {TS.real}\n')
+                                    f.write(f'TE {j} {i}  {TE.real}\n')
+
+                    #
+                    # Get relaxation rates
+                    #
+
+                    # Absorption
+
+                    # Only once per upper level magnetic component
+                    if Mu == Mup and not imagu:
+
+                        # Get second lower level
+                        for k, k_lev in enumerate(self.atom.dens_elmnt_indep):
+
+                            # Get level info and check with line
+                            lk = k_lev[0]
+                            if ll != lk:
+                                continue
+                            Jk = k_lev[1]
+                            if Jl != Jk:
+                                continue
+                            Mk = k_lev[2]
+                            Mkp = k_lev[3]
+                            imagk = k_lev[4]
+                            if imagk and Mk == Mkp:
+                                continue
+
+                            # If diagonal Ml or Mlp
+                            if (Mk == Ml and Mkp == Ml) or \
+                               (Mk == Mlp and Mkp == Mlp):
+
+                                # Get rate
+                                RA = RA_ML(self,Jl,Ml,Mlp,Ju,Mu,Jqq,line,JS)
+
+                                # Diagonal in Ml
+                                if (Mk == Ml and Mkp == Ml):
+
+                                    # Imaginary lower level (row)
+                                    if imagl:
+
+                                        self.ESE_indep[j][k] += RA.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA {j} {k}  {RA.imag}\n')
+
+                                    # Real lower level (row)
+                                    else:
+
+                                        self.ESE_indep[j][k] -= RA.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA {j} {k}  {-RA.real}\n')
+
+                                # Diagonal in Mlp
+                                if (Mk == Mlp and Mkp == Mlp):
+
+                                    # Imaginary lower level (row)
+                                    if imagl:
+
+                                        self.ESE_indep[j][k] += RA.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA {j} {k}  {RA.imag}\n')
+
+                                    # Real lower level (row)
+                                    else:
+
+                                        self.ESE_indep[j][k] -= RA.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA {j} {k}  {-RA.real}\n')
+
+                            #
+                            # Not diagonal
+                            #
+
+                            # M'' < M sum
+                            if Mk < Ml and Mkp == Ml:
+
+                                # Get rate
+                                RA = RA_ML(self,Jl,Mk,Mlp,Ju,Mu,Jqq,line,JS)
+
+                                # Imaginary lower level (row)
+                                if imagl:
+
+                                    # Imaginary second lower level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[j][k] += RA.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA {j} {k}  {RA.real}\n')
+
+                                    # Real second lower level (column)
+                                    else:
+
+                                        self.ESE_indep[j][k] += RA.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA {j} {k}  {RA.imag}\n')
+
+                                # Real lower level (row)
+                                else:
+
+                                    # Imaginary second lower level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[j][k] += RA.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA {j} {k}  {RA.imag}\n')
+
+                                    # Real second lower level (column)
+                                    else:
+
+                                        self.ESE_indep[j][k] -= RA.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA {j} {k}  {-RA.real}\n')
+
+                            # M'' > M sum
+                            if Mkp > Ml and Mk == Ml:
+
+                                # Get rate
+                                RA = RA_ML(self,Jl,Mkp,Mlp,Ju,Mu,Jqq,line,JS)
+
+                                # Imaginary lower level (row)
+                                if imagl:
+
+                                    # Imaginary second lower level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[j][k] -= RA.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA {j} {k}  {-RA.real}\n')
+
+                                    # Real second lower level (column)
+                                    else:
+
+                                        self.ESE_indep[j][k] += RA.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA {j} {k}  {RA.imag}\n')
+
+                                # Real lower level (row)
+                                else:
+
+                                    # Imaginary second lower level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[j][k] -= RA.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA {j} {k}  {-RA.imag}\n')
+
+                                    # Real second lower level (column)
+                                    else:
+
+                                        self.ESE_indep[j][k] -= RA.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA {j} {k}  {-RA.real}\n')
+
+                            # M'' < M' sum
+                            if Mk < Mlp and Mkp == Mlp:
+
+                                # Get rate
+                                RA = RA_ML(self,Jl,Mk,Ml,Ju,Mu,Jqq,line,JS)
+
+                                # Imaginary lower level (row)
+                                if imagl:
+
+                                    # Imaginary second lower level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[j][k] -= RA.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA {j} {k}  {-RA.real}\n')
+
+                                    # Real second lower level (column)
+                                    else:
+
+                                        self.ESE_indep[j][k] -= RA.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA {j} {k}  {-RA.imag}\n')
+
+                                # Real lower level (row)
+                                else:
+
+                                    # Imaginary second lower level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[j][k] += RA.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA {j} {k}  {RA.imag}\n')
+
+                                    # Real second lower level (column)
+                                    else:
+
+                                        self.ESE_indep[j][k] -= RA.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA {j} {k}  {-RA.real}\n')
+
+                            # M'' > M sum
+                            if Mkp > Mlp and Mk == Mlp:
+
+                                # Get rate
+                                RA = RA_ML(self,Jl,Mkp,Ml,Ju,Mu,Jqq,line,JS)
+
+                                # Imaginary lower level (row)
+                                if imagl:
+
+                                    # Imaginary second lower level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[j][k] += RA.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA {j} {k}  {RA.real}\n')
+
+                                    # Real second lower level (column)
+                                    else:
+
+                                        self.ESE_indep[j][k] -= RA.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA {j} {k}  {-RA.imag}\n')
+
+                                # Real lower level (row)
+                                else:
+
+                                    # Imaginary second lower level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[j][k] -= RA.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA {j} {k}  {-RA.imag}\n')
+
+                                    # Real second lower level (column)
+                                    else:
+
+                                        self.ESE_indep[j][k] -= RA.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA {j} {k}  {-RA.real}\n')
+
+
+                    # Emission
+
+                    # Only once per lower level magnetic component
+                    if Ml == Mlp and not imagl:
+
+                        # Get second upper level
+                        for k, k_lev in enumerate(self.atom.dens_elmnt_indep):
+
+                            # Get level info and check with line
+                            lk = k_lev[0]
+                            if lu != lk:
+                                continue
+                            Jk = k_lev[1]
+                            if Ju != Jk:
+                                continue
+                            Mk = k_lev[2]
+                            Mkp = k_lev[3]
+                            imagk = k_lev[4]
+                            if imagk and Mk == Mkp:
+                                continue
+
+                            # If diagonal Mu or Mup
+                            if (Mk == Mu and Mkp == Mu) or \
+                               (Mk == Mup and Mkp == Mup):
+
+                                # Get rate
+                                RS = RS_ML(self,Ju,Mu,Mup,Jl,Ml,Jqq,line,JS)
+
+                                # If diagonal Mu
+                                if (Mk == Mu and Mkp == Mu):
+
+                                    # Imaginary upper level (row)
+                                    if imagu:
+
+                                        self.ESE_indep[i][k] -= RS.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS {i} {k}  {-RS.imag}\n')
+
+                                    # Real upper level (row)
+                                    else:
+
+                                        # Get rate
+                                        RE = RE_ML(self,Ju,Mu,Mup,Jl,Ml,line)
+
+                                        self.ESE_indep[i][k] -= RS.real
+                                        self.ESE_indep[i][k] -= RE.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS {i} {k}  {-RS.real}\n')
+                                            f.write(f'RE {i} {k}  {-RE.real}\n')
+
+                                # If diagonal Mup
+                                if (Mk == Mup and Mkp == Mup):
+
+                                    # Imaginary upper level (row)
+                                    if imagu:
+
+                                        self.ESE_indep[i][k] -= RS.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS {i} {k}  {-RS.imag}\n')
+
+                                    # Real upper level (row)
+                                    else:
+
+                                        # Get rate
+                                        RE = RE_ML(self,Ju,Mu,Mup,Jl,Ml,line)
+
+                                        self.ESE_indep[i][k] -= RS.real
+                                        self.ESE_indep[i][k] -= RE.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS {i} {k}  {-RS.real}\n')
+                                            f.write(f'RE {i} {k}  {-RE.real}\n')
+
+                            #
+                            # Not diagonal
+                            #
+
+                            # M'' < M sum
+                            if Mk < Mu and Mkp == Mu:
+
+                                # Get rate
+                                RS = RS_ML(self,Ju,Mk,Mup,Jl,Ml,Jqq,line,JS)
+                                RE = RE_ML(self,Ju,Mk,Mup,Jl,Ml,line)
+
+                                # Imaginary upper level (row)
+                                if imagu:
+
+                                    # Imaginary second upper level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[i][k] += RS.real
+                                        self.ESE_indep[i][k] += RE.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS {i} {k}  {RS.real}\n')
+                                            f.write(f'RE {i} {k}  {RE.real}\n')
+
+                                    # Real second upper level (column)
+                                    else:
+
+                                        self.ESE_indep[i][k] -= RS.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS {i} {k}  {-RS.imag}\n')
+
+                                # Real upper level (row)
+                                else:
+
+                                    # Imaginary second upper level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[i][k] -= RS.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS {i} {k}  {RS.imag}\n')
+
+                                    # Real second upper level (column)
+                                    else:
+
+                                        self.ESE_indep[i][k] -= RS.real
+                                        self.ESE_indep[i][k] -= RE.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS {i} {k}  {-RS.real}\n')
+                                            f.write(f'RE {i} {k}  {-RE.real}\n')
+
+                            # M'' > M sum
+                            if Mkp > Mu and Mk == Mu:
+
+                                # Get rate
+                                RS = RS_ML(self,Ju,Mkp,Mup,Jl,Ml,Jqq,line,JS)
+                                RE = RE_ML(self,Ju,Mkp,Mup,Jl,Ml,line)
+
+                                # Imaginary upper level (row)
+                                if imagu:
+
+                                    # Imaginary second upper level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[i][k] -= RS.real
+                                        self.ESE_indep[i][k] -= RE.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS {i} {k}  {-RS.real}\n')
+                                            f.write(f'RE {i} {k}  {-RE.real}\n')
+
+                                    # Real second upper level (column)
+                                    else:
+
+                                        self.ESE_indep[i][k] -= RS.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS {i} {k}  {-RS.imag}\n')
+
+                                # Real upper level (row)
+                                else:
+
+                                    # Imaginary second upper level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[i][k] += RS.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS {i} {k}  {RS.imag}\n')
+
+                                    # Real second upper level (column)
+                                    else:
+
+                                        self.ESE_indep[i][k] -= RS.real
+                                        self.ESE_indep[i][k] -= RE.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS {i} {k}  {-RS.real}\n')
+                                            f.write(f'RE {i} {k}  {-RE.real}\n')
+
+                            # M'' < M' sum
+                            if Mk < Mup and Mkp == Mup:
+
+                                # Get rate
+                                RS = RS_ML(self,Ju,Mk,Mu,Jl,Ml,Jqq,line,JS)
+                                RE = RE_ML(self,Ju,Mk,Mu,Jl,Ml,line)
+
+                                # Imaginary upper level (row)
+                                if imagu:
+
+                                    # Imaginary second upper level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[i][k] -= RS.real
+                                        self.ESE_indep[i][k] -= RE.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS {i} {k}  {-RS.real}\n')
+                                            f.write(f'RE {i} {k}  {-RE.real}\n')
+
+                                    # Real second upper level (column)
+                                    else:
+
+                                        self.ESE_indep[i][k] += RS.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS {i} {k}  {RS.imag}\n')
+
+                                # Real upper level (row)
+                                else:
+
+                                    # Imaginary second upper level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[i][k] -= RS.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS {i} {k}  {-RS.imag}\n')
+
+                                    # Real second upper level (column)
+                                    else:
+
+                                        self.ESE_indep[i][k] -= RS.real
+                                        self.ESE_indep[i][k] -= RE.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS {i} {k}  {-RS.real}\n')
+                                            f.write(f'RE {i} {k}  {-RE.real}\n')
+
+                            # M'' > M sum
+                            if Mkp > Mup and Mk == Mup:
+
+                                # Get rate
+                                RS = RS_ML(self,Ju,Mkp,Mu,Jl,Ml,Jqq,line,JS)
+                                RE = RE_ML(self,Ju,Mkp,Mu,Jl,Ml,line)
+
+                                # Imaginary upper level (row)
+                                if imagu:
+
+                                    # Imaginary second upper level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[i][k] += RS.real
+                                        self.ESE_indep[i][k] += RE.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS {i} {k}  {RS.real}\n')
+                                            f.write(f'RE {i} {k}  {RE.real}\n')
+
+                                    # Real second upper level (column)
+                                    else:
+
+                                        self.ESE_indep[i][k] += RS.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS {i} {k}  {RS.imag}\n')
+
+                                # Real upper level (row)
+                                else:
+
+                                    # Imaginary second upper level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[i][k] += RS.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS {i} {k}  {RS.imag}\n')
+
+                                    # Real second upper level (column)
+                                    else:
+
+                                        self.ESE_indep[i][k] -= RS.real
+                                        self.ESE_indep[i][k] -= RE.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS {i} {k}  {-RS.real}\n')
+                                            f.write(f'RE {i} {k}  {-RE.real}\n')
+
+
+        # Set independent term
+        indep = np.zeros(self.N_rho)
+        indep[0] = 1
+
+        # Add mass conservation row
         for i, lev in enumerate(self.atom.dens_elmnt_indep):
             Ml = lev[2]
             Mlp = lev[3]
             if Mlp == Ml:
-                self.ESE_indep[0, i] = 1/u.s
+                self.ESE_indep[0, i] = 1
             else:
-                self.ESE_indep[0, i] = 0/u.s
+                self.ESE_indep[0, i] = 0
 
-        # Print the ESE matrix to a file
-        # extension = 'txt'
-        # ind = 0
-        # dir = 'checks/'
-        # if not os.path.exists(dir):
-        #     os.makedirs(dir)
-
-        # path = dir + 'ESE_matrix' + f'_{ind}.' + extension
-        # while os.path.exists(path):
-        #     ind += 1
-        #     path = dir + 'ESE_matrix' + f'_{ind}.' + extension
-
-        solve = np.real(self.ESE_indep.value)
-        # rows = len(solve)
-        # cols = len(solve[0])
-        # with open(path, 'w') as f:
-        #     for i in range(rows):
-        #         print(f'Row {i+1}\t', end='', file=f)
-        #         for j in range(cols):
-        #             if solve[i][j] >= 0:
-        #                 print(' ', end='', file=f)
-        #             print(f'{solve[i][j]:.2E}', end='', file=f)
-        #         print(f'= {indep[i].value}', file=f)
-
-        # LU = linalg.lu_factor(self.ESE)
-        # rho_n = linalg.lu_solve(LU, indep)
+        # Solve the system of equations
         rho_n = linalg.solve(self.ESE_indep, indep)
+
         # Construct the full rho (complex)
         rho_comp = np.zeros_like(self.rho).astype('complex128')
 
+        # Initialize indexes
         indexes = []
+
+        # Initialize change populations and coherences
+        change_p = -1e99
+        change_c = -1e99
+
+        # For each density matrix element (unrolled)
         for i, lev in enumerate(self.atom.dens_elmnt_indep):
+
+            # Get quantum numbers data
             ll = lev[0]
             JJ = lev[1]
             M = lev[2]
             Mp = lev[3]
             imag = lev[4]
 
+            # Get index in complex rho and append it in the list
             index = self.atom.dens_elmnt.index([ll, self.atom.levels[ll].E, JJ, M, Mp])
             indexes.append(index)
+
+            # If real part
             if not imag:
                 rho_comp[index] += rho_n[i]
+                if np.absolute(M - Mp) < 0.25:
+                    change_p = np.max([change_c,np.absolute(rho_comp[index] - self.rho[index])])
+                else:
+                    change_c = np.max([change_c,np.absolute(rho_comp[index] - self.rho[index])])
+            # If imaginary part
             else:
                 rho_comp[index] += 1j*rho_n[i]
+                change_c = np.max([change_c,np.absolute(rho_comp[index] - self.rho[index])])
 
+
+        # For the indexes stored from the last loop
         for index in indexes:
+
+            # Get quantum numbers data
             lev = self.atom.dens_elmnt[index]
             ll = lev[0]
             JJ = lev[-3]
             M = lev[-2]
             Mp = lev[-1]
+
+            # Find the "opposite" index
             op_index = self.atom.dens_elmnt.index([ll, self.atom.levels[ll].E, JJ, Mp, M])
+            # And compute with the complex conjugate
             rho_comp[op_index] = np.conjugate(rho_comp[index])
 
-        change = np.abs(rho_comp - self.rho)/np.abs((rho_comp + 1e-40))
+        # Compute the change and store the new rho array
+       #change = np.abs(rho_comp - self.rho)/np.abs((rho_comp + 1e-40))
         self.rho = rho_comp.copy()
 
-        # path = dir + 'rho_array' + f'_{ind}.' + extension
-        # with open(path, 'w') as f:
-        #     print('RHO\n----------\n', file=f)
-        #     for i in range(rows):
-        #         print(f'{self.rho[i]}', file=f)
-
         # Check for the populations to be > 0 and to be normaliced
+
+        # Initialize sum
         suma = 0
+
+        # For each density matrix element
         for i, lev in enumerate(self.atom.dens_elmnt):
+
+            # Get element data
             Ll = lev[0]
             Ml = lev[-2]
             Mlp = lev[-1]
             JJ = lev[-3]
+
+            # If diagonal
             if Mlp == Ml:
+
+                # Add to sum
                 suma += self.rho[i]
+
+                # Check physical
                 if self.rho[i] < 0:
-                    print(f"Warning: Negative population of the level: L={Ll},J={JJ}, M={Ml},M'={Mlp}")
+
+                    print(f"Warning: Negative population of the level: " + \
+                          f"L={Ll},J={JJ}, M={Ml},M'={Mlp}")
                     print(f"with population of rho={self.rho[i]}")
                     # input("Press Enter to continue...")
 
@@ -402,113 +2174,1813 @@ class ESE:
             print(f"With the sum of the populations rho = {suma}")
             # input("Press Enter to continue...")
 
-        # print('----------------------')
-        # raise SystemExit(0)
+        # Return MRC
+        return change_p,change_c
 
-        return np.max(change)
+################################################################################
 
-    def rho_call(self, lev, JJ, M, Mp):
-        index = self.atom.dens_elmnt.index([lev, self.atom.levels[lev].E, JJ, M, Mp])
-        return self.rho[index]
+    def solveESE_MT(self, rad, cdt):
+        """
+            Called at every grid point at the end of the Lambda iteration.
+            Solves the SEE for a multi-term atom in standard representation
+            Eqs. 7.29 in LL04
+            return value: maximum relative change of the level population
+        """
+
+        # Shortcut to J symbols
+        JS = cdt.JS
+
+        # Fill the missing Jqq
+        self.fill_Jqq()
+
+        # Debug
+        if self.debug:
+
+            # Open debug file
+            f = open('debug_SEE_MT','w')
+
+            # Write Jqq pre-rotation
+            f.write("J_qq'\n")
+            for il,line in enumerate(self.atom.lines):
+                f.write(f'Line {il} l0 {c.c*1e7/line.nu}\n')
+                if line.especial:
+                    for comp in line.resos:
+                        f.write(f'Component l0 {c.c*1e7/comp}\n')
+                        JKQ = {0: {0: 0.}, \
+                               1: {-1:0.,0:0.,1:0.}, \
+                               2: {-2:0.,-1:0.,0:0.,1:0.,2:0.}}
+                        for qq in range(-1,2):
+                            for qp in range(-1,2):
+                                f.write(f'    J_{qq:2d}{qp:2d} {line.jqq[comp][qq][qp]}\n')
+                                for K in range(3):
+                                    Q = qq - qp
+                                    if np.absolute(Q) > K:
+                                        continue
+                                    JKQ[K][Q] += ESE.jsim.sign(1 + qq)* \
+                                                 np.sqrt(3.*(2.*K + 1.))* \
+                                                 ESE.jsim.j3(1.,1.,K,qq,-qp,-Q)* \
+                                                 line.jqq[comp][qq][qp]
+                        for K in range(0,3):
+                            for Q in range(-K,K+1):
+                                f.write(f'    J^{K:1d}{Q:2d} {JKQ[K][Q]}\n')
+                else:
+                    JKQ = {0: {0: 0.}, \
+                           1: {-1:0.,0:0.,1:0.}, \
+                           2: {-2:0.,-1:0.,0:0.,1:0.,2:0.}}
+                    for qq in range(-1,2):
+                        for qp in range(-1,2):
+                            f.write(f'    J_{qq:2d}{qp:2d} {line.jqq[qq][qp]}\n')
+
+                            for K in range(3):
+                                Q = qq - qp
+                                if np.absolute(Q) > K:
+                                    continue
+                                JKQ[K][Q] += ESE.jsim.sign(1 + qq)* \
+                                             np.sqrt(3.*(2.*K + 1.))* \
+                                             ESE.jsim.j3(1.,1.,K,qq,-qp,-Q)* \
+                                             line.jqq[qq][qp]
+                    for K in range(0,3):
+                        for Q in range(-K,K+1):
+                            f.write(f'    J^{K:1d}{Q:2d} {JKQ[K][Q]}\n')
+
+        # If there is magnetic field, need to rotate Jqq
+        if self.B > 0.:
+
+            # Rotate Jqq
+            self.rotate_Jqq(JS)
+
+            # Debug
+            if self.debug:
+
+                # Write Jqq post-rotation
+                f.write("ROTATED J'\n")
+                f.write("J_qq'\n")
+                for il,line in enumerate(self.atom.lines):
+                    f.write(f'Line {il} l0 {c.c*1e7/line.nu}\n')
+                    if line.especial:
+                        for comp in line.resos:
+                            f.write(f'Component l0 {c.c*1e7/comp}\n')
+                            JKQ = {0: {0: 0.}, \
+                                   1: {-1:0.,0:0.,1:0.}, \
+                                   2: {-2:0.,-1:0.,0:0.,1:0.,2:0.}}
+                            for qq in range(-1,2):
+                                for qp in range(-1,2):
+                                    f.write(f'    J_{qq:2d}{qp:2d} {line.jqq[comp][qq][qp]}\n')
+                                    for K in range(3):
+                                        Q = qq - qp
+                                        if np.absolute(Q) > K:
+                                            continue
+                                        JKQ[K][Q] += ESE.jsim.sign(1 + qq)* \
+                                                     np.sqrt(3.*(2.*K + 1.))* \
+                                                     ESE.jsim.j3(1.,1.,K,qq,-qp,-Q)* \
+                                                     line.jqq[comp][qq][qp]
+                            for K in range(0,3):
+                                for Q in range(-K,K+1):
+                                    f.write(f'    J^{K:1d}{Q:2d} {JKQ[K][Q]}\n')
+                    else:
+                        JKQ = {0: {0: 0.}, \
+                               1: {-1:0.,0:0.,1:0.}, \
+                               2: {-2:0.,-1:0.,0:0.,1:0.,2:0.}}
+                        for qq in range(-1,2):
+                            for qp in range(-1,2):
+                                f.write(f'    J_{qq:2d}{qp:2d} {line.jqq[qq][qp]}\n')
+
+                                for K in range(3):
+                                    Q = qq - qp
+                                    if np.absolute(Q) > K:
+                                        continue
+                                    JKQ[K][Q] += ESE.jsim.sign(1 + qq)* \
+                                                 np.sqrt(3.*(2.*K + 1.))* \
+                                                 ESE.jsim.j3(1.,1.,K,qq,-qp,-Q)* \
+                                                 line.jqq[comp][qq][qp]
+                        for K in range(0,3):
+                            for Q in range(-K,K+1):
+                                f.write(f'    J^{K:1d}{Q:2d} {JKQ[K][Q]}\n')
 
 
-# Eq 7.9 from LL04 for the SEE coeficients
-def TA(ESE, J, M, Mp, Jl, Ml, Mlp, rad, line, cdt):
+        #
+        # Initialize to zero and add trivial rows
+        #
+
+        # For each rho element
+        for i in range(self.atom.ndim):
+
+            self.ESE_indep[i] = np.zeros_like(self.ESE_indep[i])
+
+            # If forbidden row, make it trivial solution
+            if i in self.atom.forbidden:
+
+                # rho(jM,j'M') = 0.
+                self.ESE_indep[i][i] = 1.0
+
+        #
+        # Interference term (diagonal)
+        #
+
+        # For each atomic term
+        for term in self.atom.terms:
+
+            # Run over rho elements
+            for index in term.index:
+
+                # If forbidden, skip
+                if index[0] in self.atom.forbidden:
+                    continue
+
+                # If diagonal, skip
+                if self.isdiag(index):
+                    continue
+
+                # Get eigenvalues
+                EE  = term.eigval[index[1]]
+                EE1 = term.eigval[index[2]]
+
+                # Get multiplicative term
+                Gamma = 2.*np.pi*(EE - EE1)*c.c
+
+                # If imaginary row
+                if index[-1]:
+
+                    self.ESE_indep[index[0]][index[0]-1] = -Gamma
+
+                    # Debug
+                    if self.debug:
+                        f.write(f'MK {index[0]} {index[0]-1}  {-Gamma}\n')
+
+                # If real row
+                else:
+
+                    self.ESE_indep[index[0]][index[0]+1] = Gamma
+
+                    # Debug
+                    if self.debug:
+                        f.write(f'MK {index[0]} {index[0]+1}  {Gamma}\n')
+
+        #
+        # Radiative terms
+        #
+
+        # For each radiative transition
+        for line in self.atom.lines:
+
+            # Point to the upper and lower terms
+            termu = self.atom.terms[line.terms[1]]
+            terml = self.atom.terms[line.terms[0]]
+
+            # If line is not especial, we can get the Jqq already
+            if not line.especial:
+                Jqq = line.get_Jqq()
+
+            # Run over upper term indexes
+            for indexu in termu.index:
+
+                # Get variables in shorter form
+                i,iu,iu1,iMu,Mu,muu,iMu1,Mu1,muu1,imagu = indexu
+
+                # Get the energies of the juMu and ju'Mu' states
+                Eu  = termu.eigval[iu]*c.c
+                Eu1 = termu.eigval[iu1]*c.c
+
+                # Run over lower term indexes
+                for indexl in terml.index:
+
+                    # Get variables in shorter form
+                    j,il,il1,iMl,Ml,mul,iMl1,Ml1,mul1,imagl = indexl
+
+                    # If the line is special
+                    if line.especial:
+
+                        # Get the energies of the jlMl and jl'Ml' states
+                        El  = terml.eigval[il]*c.c
+                        El1 = terml.eigval[il1]*c.c
+
+                        # Get components frequencies
+                        nu_ul   = Eu  - El
+                        nu_u1l  = Eu1 - El
+                        nu_ul1  = Eu  - El1
+                        nu_u1l1 = Eu1 - El1
+
+                        # Get transfer frequency
+                        nu_t = 0.25*(nu_ul + nu_u1l + nu_ul1 + nu_u1l1)
+
+                        # And request the Jqq
+                        Jqq = line.get_Jqq(nu_t)
+
+                    #
+                    # Get transfer rates
+                    #
+
+                    # Ignoring this density matrix element
+                    if i in self.atom.forbidden or j in self.atom.forbidden:
+
+                        # No contribution
+                        TA = 0.0
+                        TAp = 0.0
+                        TS = 0.0
+                        TSp = 0.0
+                        TE = 0.0
+                        TEp = 0.0
+
+                        # Debug
+                        if self.debug:
+                            f.write('Skip transfer rates for '+ \
+                                    f'{i} {muu}{Mu} {muu1,Mu1} {imagu}, '+ \
+                                    f'{j} {mul}{Ml} {mul1,Ml1} {imagl}\n')
+
+                    # Including the density matrix element
+                    else:
+
+                        # Absorption transfer
+                        TA  = TA_MT(self,termu,iu,muu,iMu,Mu,iu1,muu1,iMu1,Mu1, \
+                                         terml,il,mul,iMl,Ml,il1,mul1,iMl1,Ml1,Jqq,line,JS)
+                        if il != il1:
+                            TAp = TA_MT(self,termu,iu,muu,iMu,Mu,iu1,muu1,iMu1,Mu1, \
+                                             terml,il1,mul1,iMl1,Ml1,il,mul,iMl,Ml,Jqq,line,JS)
+                        # Stimulated emission transfer
+                        TS  = TS_MT(self,terml,il,mul,iMl,Ml,il1,mul1,iMl1,Ml1, \
+                                         termu,iu,muu,iMu,Mu,iu1,muu1,iMu1,Mu1,Jqq,line,JS)
+                        if iu != iu1:
+                            TSp = TS_MT(self,terml,il,mul,iMl,Ml,il1,mul1,iMl1,Ml1, \
+                                             termu,iu1,muu1,iMu1,Mu1,iu,muu,iMu,Mu,Jqq,line,JS)
+                        # Espontaneous emission transfer
+                        TE  = TE_MT(self,terml,il,mul,iMl,Ml,il1,mul1,iMl1,Ml1, \
+                                         termu,iu,muu,iMu,Mu,iu1,muu1,iMu1,Mu1,line,JS)
+                        if iu != iu1:
+                            TEp = TE_MT(self,terml,il,mul,iMl,Ml,il1,mul1,iMl1,Ml1, \
+                                             termu,iu1,muu1,iMu1,Mu1,iu,muu,iMu,Mu,line,JS)
+
+                        #
+                        # Add to ESE
+                        #
+
+                        # Imaginary upper level (row TA | column TS, TE))
+                        if imagu:
+
+                            # Imaginary lower level (row TS, TE | column TA)
+                            if imagl:
+
+                                self.ESE_indep[i][j] += TA.real - TAp.real
+
+                                self.ESE_indep[j][i] += TS.real - TSp.real
+
+                                self.ESE_indep[j][i] += TE.real - TEp.real
+
+                                # Debug
+                                if self.debug:
+                                    f.write(f'TA1 {i} {j} --  {TA.real-TAp.real}\n')
+                                    f.write(f'TS1 {j} {i} --  {TS.real-TSp.real}\n')
+                                    f.write(f'TE1 {j} {i} --  {TE.real-TEp.real}\n')
+
+                            # Real lower level (row TS, TE | column TA)
+                            else:
+
+                                self.ESE_indep[i][j] += TA.imag
+                                if il != il1:
+                                    self.ESE_indep[i][j] += TAp.imag
+
+                                # Debug
+                                if self.debug:
+                                    if il != il1:
+                                        f.write(f'TA2 {i} {j} --  {TA.imag+TAp.imag}\n')
+                                    else:
+                                        f.write(f'TA2 {i} {j} --  {TA.imag}\n')
+
+                                self.ESE_indep[j][i] += TSp.imag - TS.imag
+
+                                # Debug
+                                if self.debug:
+                                    f.write(f'TS2 {j} {i} --  {TSp.imag-TS.imag}\n')
+
+                        # Real upper level (row TA | columns TS, TE)
+                        else:
+
+                            # Imaginary lower level (row TS, TE | column TA)
+                            if imagl:
+
+                                self.ESE_indep[i][j] += TAp.imag - TA.imag
+
+                                # Debug
+                                if self.debug:
+                                    f.write(f'TA3 {i} {j} --  {TAp.imag-TA.imag}\n')
+
+                                self.ESE_indep[j][i] += TS.imag
+                                if iu != iu1:
+                                    self.ESE_indep[j][i] += TSp.imag
+
+                                # Debug
+                                if self.debug:
+                                    if iu != iu1:
+                                        f.write(f'TS3 {j} {i} --  {TS.imag+TSp.imag}\n')
+                                    else:
+                                        f.write(f'TS3 {j} {i} --  {TS.imag}\n')
+
+                            # Real lower level (row TS, TE | column TA)
+                            else:
+
+                                self.ESE_indep[i][j] += TA.real
+                                if il != il1:
+                                    self.ESE_indep[i][j] += TAp.real
+
+                                # Debug
+                                if self.debug:
+                                    if il != il1:
+                                        f.write(f'TA4 {i} {j} --  {TA.real+TAp.real}\n')
+                                    else:
+                                        f.write(f'TA4 {i} {j} --  {TA.real}\n')
+
+                                self.ESE_indep[j][i] += TS.real
+                                self.ESE_indep[j][i] += TE.real
+                                if iu != iu1:
+                                    self.ESE_indep[j][i] += TSp.real
+                                    self.ESE_indep[j][i] += TEp.real
+
+                                # Debug
+                                if self.debug:
+                                    if iu != iu1:
+                                        f.write(f'TS4 {j} {i} --  {TS.real+TSp.real}\n')
+                                        f.write(f'TE4 {j} {i} --  {TE.real+TEp.real}\n')
+                                    else:
+                                        f.write(f'TS4 {j} {i} --  {TS.real}\n')
+                                        f.write(f'TE4 {j} {i} --  {TE.real}\n')
+
+                    #
+                    # Get relaxation rates
+                    #
+
+                    # Absorption
+
+                    # Only once per upper level magnetic component
+                    if iu == iu1 and not imagu and i not in self.atom.forbidden:
+
+                        # Get Ju value
+                        Ju = termu.index_muM[iMu][muu][2]
+
+                        # Get second lower level
+                        for indexk in terml.index:
+
+                            # Get variables in shorter form
+                            k,ik,ik1,iMk,Mk,muk,iMk1,Mk1,muk1,imagk = indexk
+
+                            # If ignoring this density matrix element
+                            if k in self.atom.forbidden:
+
+                                # Debug
+                                if self.debug:
+                                    f.write('Skip absorption relaxation for '+ \
+                                            f'{k} {muk}{Mk} {muk1,Mk1} {imagk}\n')
+                                continue
+
+                            # If especial
+                            if line.especial:
+
+                                # Get energies
+                                Ek  = terml.eigval[ik]*c.c
+                                Ek1 = terml.eigval[ik1]*c.c
+
+                                # And component frequency
+                                nu_uk   = Eu - Ek
+                                nu_uk1  = Eu - Ek1
+
+                            # If diagonal jM or jpMp
+                            if (ik == il and ik1 == il) or \
+                               (ik == il1 and ik1 == il1):
+
+                                # Get Jqq if especial
+                                if line.especial:
+
+                                    # Get average frequency
+                                    nu_ra = (nu_ul + nu_ul1 + nu_uk)/3.
+
+                                    # Get Jqq
+                                    Jqq = line.get_Jqq(nu_ra)
+
+                                # Get rate
+                                RA = RA_MT(self,terml,il,mul,iMl,Ml,il1,mul1,iMl1,Ml1, \
+                                                termu,Ju,Mu,Jqq,line,JS)
+
+                                # Diagonal in jM
+                                if (ik == il and ik1 == il):
+
+                                    # Imaginary lower level (row)
+                                    if imagl:
+
+                                        self.ESE_indep[j][k] += RA.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA1 {j} {k} {i}  {RA.imag}\n')
+
+                                    # Real lower level (row)
+                                    else:
+
+                                        self.ESE_indep[j][k] -= RA.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA2 {j} {k} {i}  {-RA.real}\n')
+
+                                # Diagonal in jpMp
+                                if (ik == il1 and ik1 == il1):
+
+                                    # Imaginary lower level (row)
+                                    if imagl:
+
+                                        self.ESE_indep[j][k] += RA.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA3 {j} {k} {i}  {RA.imag}\n')
+
+                                    # Real lower level (row)
+                                    else:
+
+                                        self.ESE_indep[j][k] -= RA.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA4 {j} {k} {i}  {-RA.real}\n')
+
+                            #
+                            # Not diagonal
+                            #
+
+                            # j''M'' < jM sum
+                            if ik < il and ik1 == il:
+
+                                # Get Jqq if especial
+                                if line.especial:
+
+                                    # Get average frequency
+                                    nu_ra = (nu_ul + nu_ul1 + nu_uk)/3.
+
+                                    # Get Jqq
+                                    Jqq = line.get_Jqq(nu_ra)
+
+                                # Get rate
+                                RA = RA_MT(self,terml,ik,muk,iMk,Mk,il1,mul1,iMl1,Ml1, \
+                                                termu,Ju,Mu,Jqq,line,JS)
+
+                                # Imaginary lower level (row)
+                                if imagl:
+
+                                    # Imaginary second lower level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[j][k] += RA.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA5 {j} {k} {i}  {RA.real}\n')
+
+                                    # Real second lower level (column)
+                                    else:
+
+                                        self.ESE_indep[j][k] += RA.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA6 {j} {k} {i}  {RA.imag}\n')
+
+                                # Real lower level (row)
+                                else:
+
+                                    # Imaginary second lower level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[j][k] += RA.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA7 {j} {k} {i}  {RA.imag}\n')
+
+                                    # Real second lower level (column)
+                                    else:
+
+                                        self.ESE_indep[j][k] -= RA.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA8 {j} {k} {i}  {-RA.real}\n')
+
+                            # j''M'' > jM sum
+                            if ik1 > il and ik == il:
+
+                                # Get Jqq if especial
+                                if line.especial:
+
+                                    # Get average frequency
+                                    nu_ra = (nu_ul + nu_ul1 + nu_uk1)/3.
+
+                                    # Get Jqq
+                                    Jqq = line.get_Jqq(nu_ra)
+
+                                # Get rate
+                                RA = RA_MT(self,terml,ik1,muk1,iMk1,Mk1,il1,mul1,iMl1,Ml1, \
+                                                termu,Ju,Mu,Jqq,line,JS)
+
+                                # Imaginary lower level (row)
+                                if imagl:
+
+                                    # Imaginary second lower level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[j][k] -= RA.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RA9 {j} {k} {i}  {-RA.real}\n')
+
+                                    # Real second lower level (column)
+                                    else:
+
+                                        self.ESE_indep[j][k] += RA.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RAA {j} {k} {i}  {RA.imag}\n')
+
+                                # Real lower level (row)
+                                else:
+
+                                    # Imaginary second lower level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[j][k] -= RA.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RAB {j} {k} {i}  {-RA.imag}\n')
+
+                                    # Real second lower level (column)
+                                    else:
+
+                                        self.ESE_indep[j][k] -= RA.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RAC {j} {k} {i}  {-RA.real}\n')
+
+                            # j''M'' < jpMp sum
+                            if ik < il1 and ik1 == il1:
+
+                                # Get Jqq if especial
+                                if line.especial:
+
+                                    # Get average frequency
+                                    nu_ra = (nu_ul + nu_ul1 + nu_uk)/3.
+
+                                    # Get Jqq
+                                    Jqq = line.get_Jqq(nu_ra)
+
+                                # Get rate
+                                if j == 1 and k == 1 and i == 7:
+                                    print(f'Just before: {RA}')
+                                RA = RA_MT(self,terml,ik,muk,iMk,Mk,il,mul,iMl,Ml, \
+                                                termu,Ju,Mu,Jqq,line,JS)
+                                if j == 1 and k == 1 and i == 7:
+                                    print(f'Just computed: {RA}')
+
+                                # Imaginary lower level (row)
+                                if imagl:
+
+                                    # Imaginary second lower level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[j][k] -= RA.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RAD {j} {k} {i}  {-RA.real}\n')
+
+                                    # Real second lower level (column)
+                                    else:
+
+                                        self.ESE_indep[j][k] -= RA.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RAE {j} {k} {i}  {-RA.imag}\n')
+
+                                # Real lower level (row)
+                                else:
+
+                                    # Imaginary second lower level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[j][k] += RA.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RAF {j} {k} {i}  {RA.imag}\n')
+
+                                    # Real second lower level (column)
+                                    else:
+
+                                        self.ESE_indep[j][k] -= RA.real
+
+                                        if j == 1 and k == 1 and i == 7:
+                                            print(f'RA for 1,1, 7')
+                                            print(f'Index {j}: {mul} {Ml},{mul1} {Ml1}')
+                                            print(f'Index {k}: {muk} {Mk},{muk1} {Mk1}')
+                                            print(f'Index {i}: {muu} {Mu},{muu1} {Mu1}')
+                                            print(f'   {RA}')
+                                            print(f'   {RA.real}')
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RAG {j} {k} {i}  {-RA.real}\n')
+
+                            # j''M'' > jM sum
+                            if ik1 > il1 and ik == il1:
+
+                                # Get Jqq if especial
+                                if line.especial:
+
+                                    # Get average frequency
+                                    nu_ra = (nu_ul + nu_ul1 + nu_uk1)/3.
+
+                                    # Get Jqq
+                                    Jqq = line.get_Jqq(nu_ra)
+
+                                # Get rate
+                                RA = RA_MT(self,terml,ik1,muk1,iMk1,Mk1,il,mul,iMl,Ml, \
+                                                termu,Ju,Mu,Jqq,line,JS)
+
+                                # Imaginary lower level (row)
+                                if imagl:
+
+                                    # Imaginary second lower level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[j][k] += RA.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RAH {j} {k} {i}  {RA.real}\n')
+
+                                    # Real second lower level (column)
+                                    else:
+
+                                        self.ESE_indep[j][k] -= RA.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RAI {j} {k} {i}  {-RA.imag}\n')
+
+                                # Real lower level (row)
+                                else:
+
+                                    # Imaginary second lower level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[j][k] -= RA.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RAJ {j} {k} {i}  {-RA.imag}\n')
+
+                                    # Real second lower level (column)
+                                    else:
+
+                                        self.ESE_indep[j][k] -= RA.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RAK {j} {k} {i}  {-RA.real}\n')
+
+
+                    # Emission
+
+                    # Only once per lower level magnetic component
+                    if il == il1 and not imagl and j not in self.atom.forbidden:
+
+                        # Get Jl value
+                        Jl = terml.index_muM[iMl][mul][2]
+
+                        # Get inverse of degeneracy
+                        invg = 1./terml.g
+
+                        # Get second upper level
+                        for indexk in termu.index:
+
+                            # Get variables in shorter form
+                            k,ik,ik1,iMk,Mk,muk,iMk1,Mk1,muk1,imagk = indexk
+
+                            # If ignoring this density matrix element
+                            if k in self.atom.forbidden:
+
+                                # Debug
+                                if self.debug:
+                                    f.write('Skip emission relaxation for '+ \
+                                            f'{k} {muk}{Mk} {muk1,Mk1} {imagk}')
+                                continue
+
+                            # If especial
+                            if line.especial:
+
+                                # Get energies
+                                Ek  = terml.eigval[ik]*c.c
+                                Ek1 = terml.eigval[ik1]*c.c
+
+                                # And component frequency
+                                nu_kl   = Ek  - El
+                                nu_k1l  = Ek1 - El
+
+                            # If diagonal Mu or Mup
+                            if (ik == iu and ik1 == iu) or \
+                               (ik == iu1 and ik1 == iu1):
+
+                                # Get Jqq if especial
+                                if line.especial:
+
+                                    # Get average frequency
+                                    nu_rs = (nu_ul + nu_u1l + nu_kl)/3.
+
+                                    # Get Jqq
+                                    Jqq = line.get_Jqq(nu_rs)
+
+                                # Get rate
+                                RS = RS_MT(self,termu,iu,muu,iMu,Mu,iu1,muu1,iMu1,Mu1, \
+                                                terml,Jl,Ml,Jqq,line,JS)
+
+                                # If diagonal jM
+                                if (ik == iu and ik1 == iu):
+
+                                    # Imaginary upper level (row)
+                                    if imagu:
+
+                                        self.ESE_indep[i][k] -= RS.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS1 {i} {k} {j}  {-RS.imag}\n')
+
+                                    # Real upper level (row)
+                                    else:
+
+                                        # Get rate
+                                        RE = RE_MT(self,termu,iu,iu1,line)*invg
+
+                                        self.ESE_indep[i][k] -= RS.real
+                                        self.ESE_indep[i][k] -= RE.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS2 {i} {k} {j}  {-RS.real}\n')
+                                            f.write(f'RE2 {i} {k} {j}  {-RE.real}\n')
+
+                                # If diagonal jupMup
+                                if (ik == iu1 and ik1 == iu1):
+
+                                    # Imaginary upper level (row)
+                                    if imagu:
+
+                                        self.ESE_indep[i][k] -= RS.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS3 {i} {k} {j}  {-RS.imag}\n')
+
+                                    # Real upper level (row)
+                                    else:
+
+                                        # Get rate
+                                        RE = RE_MT(self,termu,iu,iu1,line)*invg
+
+                                        self.ESE_indep[i][k] -= RS.real
+                                        self.ESE_indep[i][k] -= RE.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS4 {i} {k} {j}  {-RS.real}\n')
+                                            f.write(f'RE4 {i} {k} {j}  {-RE.real}\n')
+
+                            #
+                            # Not diagonal
+                            #
+
+                            # j''M'' < jM sum
+                            if ik < iu and ik1 == iu:
+
+                                # Get Jqq if especial
+                                if line.especial:
+
+                                    # Get average frequency
+                                    nu_rs = (nu_ul + nu_u1l + nu_kl)/3.
+
+                                    # Get Jqq
+                                    Jqq = line.get_Jqq(nu_rs)
+
+                                # Get rate
+                                RS = RS_MT(self,termu,ik,muk,iMk,Mk,iu1,muu1,iMu1,Mu1, \
+                                                terml,Jl,Ml,Jqq,line,JS)
+                                RE = RE_MT(self,termu,ik,iu1,line)*invg
+
+                                # Imaginary upper level (row)
+                                if imagu:
+
+                                    # Imaginary second upper level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[i][k] += RS.real
+                                        self.ESE_indep[i][k] += RE.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS5 {i} {k} {j}  {RS.real}\n')
+                                            f.write(f'RE5 {i} {k} {j}  {RE.real}\n')
+
+                                    # Real second upper level (column)
+                                    else:
+
+                                        self.ESE_indep[i][k] -= RS.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS6 {i} {k} {j}  {-RS.imag}\n')
+
+                                # Real upper level (row)
+                                else:
+
+                                    # Imaginary second upper level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[i][k] -= RS.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS7 {i} {k} {j}  {-RS.imag}\n')
+
+                                    # Real second upper level (column)
+                                    else:
+
+                                        self.ESE_indep[i][k] -= RS.real
+                                        self.ESE_indep[i][k] -= RE.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS8 {i} {k} {j}  {-RS.real}\n')
+                                            f.write(f'RE8 {i} {k} {j}  {-RE.real}\n')
+
+                            # j''M'' > jM sum
+                            if ik1 > iu and ik == iu:
+
+                                # Get Jqq if especial
+                                if line.especial:
+
+                                    # Get average frequency
+                                    nu_rs = (nu_ul + nu_u1l + nu_k1l)/3.
+
+                                    # Get Jqq
+                                    Jqq = line.get_Jqq(nu_rs)
+
+                                # Get rate
+                                RS = RS_MT(self,termu,ik1,muk1,iMk1,Mk1,iu1,muu1,iMu1,Mu1, \
+                                                terml,Jl,Ml,Jqq,line,JS)
+                                RE = RE_MT(self,termu,ik1,iu1,line)*invg
+
+                                # Imaginary upper level (row)
+                                if imagu:
+
+                                    # Imaginary second upper level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[i][k] -= RS.real
+                                        self.ESE_indep[i][k] -= RE.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RS9 {i} {k} {j}  {-RS.real}\n')
+                                            f.write(f'RE9 {i} {k} {j}  {-RE.real}\n')
+
+                                    # Real second upper level (column)
+                                    else:
+
+                                        self.ESE_indep[i][k] -= RS.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RSA {i} {k} {j}  {-RS.imag}\n')
+
+                                # Real upper level (row)
+                                else:
+
+                                    # Imaginary second upper level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[i][k] += RS.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RSB {i} {k} {j}  {RS.imag}\n')
+
+                                    # Real second upper level (column)
+                                    else:
+
+                                        self.ESE_indep[i][k] -= RS.real
+                                        self.ESE_indep[i][k] -= RE.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RSC {i} {k} {j}  {-RS.real}\n')
+                                            f.write(f'REC {i} {k} {j}  {-RE.real}\n')
+
+                            # j''M'' < j'M' sum
+                            if ik < iu1 and ik1 == iu1:
+
+                                # Get Jqq if especial
+                                if line.especial:
+
+                                    # Get average frequency
+                                    nu_rs = (nu_ul + nu_u1l + nu_kl)/3.
+
+                                    # Get Jqq
+                                    Jqq = line.get_Jqq(nu_rs)
+
+                                # Get rate
+                                RS = RS_MT(self,termu,ik,muk,iMk,Mk,iu,muu,iMu,Mu, \
+                                                terml,Jl,Ml,Jqq,line,JS)
+                                RE = RE_MT(self,termu,ik,iu,line)*invg
+
+                                # Imaginary upper level (row)
+                                if imagu:
+
+                                    # Imaginary second upper level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[i][k] -= RS.real
+                                        self.ESE_indep[i][k] -= RE.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RSD {i} {k} {j}  {-RS.real}\n')
+                                            f.write(f'RED {i} {k} {j}  {-RE.real}\n')
+
+                                    # Real second upper level (column)
+                                    else:
+
+                                        self.ESE_indep[i][k] += RS.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RSE {i} {k} {j}  {RS.imag}\n')
+
+                                # Real upper level (row)
+                                else:
+
+                                    # Imaginary second upper level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[i][k] -= RS.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RSF {i} {k} {j}  {-RS.imag}\n')
+
+                                    # Real second upper level (column)
+                                    else:
+
+                                        self.ESE_indep[i][k] -= RS.real
+                                        self.ESE_indep[i][k] -= RE.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RSG {i} {k} {j}  {-RS.real}\n')
+                                            f.write(f'REG {i} {k} {j}  {-RE.real}\n')
+
+                            # j''M'' > jM sum
+                            if ik1 > iu1 and ik == iu1:
+
+                                # Get Jqq if especial
+                                if line.especial:
+
+                                    # Get average frequency
+                                    nu_rs = (nu_ul + nu_u1l + nu_k1l)/3.
+
+                                    # Get Jqq
+                                    Jqq = line.get_Jqq(nu_rs)
+
+                                # Get rate
+                                RS = RS_MT(self,termu,ik1,muk1,iMk1,Mk1,iu,muu,iMu,Mu, \
+                                                terml,Jl,Ml,Jqq,line,JS)
+                                RE = RE_MT(self,termu,ik1,iu,line)*invg
+
+                                # Imaginary upper level (row)
+                                if imagu:
+
+                                    # Imaginary second upper level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[i][k] += RS.real
+                                        self.ESE_indep[i][k] += RE.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RSH {i} {k} {j}  {RS.real}\n')
+                                            f.write(f'REH {i} {k} {j}  {RE.real}\n')
+
+                                    # Real second upper level (column)
+                                    else:
+
+                                        self.ESE_indep[i][k] += RS.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RSI {i} {k} {j}  {RS.imag}\n')
+
+                                # Real upper level (row)
+                                else:
+
+                                    # Imaginary second upper level (column)
+                                    if imagk:
+
+                                        self.ESE_indep[i][k] += RS.imag
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RSJ {i} {k} {j}  {RS.imag}\n')
+
+                                    # Real second upper level (column)
+                                    else:
+
+                                        self.ESE_indep[i][k] -= RS.real
+                                        self.ESE_indep[i][k] -= RE.real
+
+                                        # Debug
+                                        if self.debug:
+                                            f.write(f'RSK {i} {k} {j}  {-RS.real}\n')
+                                            f.write(f'REK {i} {k} {j}  {-RE.real}\n')
+
+
+        # Mass conservation
+
+        indep = np.zeros(self.atom.ndim)
+        irow = 0
+        indep[irow] = 1
+
+        # For every term
+        for term in self.atom.terms:
+
+            # For every density matrix element
+            for index in term.index:
+
+                # Get variables in shorter form
+                i,ii,ii1,iM,M,mu,iM1,M1,mu1,imag = index
+
+                # If diagonal
+                if ii == ii1:
+                    self.ESE_indep[irow,i] = 1
+                else:
+                    self.ESE_indep[irow,i] = 0
+
+        '''
+        print('AD-HOC SYSTEM LOWER TERM ISOTROPIC')
+        for index in self.atom.terms[0].index:
+
+                # Get variables in shorter form
+                i,ii,ii1,iM,M,mu,iM1,M1,mu1,imag = index
+
+                self.ESE_indep[i,:] = 0
+                self.ESE_indep[i,i] = 1
+
+                # If diagonal
+                if ii == ii1:
+                    indep[i] = 1
+                else:
+                    indep[i] = 0
+        print('AD-HOC SYSTEM LOWER TERM ISOTROPIC')
+        '''
+
+        '''
+        print('AD-HOC SYSTEM UPPER TERM ISOTROPIC')
+        for index in self.atom.terms[1].index:
+
+                # Get variables in shorter form
+                i,ii,ii1,iM,M,mu,iM1,M1,mu1,imag = index
+
+                self.ESE_indep[i,:] = 0
+                self.ESE_indep[i,i] = 1
+
+                # If diagonal
+                if ii == ii1:
+                    indep[i] = 1
+                else:
+                    indep[i] = 0
+        print('AD-HOC SYSTEM UPPER TERM ISOTROPIC')
+        '''
+
+        # Debug
+        if self.debug:
+            f.write('SEE:\n')
+            # For each line
+            for i in range(self.atom.ndim):
+                row = f'{i}: '
+                # For each column
+                for j in range(self.atom.ndim):
+                    row += f' {j}:{self.ESE_indep[i,j]:13.6e}'
+                row += f'  ; {indep[i]:13.6e}\n'
+                f.write(row+'\n')
+                if i == 27 or i == 28 or i == 82 or i == 83:
+                    print(self.ESE_indep[i,:])
+
+        # Copy old rho
+        rho_old = self.rho.copy()
+
+        # Solve SEE and store new density matrix
+        self.rho = linalg.solve(self.ESE_indep, indep)
+
+        # Debug
+        if self.debug:
+            f.write("rho(jM,j'M'):\n")
+            for term in self.atom.terms:
+                for index in term.index:
+                    i,ii,ii1,iM,M,mu,iM1,M1,mu1,imag = index
+                    f.write(f'[{i:2d}][{ii:2d},{ii1:2d}] ' + \
+                            f'rho({mu:2d}{M:2d},{mu1:2d}{M1:2d}) = '+ \
+                            f'{rho_old[i]:13.6e}  {self.rho[i]:13.6e}\n')
+
+            f.write('\n')
+
+        # Debug
+        if self.debug:
+            print('')
+            f.write("rho^K_Q(J,J'):\n")
+            for term in self.atom.terms:
+                f.write(f"Term L {term.L} S {term.S}\n")
+                print(f"Term L {term.L} S {term.S}")
+                for J in term.J:
+
+                    # Possible M
+                    Ms = np.linspace(-J,J,int(round(2*J+1)),endpoint=True)
+
+                    for Jp in term.J:
+                        minK = int(round(np.absolute(J-Jp)))
+                        maxK = int(round(J + Jp))
+                        for K in range(minK,maxK+1):
+                            for Q in range(-K,K+1):
+
+                                # Initialize rhoKQ
+                                rho0 = 0.
+                                rho1 = 0.
+
+                                # For each M
+                                for M in Ms:
+
+                                    # Decide M'
+                                    Mp = M - Q
+
+                                    # Sign and weight
+                                    SS = ESE.jsim.sign(J-M)* \
+                                         np.sqrt(2.*K + 1.)
+
+                                   ## If J=Jp=K=1
+                                   #if np.absolute(J-1.0)<0.25 and \
+                                   #   np.absolute(Jp-1.0)<0.25 and \
+                                   #   K == 1 and Q == -1:
+                                   #    print(f'For J {J} Jp {Jp} ; M {M} Mp {Mp}')
+
+                                    # Skip invalid M'
+                                    if np.absolute(Mp) > Jp:
+                                        continue
+
+                                    # Go by the whole term
+                                    for index in term.index:
+
+                                        # Extract data
+                                        ii,i1,i2,iM1,M1,mu1,iM2,M2,mu2,imag = index
+
+                                       ## If J=Jp=K=1
+                                       #if np.absolute(J-1.0)<0.25 and \
+                                       #   np.absolute(Jp-1.0)<0.25 and \
+                                       #   K == 1 and Q == -1:
+                                       #    print('' + \
+                                       #          f'     Checking ii {ii} i1 ' + \
+                                       #          f'{i1} i2 {i2} iM1 {iM1} M1 ' + \
+                                       #          f'{M1} mu1 {mu1} iM2 {iM2} ' + \
+                                       #          f'M2 {M2} mu2 {mu2} imag {imag}')
+
+                                        # If M,M'
+                                        if (M1 != M or M2 != Mp) and \
+                                           (M1 != Mp or M2 != M):
+
+                                           #if np.absolute(J-1.0)<0.25 and \
+                                           #   np.absolute(Jp-1.0)<0.25 and \
+                                           #   K == 1 and Q == -1:
+                                           #    print('Invalid M pair')
+
+                                            continue
+
+                                        # If crossed, conjugate
+                                        if M1 == Mp and M2 == M and i1 != i2:
+                                            iiM1 = iM2
+                                            ii1 = i2
+                                            iiM2 = iM1
+                                            ii2 = i1
+                                            conj = -1.0
+                                        else:
+                                            iiM1 = iM1
+                                            ii1 = i1
+                                            iiM2 = iM2
+                                            ii2 = i2
+                                            conj = 1.0
+
+                                        # Run over J
+                                        for Jindex1 in term.index_muM[iiM1]:
+                                            J1 = Jindex1[2]
+                                            iJ1 = Jindex1[1]
+
+                                            # Relevant J
+                                            if np.absolute(J1-J) > 0.25:
+                                                continue
+
+                                            # Run over J'
+                                            for Jindex2 in term.index_muM[iiM2]:
+                                                J2 = Jindex2[2]
+                                                iJ2 = Jindex2[1]
+
+                                                # Relevant J'
+                                                if np.absolute(J2-Jp) > 0.25:
+                                                    continue
+
+                                               ## If J=Jp=K=1
+                                               #if np.absolute(J1-1.0)<0.25 and \
+                                               #   np.absolute(J2-1.0)<0.25 and \
+                                               #   K == 1 and Q == -1:
+                                               #    print('' + \
+                                               #          f'K {K:1d} Q {Q:2d} M ' + \
+                                               #          f'{int(M):2d} Mp ' + \
+                                               #          f'{int(Mp):2d} J ' + \
+                                               #          f'{int(J):1d} Jp ' + \
+                                               #          f'{int(Jp):1d} M1 ' + \
+                                               #          f'{int(M1):2d} M2 ' + \
+                                               #          f'{int(M2):2d} J1 ' + \
+                                               #          f'{int(J1):1d} J2 ' + \
+                                               #          f'{int(J2):1d}')
+
+                                                # Contribution
+                                                CC = term.eigvec[ii1][iJ1]* \
+                                                     term.eigvec[ii2][iJ2]* \
+                                                     SS*ESE.jsim.j3(J,Jp,K,M,-Mp,-Q)
+
+                                                # If imag
+                                                if imag:
+                                                    rho0 += conj*CC*rho_old[ii]*1j
+                                                    rho1 += conj*CC*self.rho[ii]*1j
+
+                                                   ## If J=Jp=K=1
+                                                   #if np.absolute(J1-1.0)<0.25 and \
+                                                   #   np.absolute(J2-1.0)<0.25 and \
+                                                   #   K == 1 and Q == -1:
+                                                   #    conjp = conj
+                                                   #    print(f'Contribution from ' + \
+                                                   #          f'{ii1:2d},{ii2:2d} ' + \
+                                                   #          f'({i1:2d}{i2:2d}) ' + \
+                                                   #          f'total ' + \
+                                                   # f'{conj*CC*self.rho[ii]:9.6e} ' + \
+                                                   #          f'conj {conjp:4.1f} ' + \
+                                                   #          f'e1 ' + \
+                                                   # f'{term.eigvec[ii1][iJ1]:9.6e} ' + \
+                                                   #          f'e2 ' + \
+                                                   # f'{term.eigvec[ii2][iJ2]:9.6e} ' + \
+                                                   #          f'sig ' + \
+                                                   # f'{ESE.jsim.sign(J-M):4.1f} ' + \
+                                                   #          f'fj3 ' + \
+                                                   # f'{np.sqrt(2.*K+1)*ESE.jsim.j3(J,Jp,K,M,-Mp,-Q):9.6e} ' + \
+                                                   #          f'CC {CC:9.6e} rho ' + \
+                                                   # f'{self.rho[ii]:9.6e} mu1M1 ' + \
+                                                   #          f'{mu1},{M1} mu2M2 ' + \
+                                                   #          f'{mu2},{M2}  ' + \
+                                                   #          f'iM1 {iM1} iM2 {iM2} ' + \
+                                                   #          f'ii {ii}')
+                                                else:
+                                                    rho0 += CC*rho_old[ii]
+                                                    rho1 += CC*self.rho[ii]
+                                                   ## If J=Jp=K=1
+                                                   #if np.absolute(J1-1.0)<0.25 and \
+                                                   #   np.absolute(J2-1.0)<0.25 and \
+                                                   #   K == 1 and Q == -1:
+                                                   #    conj = 1.0
+                                                   #    conjp = 0.
+                                                   #    print( \
+#f'Contribution from {ii1:2d},{ii2:2d} ({i1:2d}{i2:2d}) ' + \
+#f'total {conj*CC*self.rho[ii]:9.6e} ' + \
+#f'conj {conjp:4.1f} e1 {term.eigvec[ii1][iJ1]:9.6e} ' + \
+#f'e2 {term.eigvec[ii2][iJ2]:9.6e} ' + \
+#f'sig {ESE.jsim.sign(J-M):4.1f} ' + \
+#f'fj3 {np.sqrt(2.*K+1)*ESE.jsim.j3(J,Jp,K,M,-Mp,-Q):9.6e} ' + \
+#f'CC {CC:9.6e} rho {self.rho[ii]:9.6e} mu1M1 {mu1},{M1} mu2M2 {mu2},{M2}  ' + \
+#f'iM1 {iM1} iM2 {iM2} ii {ii}')
+
+                                # Print rhoKQ
+                                f.write(f'rho^{K:1d}_{Q:2d}({J:3f},{Jp:3f}) = ' + \
+                                        f'{rho0.real:13.6e}  {rho1.real:13.6e}\n')
+                                if Q != 0:
+                                    f.write(f'rho^{K:1d}_{Q:2d}({J:3f},{Jp:3f}) = ' + \
+                                            f'{rho0.imag:13.6e}  {rho1.imag:13.6e}\n')
+
+       #sys.exit()
+
+        # Get maximum relative change and check population sum
+        MRC_p = 0.0
+        MRC_c = 0.0
+        suma = 0.
+
+        # For each term
+        for term in self.atom.terms:
+
+            # Get scale
+            scale = -1.
+
+            # For each element
+            for index in term.index:
+
+                # If not diagonal, skip
+                if not self.isdiag(index):
+                    continue
+
+                # Update scale
+                scale = np.max([scale, \
+                                np.max([np.max(rho_old[index[0]]), \
+                                        np.max(self.rho[index[0]])])])
+
+            # For each element
+            for index in term.index:
+
+                # Easier pointer
+                old = rho_old[index[0]]
+                new = self.rho[index[0]]
+
+                # If diagonal
+                if self.isdiag(index):
+
+                    # Get MRC
+                    if old < 1e-15 and new < 1e-15:
+                        continue
+                    if old > 1e-15:
+                        MRC = np.absolute(old-new)/np.absolute(old)
+                    elif new > 1e-15:
+                        MRC = np.absolute(old-new)/np.absolute(new)
+                    else:
+                        MRC = np.absolute(old-new)
+
+                    # Update maximum relative change
+                    MRC_p = np.max([MRC_p,MRC])
+
+                    # Add to population
+                    suma += self.rho[index[0]]
+
+                    # Check sign
+                    if self.rho[index[0]] < 0:
+                        print(f"Warning: Negative population of the level: " + \
+                               "L={term.L},j={index[4]}, M={index[3]}," + \
+                               "j'={index[6]},M'={index[5]},real={index[7]}")
+                        print(f"with population of rho={self.rho[index[0]]}")
+
+                # If not diagonal
+                else:
+
+                    # Get MRC
+                    if old*scale < 1e-15 and new*scale < 1e-15:
+                        continue
+                    if old*scale > 1e-15:
+                        MRC = np.absolute(old-new)/np.absolute(old)
+                    elif new*scale > 1e-15:
+                        MRC = np.absolute(old-new)/np.absolute(new)
+                    else:
+                        MRC = np.absolute(old-new)
+
+                    # Update maximum relative change
+                    MRC_c = np.max([MRC_c,MRC])
+
+        # If bad normalization
+        if not 0.98 < suma < 1.02:
+            print("Warning: Not normaliced populations in this itteration")
+            print(f"With the sum of the populations rho = {suma}")
+
+        # Debug
+        if self.debug:
+            f.close()
+
+        return MRC_p,MRC_c
+
+################################################################################
+################################################################################
+################################################################################
+
+# Eq 7.34a from LL04 for the SEE coeficients
+def TA_MT(ESE,term,i,mu,iM,M,ip,mup,iMp,Mp,terml,il,mul,iMl,Ml,ilp,mulp,iMlp,Mlp,Jqq,line,jsim):
+
+    # Initialize sum
+    sum_qq = (0+0j)
+
     # Applied selection rules to remove sumation
     q = int(Ml - M)
+    if np.absolute(q) > 1:
+        return sum_qq
     qp = int(Mlp - Mp)
+    if np.absolute(qp) > 1:
+        return sum_qq
 
-    sum_qq = 3*(-1)**(Ml - Mlp)*(ESE.jsim.j3(J, Jl, 1, -M,  Ml, -q) *
-                                 ESE.jsim.j3(J, Jl, 1, -Mp, Mlp, -qp) *
-                                 rad.Jqq_nu(cdt, line, q, qp, M, Ml, ESE.B, ESE.nus_weights))
-    return (2*Jl + 1)*line.B_lu*sum_qq
+    # For each J
+    for Jindex in term.index_muM[iM]:
 
+        J = Jindex[2]
+        iJ = Jindex[1]
+        pJ = np.sqrt(2.*J + 1.)*term.eigvec[i][iJ]
 
-def TE(ESE, J, M, Mp, Ju, Mu, Mup, Aul):
+        # For each Jl
+        for Jlindex in terml.index_muM[iMl]:
+
+            Jl = Jlindex[2]
+            iJl = Jlindex[1]
+
+            # Dipole
+            if np.absolute(J-Jl) > 1.25 or (J + Jl) < 0.25:
+                continue
+
+            WW = pJ*np.sqrt(2.*Jl + 1.)*terml.eigvec[il][iJl]* \
+                 jsim.j6(term.L,terml.L,1.,Jl,J,term.S)* \
+                 jsim.j3(J,Jl,1.,-M,Ml,-q)
+
+            # For each J'
+            for Jpindex in term.index_muM[iMp]:
+
+                Jp = Jpindex[2]
+                iJp = Jpindex[1]
+
+                pJp = np.sqrt(2.*Jp + 1.)*term.eigvec[ip][iJp]
+
+                # For each Jl'
+                for Jlpindex in terml.index_muM[iMlp]:
+
+                    Jlp = Jlpindex[2]
+                    iJlp = Jlpindex[1]
+
+                    # Dipole
+                    if np.absolute(Jp-Jlp) > 1.25 or (Jp + Jlp) < 0.25:
+                        continue
+
+                    WWp = WW*pJp*np.sqrt(2.*Jlp+1.)*terml.eigvec[ilp][iJlp]* \
+                          jsim.j6(term.L,terml.L,1.,Jlp,Jp,term.S)* \
+                          jsim.j3(Jp,Jlp,1.,-Mp,Mlp,-qp)
+
+                    sum_qq += WWp*Jqq[q][qp]
+
+    return (2.*terml.L + 1.)*3.*jsim.sign(Ml-Mlp)*line.B_lu*sum_qq
+
+# Eq 7.9 from LL04 for the SEE coeficients
+def TA_ML(ESE, J, M, Mp, Jl, Ml, Mlp, Jqq, line,jsim):
+
     # Applied selection rules to remove sumation
-    q = int(Mp - Mup)
-    sum_q = (-1)**(Mu - Mup)*(ESE.jsim.j3(Ju, J, 1, -Mup, Mp, -q) *
-                              ESE.jsim.j3(Ju, J, 1, -Mu,  M, -q))
-    return (2*Ju + 1)*Aul*sum_q
+    q = int(Ml - M)
+    if np.absolute(q) > 1:
+        return (0+0j)
+    qp = int(Mlp - Mp)
+    if np.absolute(qp) > 1:
+        return (0+0j)
+
+    sum_qq = 3.*jsim.sign(Ml-Mlp) * \
+                jsim.j3(J, Jl, 1, -M,  Ml, -q) * \
+                jsim.j3(J, Jl, 1, -Mp, Mlp, -qp) * \
+                Jqq[q][qp]
+
+    return (2.*Jl + 1.)*line.B_lu*sum_qq
 
 
-def TS(ESE, J, M, Mp, Ju, Mu, Mup, rad, line, cdt):
+# Eq 7.34b from LL04 for the SEE coeficients
+def TE_MT(ESE,term,i,mu,iM,M,ip,mup,iMp,Mp,termu,iu,muu,iMu,Mu,iup,muup,iMup,Mup,line,jsim):
+
+    # Initialize sum
+    sum_qq = (0+0j)
+
     # Applied selection rules to remove sumation
     q = int(Mp - Mup)
     qp = int(M - Mu)
+    if q != qp:
+        return sum_qq
 
-    sum_qq = 3*(-1)**(Mp - M)*(ESE.jsim.j3(Ju, J, 1, -Mup, Mp, -q) *
-                               ESE.jsim.j3(Ju, J, 1, -Mu,  M, -qp) *
-                               rad.Jqq_nu(cdt, line, q, qp, Mu, M, ESE.B, ESE.nus_weights))
-    return (2*Ju + 1)*line.B_ul*sum_qq
+    # For each J
+    for Jindex in term.index_muM[iM]:
 
+        J = Jindex[2]
+        iJ = Jindex[1]
+        pJ = np.sqrt(2.*J + 1.)*term.eigvec[i][iJ]
 
-def RA(ESE, Li, J, M, Mp, rad, cdt):
+        # For each Ju
+        for Juindex in termu.index_muM[iMu]:
 
-    sum_u = (0+0j) / u.s
-    for k, k_lev in enumerate(ESE.atom.levels):
-        for line in ESE.atom.lines:
+            Ju = Juindex[2]
+            iJu = Juindex[1]
 
-            Lk = k
-            Jk = k_lev.J
-            Mus = k_lev.M
-
-            if Li not in line.levels or Lk not in line.levels:
+            # Dipole
+            if np.absolute(J-Ju) > 1.25 or (J + Ju) < 0.25:
                 continue
 
-            if Lk > Li:
-                sum_qqMu = 0
-                for q in [-1, 0, 1]:
-                    for qp in [-1, 0, 1]:
-                        for Mu in Mus:
-                            sum_qqMu += 3*(-1)**(M - Mp)*(ESE.jsim.j3(Jk, J, 1, -Mu, M, -q) *
-                                                          ESE.jsim.j3(Jk, J, 1, -Mu, Mp, -qp) *
-                                                          rad.Jqq_nu(cdt, line, q, qp, Mu, M, ESE.B, ESE.nus_weights))
-                sum_u += (2*J+1)*line.B_lu*sum_qqMu
+            WW = pJ*np.sqrt(2.*Ju + 1.)*termu.eigvec[iu][iJu]* \
+                 jsim.j6(termu.L,term.L,1.,J,Ju,term.S)* \
+                 jsim.j3(Ju,J,1.,-Mu,M,-q)
 
-    return 0.5*sum_u
+            # For each J'
+            for Jpindex in term.index_muM[iMp]:
 
+                Jp = Jpindex[2]
+                iJp = Jpindex[1]
 
-def RE(ESE, Li, J, M, Mp):
+                pJp = np.sqrt(2.*Jp + 1.)*term.eigvec[ip][iJp]
 
-    # RE(\alpha J M M') = 1/2 * \delta_{M M'} * \sum_{\alpha_l J_l} A(\alpha J -> \alpha_l J_l)
+                # For each Ju'
+                for Jupindex in termu.index_muM[iMup]:
 
-    sum_l = (0+0j) / u.s
-    if M == Mp:
-        for k, k_lev in enumerate(ESE.atom.levels):
-            Lk = k
-            if Lk < Li:
-                for line in ESE.atom.lines:
-                    if Li not in line.levels or Lk not in line.levels:
+                    Jup = Jupindex[2]
+                    iJup = Jupindex[1]
+
+                    # Dipole
+                    if np.absolute(Jp-Jup) > 1.25 or (Jp + Jup) < 0.25:
                         continue
-                    else:
-                        sum_l += line.A_lu
 
-    return 0.5*sum_l
+                    WWp = WW*pJp*np.sqrt(2.*Jup+1.)*termu.eigvec[iup][iJup]* \
+                          jsim.j6(termu.L,term.L,1.,Jp,Jup,term.S)* \
+                          jsim.j3(Jup,Jp,1.,-Mup,Mp,-q)
 
+                    if np.absolute(WWp) <= 0.:
+                        continue
 
-def RS(ESE, Li, J, M, Mp, rad, cdt):
+                    sum_qq += WWp
 
-    sum_l = (0+0j) / u.s
-    for k, k_lev in enumerate(ESE.atom.levels):
-        for line in ESE.atom.lines:
+    return (2.*termu.L + 1)*jsim.sign(Mu-Mup)*line.A_ul*sum_qq
 
-            Lk = k
-            Jk = k_lev.J
-            Mls = k_lev.M
+def TE_ML(ESE, J, M, Mp, Ju, Mu, Mup, line, jsim):
 
-            if Li not in line.levels or Lk not in line.levels:
+    # Applied selection rules to remove sumation
+    q = int(Mp - Mup)
+    qp = int(M - Mu)
+    if q != qp:
+        return (0+0j)
+
+    sum_q = jsim.sign(Mu - Mup) * \
+            jsim.j3(Ju, J, 1, -Mup, Mp, -q) * \
+            jsim.j3(Ju, J, 1, -Mu,  M, -q)
+
+    return (2.*Ju + 1.)*line.A_ul*sum_q
+
+# Eq 7.34c from LL04 for the SEE coeficients
+def TS_MT(ESE,term,i,mu,iM,M,ip,mup,iMp,Mp,termu,iu,muu,iMu,Mu,iup,muup,iMup,Mup,Jqq,line,jsim):
+
+    # Initialize sum
+    sum_qq = (0+0j)
+
+    # Applied selection rules to remove sumation
+    q = int(Mp - Mup)
+    if np.absolute(q) > 1:
+        return sum_qq
+    qp = int(M - Mu)
+    if np.absolute(qp) > 1:
+        return sum_qq
+
+    # For each J
+    for Jindex in term.index_muM[iM]:
+
+        J = Jindex[2]
+        iJ = Jindex[1]
+        pJ = np.sqrt(2.*J + 1.)*term.eigvec[i][iJ]
+
+        # For each Ju
+        for Juindex in termu.index_muM[iMu]:
+
+            Ju = Juindex[2]
+            iJu = Juindex[1]
+
+            # Dipole
+            if np.absolute(J-Ju) > 1.25 or (J + Ju) < 0.25:
                 continue
 
-            if Lk < Li:
-                sum_qqMl = 0
-                for q in [-1, 0, 1]:
-                    for qp in [-1, 0, 1]:
-                        for Ml in Mls:
-                            sum_qqMl += 3*(ESE.jsim.j3(J, Jk, 1, -M, Ml, -q) *
-                                           ESE.jsim.j3(J, Jk, 1, -Mp, Ml, -qp) *
-                                           rad.Jqq_nu(cdt, line, q, qp, M, Ml, ESE.B, ESE.nus_weights))
+            WW = pJ*np.sqrt(2.*Ju + 1.)*termu.eigvec[iu][iJu]* \
+                 jsim.j6(termu.L,term.L,1.,J,Ju,term.S)* \
+                 jsim.j3(Ju,J,1.,-Mu,M,-qp)
 
-                sum_l += (2*J+1)*line.B_ul*sum_qqMl
+            # For each J'
+            for Jpindex in term.index_muM[iMp]:
 
-    return 0.5*sum_l
+                Jp = Jpindex[2]
+                iJp = Jpindex[1]
+
+                pJp = np.sqrt(2.*Jp + 1.)*term.eigvec[ip][iJp]
+
+                # For each Ju'
+                for Jupindex in termu.index_muM[iMup]:
+
+                    Jup = Jupindex[2]
+                    iJup = Jupindex[1]
+
+                    # Dipole
+                    if np.absolute(Jp-Jup) > 1.25 or (Jp + Jup) < 0.25:
+                        continue
+
+                    WWp = WW*pJp*np.sqrt(2.*Jup+1.)*termu.eigvec[iup][iJup]* \
+                          jsim.j6(termu.L,term.L,1.,Jp,Jup,term.S)* \
+                          jsim.j3(Jup,Jp,1.,-Mup,Mp,-q)
+
+                    sum_qq += WWp*Jqq[q][qp]
+
+    return (2.*termu.L + 1)*3.*jsim.sign(M-Mp)*line.B_ul*sum_qq
+
+
+def TS_ML(ESE, J, M, Mp, Ju, Mu, Mup, Jqq, line, jsim):
+
+    # Applied selection rules to remove sumation
+    q = int(Mp - Mup)
+    if np.absolute(q) > 1:
+        return (0+0j)
+    qp = int(M - Mu)
+    if np.absolute(qp) > 1:
+        return (0+0j)
+
+    sum_qq = 3.*jsim.sign(Mp - M) * \
+                jsim.j3(Ju, J, 1, -Mup, Mp, -q) * \
+                jsim.j3(Ju, J, 1, -Mu,  M, -qp) * \
+                Jqq[q][qp]
+
+    return (2.*Ju + 1.)*line.B_ul*sum_qq
+
+def RA_MT(ESE,term,i,mu,iM,M,ip,mup,iMp,Mp,termu,Ju,Mu,Jqq,line,jsim):
+
+    # In itialize sum
+    sum_u = (0.+0.j)
+
+    # Selection rules
+    q = int(M - Mu)
+    if np.absolute(q) > 1:
+        return sum_u
+    qp = int(Mp - Mu)
+    if np.absolute(qp) > 1:
+        return sum_u
+
+    # For each J
+    for Jindex in term.index_muM[iM]:
+
+        J = Jindex[2]
+        iJ = Jindex[1]
+
+        # Dipole
+        if np.absolute(J-Ju) > 1.25 or (J + Ju) < 0.25:
+            continue
+
+        WW = np.sqrt(2.*J + 1.)*term.eigvec[i][iJ]* \
+             jsim.j6(termu.L,term.L,1.,J,Ju,term.S)* \
+             jsim.j3(Ju,J,1.,-Mu,M,-q)
+
+        # For each J'
+        for Jpindex in term.index_muM[iMp]:
+
+            Jp = Jpindex[2]
+            iJp = Jpindex[1]
+
+            # Dipole
+            if np.absolute(Jp-Ju) > 1.25 or (Jp + Ju) < 0.25:
+                continue
+
+            WWp = WW*np.sqrt(2.*Jp + 1.)*term.eigvec[ip][iJp]* \
+                  jsim.j6(termu.L,term.L,1.,Jp,Ju,term.S)* \
+                  jsim.j3(Ju,Jp,1.,-Mu,Mp,-qp)
+
+            sum_u += WWp*Jqq[q][qp]
+
+    return 1.5*(2.*Ju + 1.)*(2.*term.L + 1.)*line.B_lu*sum_u*jsim.sign(q+qp)
+
+def RA_ML(ESE, J, M, Mp, Ju, Mu, Jqq, line, jsim):
+
+    # Selection rules
+    q = int(M - Mu)
+    if np.absolute(q) > 1:
+        return (0+0j)
+    qp = int(Mp - Mu)
+    if np.absolute(qp) > 1:
+        return (0+0j)
+
+    sum_u = 3*jsim.sign(M - Mp) * \
+              jsim.j3(Ju, J, 1, -Mu,  M,  -q) * \
+              jsim.j3(Ju, J, 1, -Mu, Mp, -qp) * \
+              Jqq[q][qp]
+
+    return 0.5*(2*J+1)*line.B_lu*sum_u
+
+def RE_MT(ESE,term,i,ip,line):
+
+    # Diagonal
+    if i == ip:
+        return 0.5*line.A_ul
+    else:
+        return (0+0j)
+
+def RE_ML(ESE, J, M, Mp, Jl, Ml, line):
+
+    # Selection rules
+    q = int(Ml - M)
+    qp = int(Ml - Mp)
+    if q != qp:
+        return (0+0j)
+
+    return 0.5*line.A_ul
+
+
+def RS_MT(ESE,term,i,mu,iM,M,ip,mup,iMp,Mp,terml,Jl,Ml,Jqq,line,jsim):
+
+    # In itialize sum
+    sum_l = (0+0j)
+
+    # Selection rules
+    q = int(Ml - M)
+    if np.absolute(q) > 1:
+        return sum_l
+    qp = int(Ml - Mp)
+    if np.absolute(qp) > 1:
+        return sum_l
+
+    # For each J
+    for Jindex in term.index_muM[iM]:
+
+        J = Jindex[2]
+        iJ = Jindex[1]
+
+        # Dipole
+        if np.absolute(Jl-J) > 1.25 or (Jl + J) < 0.25:
+            continue
+
+        WW = np.sqrt(2.*J + 1.)*term.eigvec[i][iJ]* \
+             jsim.j6(term.L,terml.L,1.,Jl,J,term.S)* \
+             jsim.j3(J,Jl,1.,-M,Ml,-q)
+
+        # For each J'
+        for Jpindex in term.index_muM[iMp]:
+
+            Jp = Jpindex[2]
+            iJp = Jpindex[1]
+
+            # Dipole
+            if np.absolute(Jl-Jp) > 1.25 or (Jl + Jp) < 0.25:
+                continue
+
+            WWp = WW*np.sqrt(2.*Jp + 1.)*term.eigvec[ip][iJp]* \
+                  jsim.j6(term.L,terml.L,1.,Jl,Jp,term.S)* \
+                  jsim.j3(Jp,Jl,1.,-Mp,Ml,-qp)
+
+            sum_l += WWp*Jqq[q][qp]
+
+    return 1.5*(2.*Jl + 1.)*(2.*term.L + 1.)*line.B_ul*sum_l
+
+
+def RS_ML(ESE, J, M, Mp, Jl, Ml, Jqq, line, jsim):
+
+    # Selection rules
+    q = int(Ml - M)
+    if np.absolute(q) > 1:
+        return (0+0j)
+    qp = int(Ml - Mp)
+    if np.absolute(qp) > 1:
+        return (0+0j)
+
+    sum_l = 3*jsim.j3( J,Jl, 1, -M, Ml, -q) * \
+              jsim.j3( J,Jl, 1,-Mp, Ml,-qp) * \
+              Jqq[q][qp]
+
+    return 0.5*(2*J+1)*line.B_ul*sum_l

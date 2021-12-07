@@ -2,131 +2,410 @@
 from RTcoefs import RTcoefs
 from conditions import conditions, state, point
 import parameters as pm
-from solver import BESSER, LinSC
+from solver import BESSER, LinSC_old, BESSER_old
 from plot_utils import *
 
 # Import needed libraries
 import numpy as np
-import pickle
-from astropy import units as u
+import pickle,struct,sys
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
+# Measure time
+# import time,sys
+
 # np.seterr(all='raise')
 
-# Initializating the conditions, state and RT coefficients
-cdt = conditions(pm)
-RT_coeficients = RTcoefs(cdt.nus)
-st = state(cdt)
+def main():
+    """ Main code
+    """
 
-if not os.path.exists(pm.dir):
-    os.makedirs(pm.dir)
+    # Initializating the conditions, state and RT coefficients
+    cdt = conditions(pm)
+    RT_coeficients = RTcoefs(cdt.nus,cdt.nus_weights,cdt.mode)
+    st = state(cdt)
 
-datadir = pm.dir + 'out'
-if not os.path.exists(datadir):
-    os.makedirs(datadir)
-datadir = pm.dir + 'out/'
+    # Create path for output files
+    if not os.path.exists(pm.dir):
+        os.makedirs(pm.dir)
+    datadir = pm.dir + 'out'
+    if not os.path.exists(datadir):
+        os.makedirs(datadir)
+    datadir = pm.dir + 'out/'
 
-plot_quadrature(cdt, directory=pm.dir)
+    #############
+    # Debug SEE #
+    #############
+   #if True:
+    if False:
 
-# Start the main loop for the Lambda iteration
-for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
-    # Reset the internal state for a new itteration
-    st.new_itter()
+        # Import extras
+        from physical_functions import jsymbols
+        JS = jsymbols()
 
-    # go through all the points (besides 0 and -1 for being IC)
-    for j, ray in enumerate(tqdm(cdt.rays, desc='propagating rays', leave=False)):
-        tau_tot = np.array([0])
-        source = np.array([])
-        emisivity = np.array([])
-        absortivity = np.array([])
-        # go through all the rays in the cuadrature
-        for i in range(cdt.z_N):
+        '''
+        def fffu(Jl,Ml,Ju,Mu):
+            ww = JS.j3(Ju,Jl,1,-Mu,Ml,Mu-Ml)
+            return (2.*Ju+1.)*ww*ww
+        def fffl(Jl,Ml,Ju,Mu):
+            ww = JS.j3(Ju,Jl,1,-Mu,Ml,Mu-Ml)
+            return (2.*Jl+1.)*ww*ww
 
-            # If the ray is downward start for the last point downward
+        jls = [1]
+        jus = [2,1,0]
+        for jl in jls:
+            mls = np.linspace(-jl,jl,2*jl+1,endpoint=True)
+            for mll in mls:
+                ml = int(round(mll))
+                for ju in jus:
+                    mus = np.linspace(-ju,ju,2*ju+1,endpoint=True)
+                    for muu in mus:
+                        mu = int(round(muu))
+                        if np.absolute(mu-ml) > 1:
+                            continue
+                        print(f'({jl:1d}{ml:2d},{ju:1d}{mu:2d}) = ' + \
+                              f'{fffu(jl,ml,ju,mu)} {fffl(jl,ml,ju,mu)}')
+        sys.exit()
+        '''
+
+        # Define a point
+        pointC = point(st.atomic[1], st.radiation[1], cdt.zz[1])
+
+        # Ad-hoc radiation field
+        JKQ = {0: {0: 3e0 + 0j}, \
+               1: {0: 0. + 0.j, \
+                   1: 0. + 0.j}, \
+               2: {0: 0. + 0.j, \
+                   1: 0. + 0.j, \
+                   2: 0. + 0.j}}
+
+        # Get negative Q
+        for K in range(3):
+            for Q in range(1,K+1):
+                if Q == 1:
+                    ss = -1.0
+                elif Q == 2:
+                    ss = 1.0
+                JKQ[K][-Q] = ss*np.conjugate(JKQ[K][Q])
+
+        # Add units to JKQ
+        for K in range(3):
+            for Q in range(-K,K+1):
+                JKQ[K][Q] = JKQ[K][Q]
+
+        # Get Jqq (assuming Helium)
+        line = pointC.atomic.atom.lines[0]
+
+        # For each q
+        for qq in range(-1,2):
+
+            # Factor for q
+            f1 = JS.sign(1+qq)
+
+            # Initialize jqq
+            line.jqq[qq] = {}
+
+            # For each q'
+            for qp in range(-1,2):
+
+                # Initialize
+                line.jqq[qq][qp] = (0. + 0.j)
+
+                # For each K
+                for K in range(3):
+
+                    # K factor
+                    f2 = f1*np.sqrt((2.*K+1.)/3.)
+
+                    # Get Q from 3J
+                    Q = qq - qp
+
+                    # Control Q
+                    if np.absolute(Q) > K:
+                        continue
+
+                    # Contribution
+                    contr = f2*JS.j3(1,1,K,qq,-qp,-Q)*JKQ[K][Q]
+
+                    # Add contribution
+                    line.jqq[qq][qp] += contr
+
+        # Ad-hoc Einstein
+       #line.A_ul /= line.A_ul
+       #line.B_ul /= line.B_ul
+       #line.B_lu = line.B_ul * (pointC.atomic.atom.terms[1].g/ \
+       #                         pointC.atomic.atom.terms[0].g)
+       #line.B_ul *= 0.
+       #for i in range(20):
+       #    print('NO STIMULATED')
+       #line.B_lu /= line.B_lu
+
+        # Summon SEE
+        pointC.atomic.solveESE(st.radiation[1],cdt)
+
+        # Exit debug
+        sys.exit('Debugging SEE')
+    #############
+    # Debug SEE #
+    #############
+
+    # Plot quadrature
+    plot_quadrature(cdt, directory=pm.dir)
+
+    # Debug
+    debug = False
+
+    # Load data
+    # ''
+    # TODO TODO TODO TODO TODO
+
+    # Not loading
+    f = open(datadir+'MRC', 'w')
+    f.close()
+
+    # Start the main loop for the Lambda iteration
+    for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
+
+        # Debug
+        if debug:
+            print(f'Starting iteration {itteration+1}')
+
+        # Reset the internal state for a new itteration
+        st.new_itter()
+
+        # Go through all the rays in the cuadrature
+        for j, ray in enumerate(tqdm(cdt.rays, desc='propagating rays', leave=False)):
+
+            # Reset lineal and set cent_limb_coef
+            cent_limb_coef = 1
+            lineal = False
+            tau_tot = [0.]
+
+            # Define limits in height index and direction
             if ray.is_downward:
-                z = -i - 1
                 step = -1
+                iz0 = -1
+                iz1 = -cdt.z_N - 1
             else:
-                z = i
                 step = 1
+                iz0 = 0
+                iz1 = cdt.z_N
+
+            # Debug
+            if debug:
+                print(f'\nPropagating ray {j} {ray.inc} {ray.az}: {iz0}--{iz1}:{step}')
+
+            # Deal with very first point computing first and second
+            z = iz0
+
+            # If top boundary
+            if iz0 == -1:
+
+                point_O = point(st.atomic[z], st.space_rad, cdt.zz[z])
+
+                # Debug
+                if debug:
+                    print(f'Defined first point at top boundary')
+
+            # If bottom boundary
+            elif iz0 == 0:
+
+                point_O = point(st.atomic[z], st.sun_rad, cdt.zz[z])
+
+                # Debug
+                if debug:
+                    print(f'Defined first point at bottom boundary')
+
+            # Get RT coefficients at initial point
+            sf_o, kk_o = RT_coeficients.getRTcoefs(point_O.atomic, ray, cdt)
+
+            # Debug
+            if debug:
+                print(f'Got RT coefficients at point {z}')
+
+            # If lower bottom, add to Jqq
+            if iz0 == 0:
+                point_O.sumStokes(ray,cdt.nus_weights)
+
+                # Debug
+                if debug:
+                    print(f'Added Jqq contribution at point {z}')
+
+            # Get next point and its RT coefficients
+            z += step
+            point_P = point(st.atomic[z], st.radiation[z], cdt.zz[z])
+            sf_p, kk_p = RT_coeficients.getRTcoefs(point_P.atomic, ray, cdt)
+
+            # Debug
+            if debug:
+                print(f'Got RT coefficients at point {z}')
+
+            # Go through all the points (besides 0 and -1 for being IC)
+            for z in range(iz0+step, iz1, step):
+
+                # Shift data
+                point_M = point_O
+                point_O = point_P
+                sf_m = sf_o
+                kk_m = kk_o
+                sf_o = sf_p
+                kk_o = kk_p
+                kk_p = None
+                sf_p = None
+
+                # Debug
+                if debug:
+                    print(f'New current point {z}')
+
+                # If we are in the boundaries, compute the CL for the IC (z=0)
+                cent_limb_coef = 1
+                if z == iz1 - step:
+
+                    point_P = False
+                    lineal = True
+
+                    # Debug
+                    if debug:
+                        print(f'Last linear point {z}')
+
+                else:
+
+                    point_P = point(st.atomic[z+step], st.radiation[z+step], \
+                                    cdt.zz[z+step])
+
+                    # Debug
+                    if debug:
+                        print(f'Prepare next point {z+step}')
+
+                    # Compute the RT coeficients for the next point (for solving RTE)
+                    sf_p, kk_p = RT_coeficients.getRTcoefs(point_P.atomic, ray, cdt)
+
+                    # Debug
+                    if debug:
+                        print(f'Got RT coefficients at point {z+step}')
+
+                # Propagate
+                tau_tot = BESSER(point_M, point_O, point_P, \
+                                 sf_m, sf_o, sf_p, \
+                                 kk_m, kk_o, kk_p, \
+                                 ray, cdt, tau_tot, not lineal, cent_limb_coef)
+
+                # Debug
+                if debug:
+                    print(f'Besser {z-step}-{z}-{z+step}')
+
+                # If last point
+                if lineal:
+
+                    # If ray going out
+                    if not ray.is_downward:
+
+                        # Store last Stokes parameters
+                        f = open(datadir + f'stokes_{itteration:03d}_{j:02d}', 'wb')
+                        N_nus = point_O.radiation.nus.size
+                        f.write(struct.pack('i',N_nus))
+                        f.write(struct.pack('d'*N_nus,*point_O.radiation.nus))
+                        for i in range(4):
+                            f.write(struct.pack('d'*N_nus, \
+                                                *point_O.radiation.stokes[i]))
+                        f.close()
+
+                # Add to Jqq
+                point_O.sumStokes(ray,cdt.nus_weights)
+
+                # Debug
+                if debug:
+                    print(f'Added Jqq contribution at point {z}')
+
+        # Update the MRC and check wether we reached convergence
+        st.update_mrc(cdt, itteration)
+
+        # Write into file
+        f = open(datadir+f'MRC','a')
+        f.write(f'{itteration:4d}   {st.mrc_p:14.8e}  {st.mrc_c:14.8e}\n')
+        f.close()
+
+        # If converged
+        if (st.mrc_p < pm.tolerance_p and st.mrc_c < pm.tolerance_c):
+            print('\n----------------------------------')
+            print(f'FINISHED WITH A TOLERANCE OF {st.mrc_p};{st.mrc_c}')
+            print('----------------------------------')
+            break
+        elif itteration == cdt.max_iter-1:
+            print('\n----------------------------------')
+            print(f'FINISHED DUE TO MAXIMUM ITERATIONS {cdt.max_iter}')
+            print('----------------------------------')
+
+    # Go through all the rays in the emergent directions
+    for j, ray in enumerate(tqdm(cdt.orays, desc='emerging rays', leave=False)):
+
+        # Reset lineal and set cent_limb_coef
+        cent_limb_coef = 1
+        lineal = False
+
+        # Define limits in height index and direction
+        if ray.is_downward:
+            step = -1
+            iz0 = -1
+            iz1 = -cdt.z_N - 1
+        else:
+            step = 1
+            iz0 = 0
+            iz1 = cdt.z_N
+
+        # Deal with very first point computing first and second
+        z = iz0
+        if iz0 == -1:
+            point_O = point(st.atomic[z], st.space_rad, cdt.zz[z])
+        elif iz0 == 0:
+            point_O = point(st.atomic[z], st.sun_rad, cdt.zz[z])
+
+        # Get RT coefficients at initial point
+        sf_o, kk_o = RT_coeficients.getRTcoefs(point_O.atomic, ray, cdt)
+
+        # Get next point and its RT coefficients
+        z += step
+        point_P = point(st.atomic[z], st.radiation[z], cdt.zz[z])
+        sf_p, kk_p = RT_coeficients.getRTcoefs(point_P.atomic, ray, cdt)
+
+        # Go through all the points (besides 0 and -1 for being IC)
+        for z in range(iz0, iz1, step):
+
+            # Shift data
+            point_M = point_O
+            point_O = point_P
+            sf_m = sf_o
+            kk_m = kk_o
+            sf_o = sf_p
+            kk_o = kk_p
+            kk_p = None
+            sf_p = None
 
             # If we are in the boundaries, compute the CL for the IC (z=0)
             cent_limb_coef = 1
-            lineal = False
-            if i == 0:
-                # cent_limb_coef = ray.clv
-                if ray.is_downward:
-                    point_M = point(st.space_atom, st.space_rad,         cdt.zf+cdt.dz)
-                else:
-                    point_M = point(st.sun_atom,   st.sun_rad,           cdt.z0-cdt.dz)
-                point_O = point(st.atomic[z],      st.radiation[z],      cdt.zz[z])
-                point_P = point(st.atomic[z+step], st.radiation[z+step], cdt.zz[z+step])
-            elif i == (len(cdt.zz) - 1):
-                point_M = point(st.atomic[z-step], st.radiation[z-step], cdt.zz[z-step])
-                point_O = point(st.atomic[z],      st.radiation[z],      cdt.zz[z])
+            if z == iz1 - step:
                 point_P = False
                 lineal = True
             else:
-                point_M = point(st.atomic[z-step], st.radiation[z-step], cdt.zz[z-step])
-                point_O = point(st.atomic[z],      st.radiation[z],      cdt.zz[z])
-                point_P = point(st.atomic[z+step], st.radiation[z+step], cdt.zz[z+step])
+                point_P = point(st.atomic[z+step], st.radiation[z+step], \
+                                cdt.zz[z+step])
+                # Compute the RT coeficients for the next point (for solving RTE)
+                sf_p, kk_p = RT_coeficients.getRTcoefs(point_P.atomic, ray, cdt)
 
-            # Compute the RT coeficients for the current and last points (for solving RTE)
-            em_o, ab_o, sf_o, kk_o = RT_coeficients.getRTcoefs(point_O.atomic, ray, cdt)
-            _, _, sf_m, kk_m = RT_coeficients.getRTcoefs(point_M.atomic, ray, cdt)
+            # Transfer
+            tau_tot = BESSER(point_M, point_O, point_P, \
+                             sf_m, sf_o, sf_p, \
+                             kk_m, kk_o, kk_p, \
+                             ray, cdt, tau_tot, not lineal, cent_limb_coef)
 
-            source = np.append(source, sf_o[0][int(cdt.nus_N/2)].value)
-            emisivity = np.append(emisivity, em_o)
-            absortivity = np.append(absortivity, ab_o)
+        # Store last Stokes parameters
+        f = open(datadir + f'stokes_{j:02d}', 'wb')
+        N_nus = point_O.radiation.nus.size
+        f.write(struct.pack('i',N_nus))
+        f.write(struct.pack('d'*N_nus,*point_O.radiation.nus))
+        for i in range(4):
+            f.write(struct.pack('d'*N_nus,*point_O.radiation.stokes[i]))
+        f.close()
 
-            if not lineal:
-                _, _, sf_p, kk_p = RT_coeficients.getRTcoefs(point_P.atomic, ray, cdt)
-                tau_tot = BESSER(point_M, point_O, point_P, sf_m, sf_o, sf_p, kk_m, kk_o, kk_p, ray, cdt, tau_tot, cent_limb_coef)
-            else:
-                LinSC(point_M, point_O, sf_m, sf_o, kk_m, kk_o, ray, cdt)
-
-            # Adding the ray contribution to the Jqq's
-            point_O.radiation.sumStokes(ray)
-
-            if i == 0:
-                jqq_base = point_O.radiation.jqq
-                file = open(datadir + f"jqq_base_{itteration}_{round(ray.inc.value)}_{round(ray.az.value)}.pkl", "wb")
-                pickle.dump(jqq_base, file)
-                file.close()
-
-        subfix = f'_itt{itteration}'
-        # subfix = f'_ray_inc_{round(ray.inc.value, 1)}_az_{round(ray.az.value, 1)}'
-        plot_z_profile(cdt, st, nu=int(cdt.nus_N/2), directory=pm.dir + 'plots_core_norm' + subfix)
-        plot_z_profile(cdt, st, directory=pm.dir + 'plots_norm' + subfix)
-        plot_stokes_im(cdt, st, directory=pm.dir + 'plots_norm' + subfix)
-        plot_z_profile(cdt, st, nu=int(cdt.nus_N/2), norm=False, directory=pm.dir + 'plots_core' + subfix)
-        plot_z_profile(cdt, st, norm=False, directory=pm.dir + 'plots_prof' + subfix)
-        plot_stokes_im(cdt, st, norm=False, directory=pm.dir + 'plots_prof' + subfix)
-        plot_quantity(cdt, cdt.zz, tau_tot, names=['Z (CGS)', r'$\tau$'], directory=pm.dir + 'plots' + subfix)
-        plot_quantity(cdt, cdt.zz, source, names=['Z (CGS)', r'$Sf_I$'], directory=pm.dir + 'plots' + subfix)
-        plot_quantity(cdt, cdt.zz, emisivity, names=['Z (CGS)', r'$\varepsilon_I$'], directory=pm.dir + 'plots' + subfix)
-        plot_quantity(cdt, cdt.zz, absortivity, names=['Z (CGS)', r'$\eta_I$'], directory=pm.dir + 'plots' + subfix)
-
-    rad_jqq = {}
-    for i in range(cdt.z_N):
-        rad_jqq[i] = st.radiation[i].jqq
-
-    file = open(unique_filename(datadir, "jqq", 'pkl'), "wb")
-    pickle.dump(rad_jqq, file)
-    file.close()
-
-    glob_pop = np.array([st.atomic[i].rho for i in range(cdt.z_N)])
-    np.savetxt(unique_filename(datadir, "rho_qq_before", 'csv'), glob_pop)
-
-    # Update the MRC and check wether we reached convergence
-    st.update_mrc(cdt, itteration)
-
-    glob_pop = np.array([st.atomic[i].rho for i in range(cdt.z_N)])
-    np.savetxt(unique_filename(datadir, "rho_qq_after", 'csv'), glob_pop)
-
-    if (st.mrc.max() < pm.tolerance):
-        print('\n----------------------------------')
-        print(f'FINISHED WITH A TOLERANCE OF {st.mrc.max()}')
-        print('----------------------------------')
-        break
+if __name__ == '__main__':
+    main()

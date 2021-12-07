@@ -1,38 +1,42 @@
 import numpy as np
 from numpy import sin, cos, exp, sqrt, conj
-from numba import jit
-import math
+#from numba import jit
+import math,copy
 
 
-@jit(nopython=True)
+#@jit(nopython=True)
 def voigt(v, a):
+    """ Compute the Voigt profile for a list of frequencies (normalized)
+    """
 
     ss = np.abs(v)+a
     dd = .195e0*np.abs(v)-.176e0
     zz = a - 1j*v
     res = v*0j
 
-    for i in range(len(ss)):
-        if ss[i] >= .15e2:
-            t = .5641896e0*zz[i]/(.5+zz[i]*zz[i])
+    # Run over frequencies
+    for i,s,z,d in zip(range(len(ss)),ss,zz,dd):
+
+        if s >= .15e2:
+            t = .5641896e0*z/(.5+z*z)
         else:
 
-            if ss[i] >= .55e1:
+            if s >= .55e1:
 
-                u = zz[i]*zz[i]
-                t = zz[i]*(.1410474e1 + .5641896e0*u)/(.75e0 + u*(.3e1 + u))
+                u = z*z
+                t = z*(.1410474e1 + .5641896e0*u)/(.75e0 + u*(.3e1 + u))
 
             else:
 
-                if a >= dd[i]:
-                    nt = .164955e2 + zz[i]*(.2020933e2 + zz[i]*(.1196482e2 +
-                                            zz[i]*(.3778987e1 + .5642236e0*zz[i])))
-                    dt = .164955e2 + zz[i]*(.3882363e2 + zz[i]*(.3927121e2 +
-                                            zz[i]*(.2169274e2 + zz[i]*(.6699398e1 + zz[i]))))
+                if a >= d:
+                    nt = .164955e2 + z*(.2020933e2 + z*(.1196482e2 +
+                                            z*(.3778987e1 + .5642236e0*z)))
+                    dt = .164955e2 + z*(.3882363e2 + z*(.3927121e2 +
+                                            z*(.2169274e2 + z*(.6699398e1 + z))))
                     t = nt / dt
                 else:
-                    u = zz[i]*zz[i]
-                    x = zz[i]*(.3618331e5 - u*(.33219905e4 - u*(.1540787e4 -
+                    u = z*z
+                    x = z*(.3618331e5 - u*(.33219905e4 - u*(.1540787e4 -
                                u*(.2190313e3 - u*(.3576683e2 - u*(.1320522e1 -
                                   .56419e0*u))))))
                     y = .320666e5 - u*(.2432284e5 - u*(.9022228e4 -
@@ -43,7 +47,6 @@ def voigt(v, a):
 
     return res
 
-
 def voigt_custom(x, sigma, gamma, x0=0):
     """
     Return the Voigt line shape at x with Lorentzian component gamma
@@ -52,10 +55,73 @@ def voigt_custom(x, sigma, gamma, x0=0):
     return np.real(special.wofz(((x-x0) + 1j*gamma)/sigma/np.sqrt(2))) \
         / sigma / np.sqrt(2*np.pi)
 
+def Tqq_all(theta,chi):
+    """ Return all the Tqq
+    """
 
-@jit(nopython=True)
+    # Initialize output
+    out = [{},{},{},{}]
+
+    ct = cos(theta)
+    st = sin(theta)
+    st2 = st*st
+    ct2 = ct*ct
+    cst = ct*st
+    cc = cos(chi)
+    sc = sin(chi)
+    c2c = cos(2.*chi)
+    s2c = sin(2.*chi)
+    s2i = 1./np.sqrt(2)
+    ec = (cc - 1j*sc)
+    e2c = (c2c - 1j*s2c)
+
+    # I
+    out[0]['-1-1'] = 0.25*(1+ct2)
+    out[0]['00'] = 0.5*st2
+    out[0]['11'] = out[0]['-1-1']
+    out[0]['-10'] = -0.5*s2i*cst*ec
+    out[0]['0-1'] = np.conjugate(out[0]['-10'])
+    out[0]['-11'] = 0.25*st2*e2c
+    out[0]['1-1'] = np.conjugate(out[0]['-11'])
+    out[0]['01'] = -1.*out[0]['-10']
+    out[0]['10'] = np.conjugate(out[0]['01'])
+    # Q
+    out[1]['-1-1'] = -0.25*st2
+    out[1]['00'] = 0.5*st2
+    out[1]['11'] = out[1]['-1-1']
+    out[1]['-10'] = -0.5*s2i*cst*ec
+    out[1]['0-1'] = np.conjugate(out[0]['-10'])
+    out[1]['-11'] = -0.25*(1+ct2)*e2c
+    out[1]['1-1'] = np.conjugate(out[0]['-11'])
+    out[1]['01'] = -1.*out[1]['-10']
+    out[1]['10'] = np.conjugate(out[0]['01'])
+    # U
+    out[2]['-1-1'] = 0.
+    out[2]['00'] = 0.
+    out[2]['11'] = 0.
+    out[2]['-10'] = 0.5*s2i*1j*st*ec
+    out[2]['0-1'] = np.conjugate(out[0]['-10'])
+    out[2]['-11'] = 0.5*ct*e2c*1j
+    out[2]['1-1'] = np.conjugate(out[0]['-11'])
+    out[2]['01'] = -1.*out[2]['-10']
+    out[2]['10'] = np.conjugate(out[0]['01'])
+    # V
+    out[3]['-1-1'] = -0.5*ct
+    out[3]['00'] = 0.
+    out[3]['11'] = 0.5*ct
+    out[3]['-10'] = 0.5*s2i*st*ec
+    out[3]['0-1'] = np.conjugate(out[0]['-10'])
+    out[3]['-11'] = 0.
+    out[3]['1-1'] = 0.
+    out[3]['01'] = out[3]['-10']
+    out[3]['10'] = np.conjugate(out[0]['01'])
+
+    # And return full Tqq
+    return out
+
+#@jit(nopython=True)
 def Tqq(q1, q2, i, theta, chi):
-    t = 0.
+    t = 0.+0j
     c = False
     if q2 < q1:
         c = True
@@ -65,9 +131,9 @@ def Tqq(q1, q2, i, theta, chi):
 
     if i == 0:
         if q1 == q2 == -1 or q1 == q2 == 1:
-            t = 1/4*(1+cos(theta)**2)
+            t = 1/4*(1+cos(theta)**2) + 0j
         elif q1 == q2 == 0:
-            t = 1/2*sin(theta)**2
+            t = 1/2*sin(theta)**2 + 0j
         elif q1 == -1 and q2 == 0:
             t = -1/2/sqrt(2)*sin(theta)*cos(theta)*exp(-chi*1j)
         elif q1 == -1 and q2 == 1:
@@ -76,9 +142,9 @@ def Tqq(q1, q2, i, theta, chi):
             t = 1/2/sqrt(2)*sin(theta)*cos(theta)*exp(-chi*1j)
     elif i == 1:
         if q1 == q2 == -1 or q1 == q2 == 1:
-            t = -1/4*sin(theta)**2
+            t = -1/4*sin(theta)**2 + 0j
         elif q1 == q2 == 0:
-            t = 1/2*sin(theta)**2
+            t = 1/2*sin(theta)**2 + 0j
         elif q1 == -1 and q2 == 0:
             t = -1/2/sqrt(2)*cos(theta)*sin(theta)*exp(-chi*1j)
         elif q1 == -1 and q2 == 1:
@@ -94,9 +160,9 @@ def Tqq(q1, q2, i, theta, chi):
             t = -1/2/sqrt(2)*1j*sin(theta)*exp(-chi*1j)
     elif i == 3:
         if q1 == q2 == -1:
-            t = -1/2*cos(theta)
+            t = -1/2*cos(theta) + 0j
         elif q1 == q2 == 1:
-            t = 1/2*cos(theta)
+            t = 1/2*cos(theta) + 0j
         elif q1 == -1 and q2 == 0:
             t = 1/2/sqrt(2)*sin(theta)*exp(-chi*1j)
         elif q1 == 0 and q2 == 1:
@@ -120,7 +186,7 @@ class jsymbols():
     ''' Class to compute 3, 6, and 9 j-symbols
     '''
 
-    def __init__(self, initialize=None):
+    def __init__(self, initialize=None, memoization=None):
         ''' Class initializer
         '''
 
@@ -135,14 +201,21 @@ class jsymbols():
                 a = self.logfct(initialize)
                 a = self.sign(initialize)
 
+        # Check memoization
+        self.memoization = False
+        if isinstance(memoization, bool):
+            if memoization:
+                self.memoization = True
+                self.memo = {}
+
 ######################################################################
 
     def logfct(self, val):
         ''' Returns the logarithm of the factorial of val
+            val is expected to be an integer
         '''
 
-        # Real val
-        ival = int(math.fabs(val))
+        ival = abs(val)
 
         # Compute and store up to val
         while len(self.__fact) <= ival:
@@ -199,10 +272,10 @@ class jsymbols():
         ''' Auxiliar used in 3j calculations
         '''
 
-        l1 = int(round(ij1+ij2-ij3))/2
-        l2 = int(round(ij2+ij3-ij1))/2
-        l3 = int(round(ij3+ij1-ij2))/2
-        l4 = int(round(ij1+ij2+ij3))/2 + 1
+        l1 = int(round(ij1+ij2-ij3))//2
+        l2 = int(round(ij2+ij3-ij1))//2
+        l3 = int(round(ij3+ij1-ij2))//2
+        l4 = int(round(ij1+ij2+ij3))//2 + 1
 
         fn2 = 0.5*(self.logfct(l1) + self.logfct(l2) +
                    self.logfct(l3) - self.logfct(l4))
@@ -214,6 +287,18 @@ class jsymbols():
     def j3(self, j1, j2, j3, m1, m2, m3):
         ''' Compute 3j symbol
         '''
+
+        # If memoization
+        if self.memoization:
+
+            # Get tag
+           #tag = f'{j1}{j2}{j3}{m1}{m2}{m3}'
+            tag = (j1,j2,j3,m1,m2,m3)
+
+            try:
+                return self.memo[tag]
+            except:
+                pass
 
         # Initialize value
         js3 = 0.0
@@ -247,9 +332,9 @@ class jsymbols():
             return js3
 
         # Get minimum index to run from
-        kmin = (ij3 - ij1 - im2)/2
+        kmin = (ij3 - ij1 - im2)//2
         kmin1 = int(kmin)
-        kmin2 = int((ij3 - ij2 + im1)/2)
+        kmin2 = int((ij3 - ij2 + im1)//2)
         kmin = max(-1*min(kmin1, kmin2), 0)
 
         # Get maximum index to run to
@@ -263,7 +348,7 @@ class jsymbols():
 
             term1 = self.__fn1(j1, j2, j3, m1, m2, m3)
 
-            sgn = self.sign((ij1 - ij2 - im3)/2)
+            sgn = self.sign((ij1 - ij2 - im3)//2)
 
             for i in range(kmin, kmax+1):
 
@@ -274,6 +359,10 @@ class jsymbols():
 
             js3 = sgn*js3
 
+        # If memoization
+        if self.memoization:
+            self.memo[tag] = js3
+
         return js3
 
 ######################################################################
@@ -281,6 +370,18 @@ class jsymbols():
     def j6(self, j11, j12, j13, j21, j22, j23):
         ''' Compute 6j symbol
         '''
+
+        # If memoization
+        if self.memoization:
+
+            # Get tag
+           #tag = f'{j11}{j12}{j13}{j21}{j22}{j23}'
+            tag = (j11,j12,j13,j21,j22,j23)
+
+            try:
+                return self.memo[tag]
+            except:
+                pass
 
         # Initialize value
         js6 = 0.0
@@ -293,18 +394,18 @@ class jsymbols():
         ij5 = int(round(j22 + j22))
         ij6 = int(round(j23 + j23))
 
-        ijm1 = (ij1 + ij2 + ij3)/2
-        ijm2 = (ij1 + ij5 + ij6)/2
-        ijm3 = (ij4 + ij2 + ij6)/2
-        ijm4 = (ij4 + ij5 + ij3)/2
+        ijm1 = (ij1 + ij2 + ij3)//2
+        ijm2 = (ij1 + ij5 + ij6)//2
+        ijm3 = (ij4 + ij2 + ij6)//2
+        ijm4 = (ij4 + ij5 + ij3)//2
 
         ijm = ijm1
 
         ijm = max([ijm, ijm2, ijm3, ijm4])
 
-        ijx1 = (ij1 + ij2 + ij4 + ij5)/2
-        ijx2 = (ij2 + ij3 + ij5 + ij6)/2
-        ijx3 = (ij3 + ij1 + ij6 + ij4)/2
+        ijx1 = (ij1 + ij2 + ij4 + ij5)//2
+        ijx2 = (ij2 + ij3 + ij5 + ij6)//2
+        ijx3 = (ij3 + ij1 + ij6 + ij4)//2
 
         ijx = ijx1
 
@@ -313,9 +414,9 @@ class jsymbols():
         if ijm <= ijx:
 
             term1 = self.__fn2(ij1, ij2, ij3) + \
-                self.__fn2(ij1, ij5, ij6) + \
-                self.__fn2(ij4, ij2, ij6) + \
-                self.__fn2(ij4, ij5, ij3)
+                    self.__fn2(ij1, ij5, ij6) + \
+                    self.__fn2(ij4, ij2, ij6) + \
+                    self.__fn2(ij4, ij5, ij3)
 
             for i in range(int(ijm), int(ijx)+1):
 
@@ -325,6 +426,10 @@ class jsymbols():
                     self.logfct(ijx2-i) - self.logfct(ijx3-i)
                 js6 = self.sign(i)*math.exp(term1+term2) + js6
 
+        # If memoization
+        if self.memoization:
+            self.memo[tag] = js6
+
         return js6
 
 ######################################################################
@@ -332,6 +437,18 @@ class jsymbols():
     def j9(self, j11, j12, j13, j21, j22, j23, j31, j32, j33):
         ''' Compute 9j symbol
         '''
+
+        # If memoization
+        if self.memoization:
+
+            # Get tag
+           #tag = f'{j11}{j12}{j13}{j21}{j22}{j23}{j31}{j32}{j33}'
+            tag = (j11,j12,j13,j21,j22,j23,j31,j32,j33)
+
+            try:
+                return self.memo[tag]
+            except:
+                pass
 
         # Initialize value
         js9 = 0.0
@@ -366,8 +483,270 @@ class jsymbols():
                 hk = 0.5*float(k)
 
                 js9 = self.sign(k)*float(k+1) * \
-                    self.j6(j11, j21, j31, j32, j33, hk) * \
-                    self.j6(j12, j22, j32, j21, hk, j23) * \
-                    self.j6(j13, j23, j33, hk, j11, j12) + js9
+                      self.j6(j11, j21, j31, j32, j33, hk) * \
+                      self.j6(j12, j22, j32, j21, hk, j23) * \
+                      self.j6(j13, j23, j33, hk, j11, j12) + js9
+
+        # If memoization
+        if self.memoization:
+            self.memo[tag] = js9
 
         return js9
+
+######################################################################
+# Tanaus\'u del Pino Alem\'an                                        #
+#   Instituto de Astrof\'isica de Canarias                           #
+#   Class to compute rotation matrices                               #
+#   Modified to return complex number instead of list                #
+#                                                                    #
+#  15/01/2021 - V1.0.0 - First version. (TdPA)                       #
+######################################################################
+
+######################################################################
+######################################################################
+######################################################################
+
+class rotate_ist():
+    ''' Class to rotate irreducible spherical tensors
+    '''
+
+######################################################################
+######################################################################
+######################################################################
+
+    def __init__(self, initialize=None):
+        ''' Class initializer
+        '''
+
+        # Initialize factorial and sign list
+        self.__fact = [0.]
+        self.__sign = [1.]
+
+        # Initialize factorial list up to the specified value
+        if initialize is not None:
+            if isinstance(initialize, int) or \
+               isinstance(initialize, float):
+                a = self.logfct(initialize)
+                a = self.sign(initialize)
+
+######################################################################
+######################################################################
+######################################################################
+
+    def logfct(self, val):
+        ''' Returns the logarithm of the factorial of val
+        '''
+
+        # Real val
+        ival = int(math.fabs(val))
+
+        # Compute and store up to val
+        while len(self.__fact) <= ival:
+
+            self.__fact.append(self.__fact[-1] + \
+                               math.log(float(len(self.__fact))))
+
+        return self.__fact[ival]
+
+######################################################################
+######################################################################
+######################################################################
+
+    def sign(self, val):
+        ''' Returns the sign of val
+        '''
+
+        # Real val
+        ival = int(math.fabs(val))
+
+        # Compute and store up to val
+        while len(self.__sign) <= ival:
+
+            self.__sign.append(self.__sign[-1] * -1.)
+
+        return self.__sign[ival]
+
+######################################################################
+######################################################################
+######################################################################
+
+    def __nint(self,num):
+        ''' Fortran's nint
+        '''
+
+        return int(round(num))
+
+######################################################################
+######################################################################
+######################################################################
+
+    def __rdmat(self,rJ,rM1,rM,theta):
+        ''' Compute rotation matrix d[rJ,rM1,rM](theta)
+            -180 < theta < 180
+        '''
+
+        thalf = 0.5*theta
+
+        ss = math.sin(thalf)
+        cc = math.cos(thalf)
+
+        ifs = self.__nint(rJ+rM)
+        ifd = self.__nint(rJ-rM)
+        ifs1 = self.__nint(rJ+rM1)
+        ifd1 = self.__nint(rJ-rM1)
+        imd = self.__nint(rM1-rM)
+        imdf2 = self.__nint(rJ+rJ) - imd
+
+        imax = min(ifs,ifd1)
+        imin = max(0,-imd)
+
+        tmp = 0.0
+
+        for i in range(imin,imax+1):
+
+            i2 = i + i
+
+            k1 = imdf2 - i2
+            k2 = imd + i2
+
+            ess = 0.0
+            ecc = 0.0
+
+            if math.fabs(theta-math.pi) > 0.0:
+                ecc = cc**k1
+            elif k1 == 0:
+                ecc = 1.0
+
+            if math.fabs(theta) > 0.0:
+                ess = ss**k2
+            elif K2 == 0:
+                ess = 1.0
+
+            k = imd + i
+
+            tmp = self.sign(k)* \
+                  math.exp(-self.logfct(k) - \
+                            self.logfct(ifs-i) - \
+                            self.logfct(ifd1-i) - \
+                            self.logfct(i))*ecc*ess + tmp
+
+        rdmat = tmp*math.exp(0.5* \
+                (self.logfct(ifs) + self.logfct(ifd) + \
+                 self.logfct(ifs1) + self.logfct(ifd1)))
+
+        return rdmat
+
+######################################################################
+######################################################################
+######################################################################
+
+    def get_DKQQ(self,Kmax,theta,chi,conjugate=None,backwards=None):
+        ''' Return the DKQQ tensor for the given maximum rank,
+            angles, and rotation variables.
+            Rotated an angle theta (polar) and chi (azimuth)
+        '''
+
+        # Deal with inputs
+        if isinstance(conjugate, bool):
+            conj = conjugate
+        else:
+            conj = False
+
+        # Deal with inputs
+        if isinstance(backwards, bool):
+            back = backwards
+        else:
+            back = False
+
+        # Compute complex exponential part
+
+        # Initialize arrays
+        ceR = []
+        ceI = []
+        ceIm = []
+
+        # For each K to include
+        for K in range(1,Kmax):
+            ang = float(K)*chi
+            ceR.append(math.cos(ang))
+            ceI.append(math.sin(ang))
+            ceIm.append(-ceI[-1])
+
+        # Rearrange the numbers
+        ceR = ceR[::-1] + [1.0] + ceR
+        ceI = ceIm[::-1] + [0.0] + ceI
+
+        # Compute rotation tensor D[K][Q][Q'] and rotate
+        DKQQ = {}
+        kmax = Kmax - 1
+
+        # For each K multipole
+        for K in range(Kmax):
+
+            # Float and dimension in Q space
+            rK = float(K)
+            NQ = 2*K + 1
+
+            # Initialize Q space
+            DKQQ[K] = {}
+
+            # Initialize rolling Q
+            aQ = -K - 1
+
+            # For each Q
+            for iQ in range(NQ):
+
+                # Rolling Q and its float
+                aQ += 1
+                rQ = float(aQ)
+
+                # Initialize Q' space
+                DKQQ[K][aQ] = {}
+
+                # Initialize rolling Q
+                aQ1 = -K - 1
+
+                # For each Q'
+                for iQ1 in range(NQ):
+
+                    # Rolling Q' and its float
+                    aQ1 += 1
+                    rQ1 = float(aQ1)
+
+                    # Get dKQQ
+                    dkqq = self.__rdmat(rK,rQ1,rQ,theta)
+
+                    #
+                    # Get exponential parts depending on the
+                    # configuration
+                    #
+
+                    # If rotating with complex conjugated
+                    if conj:
+
+                        # If rotating backwards
+                        if back:
+                            cer = ceR[kmax+aQ]
+                            cei = ceI[kmax+aQ]
+                        # If rotating forwards
+                        else:
+                            cer = ceR[kmax+aQ1]
+                            cei = ceI[kmax+aQ1]
+
+                    # If rotating with normal tensor
+                    else:
+
+                        # If rotating backwards
+                        if back:
+                            cer = ceR[kmax-aQ]
+                            cei = ceI[kmax-aQ]
+                        # If rotating forwards
+                        else:
+                            cer = ceR[kmax-aQ1]
+                            cei = ceI[kmax-aQ1]
+
+                    # Add the DKQQ value
+                    DKQQ[K][aQ][aQ1] = cer*dkqq + j*cei*dkqq
+
+        # Return the new tensor
+        return DKQQ

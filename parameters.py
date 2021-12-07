@@ -1,25 +1,25 @@
-from astropy import units as u
 import time
 
-z0 = 100 * u.km                 # height of the slav over the surfave
-zf = 110 * u.km                # geometrical height of the slav
-zn = 32                         # Points in z in the slav
-alpha = 0 * u.deg              # angle between the vertical of the slav and the radial line
+z0 = 100*1e5                 # height of the slav over the surfave [cm]
+zf = 110*1e5                 # geometrical height of the slab [cm]
+#zf = 1000*1e5                # geometrical height of the slab [cm]
+#zn = 5                       # Points in z in the slab
+#zn = 35                      # Points in z in the slab
+zn = 10                      # Points in z in the slab
+alpha = 0.                   # angle between the vertical of the slav and the radial line [deg]
 
-lamb0 = 1081.3 * u.nm             # Initial frequency (nm)
-lambf = 1085.3 * u.nm             # Final frequency (nm)
-wn = 64                        # Points in the frequency quadrature (grid)
+ray_quad = "gaussian_quadrature_8x8.dat"   # file where the angular quadrature is saved
+#ray_quad = 'gaussian_quadrature_2x1.dat'
+ray_out = [[0.1,0.],[1.0,0.]]                       # List of mu,phi for emergent radiation directions
 
-ray_quad = "gaussian_quadrature_3.dat"       # file where the angular quadrature is saved
+v_dop = 5.0*1e5              # Dopler velocity (not the actual one) [cm/s]
+a_voigt = 1e-4               # voigt damping parameter of the line profile
+n_dens = 1e6                 # Density wich defines the optical thickness [cm^-3]
+temp = 1e4                   # Temperature of the slab [K]
 
-v_dop = 5.0 * u.km / u.s         # Dopler velocity
-a_voigt = 1                      # voigt width of the line profile
-n_dens = 1e0 * 1/u.cm**3         # Density wich defines the optical thickness
-temp = 1e4 * u.K                 # Temperature of the slab
+max_iter = 200               # Maximum itterations for the forward method
+tolerance_p = 1e-6           # tolerated relative change in populations
+tolerance_c = 1e-6           # tolerated relative change in coherences
 
-I_units = u.erg / (u.cm**2 * u.Hz * u.s * u.sr)
-
-max_iter = 4                    # Maximum itterations for the forward method
-tolerance = 1e-10               # tolerated relative change in populations
-
-dir = f'{time.strftime("%Y%m%d-%H%M%S")}_plots_ndens_{n_dens.value}_dz_{(zf-z0).value}/'
+#dir = f'output_{time.strftime("%Y%m%d-%H%M%S")}/'
+dir = f'output_testing/'

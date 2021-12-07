@@ -5,9 +5,10 @@ import parameters as pm
 import matplotlib.pyplot as plt
 from physical_functions import jsymbols
 from plot_utils import save_or_show
+from astropy import units, constants
 
 # Definition of the files to load
-directory = '20210807-210338_plots_ndens_1.0_dz_10.0/out/'
+directory = 'plots_20211001-100734/out/'
 prefix = 'jqq_base*'
 files = sorted(glob(directory + prefix))
 looked_for = '_0_16_'
@@ -49,9 +50,16 @@ for i in range(len(jqq_base_rays)):
 #  Compute the JKQ and rhoKQ
 
 jsymb = jsymbols()
-nus_weights = np.ones_like(jqq_itt_z[0][0][0][0].value)
-nus_weights[0] = 0.5
-nus_weights[-1] = 0.5
+# print('WRONG WEIGHTS')
+lamb0 = 1082.5216751075432 * units.nm             # Initial frequency (nm)
+lambf = 1084.121675107543 * units.nm             # Final frequency (nm)
+
+wf = (constants.c.cgs / lamb0.cgs).to('Hz')
+w0 = (constants.c.cgs / lambf.cgs).to('Hz')
+nus = np.linspace(w0, wf, 64)
+nus_weights = np.ones_like(jqq_itt_z[0][0][0][0].value)*(nus[1] - nus[0])
+nus_weights[0] = 0.5*(nus[1] - nus[0])
+nus_weights[-1] = 0.5*(nus[1] - nus[0])
 
 J_KQ_bar_itt = np.zeros((len(jqq_itt_z), len(jqq_itt_z[0]), 3, 5)) + 0j
 for it, jqq_z in enumerate(jqq_itt_z):
