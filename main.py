@@ -4,6 +4,7 @@ from conditions import conditions, state, point
 import parameters as pm
 from solver import BESSER, LinSC_old, BESSER_old
 from plot_utils import *
+import constants as c
 
 # Import needed libraries
 import numpy as np
@@ -176,6 +177,9 @@ def main():
         # Go through all the rays in the cuadrature
         for j, ray in enumerate(tqdm(cdt.rays, desc='propagating rays', leave=False)):
 
+            # Initialize optical depth
+            tau = np.zeros((cdt.nus_N))
+
             # Reset lineal and set cent_limb_coef
             cent_limb_coef = 1
             lineal = False
@@ -288,7 +292,8 @@ def main():
                 tau_tot = BESSER(point_M, point_O, point_P, \
                                  sf_m, sf_o, sf_p, \
                                  kk_m, kk_o, kk_p, \
-                                 ray, cdt, tau_tot, not lineal, cent_limb_coef)
+                                 ray, cdt, tau_tot, not lineal, \
+                                 tau, cent_limb_coef)
 
                 # Debug
                 if debug:
@@ -308,6 +313,14 @@ def main():
                         for i in range(4):
                             f.write(struct.pack('d'*N_nus, \
                                                 *point_O.radiation.stokes[i]))
+                        f.close()
+
+                        # Store optical depth
+                        f = open(datadir + f'tau_{itteration:03d}_{j:02d}', 'w')
+                        N_nus = point_O.radiation.nus.size
+                        f.write(f'{N_nus}\n')
+                        for nu,ta in zip(point_O.radiation.nus,tau):
+                            f.write(f'{1e7*c.c/nu:25.16f}  {ta:23.16e}\n')
                         f.close()
 
                 # Add to Jqq
@@ -338,6 +351,9 @@ def main():
 
     # Go through all the rays in the emergent directions
     for j, ray in enumerate(tqdm(cdt.orays, desc='emerging rays', leave=False)):
+
+        # Initialize optical depth
+        tau = np.zeros((cdt.nus_N))
 
         # Reset lineal and set cent_limb_coef
         cent_limb_coef = 1
@@ -396,7 +412,8 @@ def main():
             tau_tot = BESSER(point_M, point_O, point_P, \
                              sf_m, sf_o, sf_p, \
                              kk_m, kk_o, kk_p, \
-                             ray, cdt, tau_tot, not lineal, cent_limb_coef)
+                             ray, cdt, tau_tot, not lineal, \
+                             tau, cent_limb_coef)
 
         # Store last Stokes parameters
         f = open(datadir + f'stokes_{j:02d}', 'wb')
@@ -405,6 +422,13 @@ def main():
         f.write(struct.pack('d'*N_nus,*point_O.radiation.nus))
         for i in range(4):
             f.write(struct.pack('d'*N_nus,*point_O.radiation.stokes[i]))
+        f.close()
+
+        f = open(datadir + f'tau_{j:02d}', 'w')
+        N_nus = point_O.radiation.nus.size
+        f.write(f'{N_nus}\n')
+        for nu,ta in zip(point_O.radiation.nus,tau):
+            f.write(f'{1e7*c.c/nu:25.16f}  {ta:23.16e}\n')
         f.close()
 
 if __name__ == '__main__':

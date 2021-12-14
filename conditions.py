@@ -29,9 +29,9 @@ class ray:
         self.raz = self.az*constants.degtorad
 
         # Rotate the RF to the global one and store the result as a attribute
-        xyz_slab = np.array([np.sin(self.inc)*np.cos(self.az),
-                             np.sin(self.inc)*np.sin(self.az),
-                             np.cos(self.inc)])
+        xyz_slab = np.array([np.sin(self.rinc)*np.cos(self.raz),
+                             np.sin(self.rinc)*np.sin(self.raz),
+                             np.cos(self.rinc)])
         rotation_matrix = np.array([[np.cos(alpha), 0, np.sin(-alpha)],
                                     [0,             1,              0],
                                     [np.sin(alpha), 0,  np.cos(alpha)]])
@@ -153,6 +153,9 @@ class conditions:
         # Initialice the array of the magnetic field vector
         self.B = np.zeros((self.z_N, 3))
 
+        # If starting from equilibrium
+        self.equi = parameters.initial_equilibrium
+
         # Maximum lambda itterations
         self.max_iter = int(parameters.max_iter)
 
@@ -224,7 +227,7 @@ class state:
 
         # Initialicing the atomic state instanciating ESE class for each point
         self.atomic = [ESE(cdts.v_dop, cdts.a_voigt, \
-                           vec, cdts.temp, cdts.JS) for vec in cdts.B]
+                           vec, cdts.temp, cdts.JS, cdts.equi) for vec in cdts.B]
 
         # Initialicing the radiation state instanciating RTE class for each point
         self.radiation = [RTE(cdts.nus, cdts.v_dop) for z in cdts.zz]

@@ -7,12 +7,14 @@ import constants as c
 def BESSER(point_M, point_O, point_P, \
            sf_m, sf_o, sf_p, \
            kk_m, kk_o, kk_p, \
-           ray, cdt, tau_tot, quad=True,clv=1):
+           ray, cdt, tau_tot, quad, \
+           tau, clv=1):
     """ Solve SC step with BESSER
     """
 
     # Compute optical depth step
     tauMO = 0.5*(kk_m[0][0] + kk_o[0][0])*np.absolute((point_O.z - point_M.z)/np.cos(ray.rinc)) + c.vacuum
+    tau += tauMO
 
     # Add to total tau
     tau_tot = np.append(tau_tot, tau_tot[-1] + tauMO[cdt.nus_N//2])
