@@ -2,7 +2,6 @@ import numpy as np
 import os,sys
 import scipy.linalg as linalg
 import constants as c
-from astropy.modeling.models import BlackBody as bb
 from physical_functions import Tqq_all, jsymbols, rotate_ist
 
 ################################################################################
