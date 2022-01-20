@@ -9,6 +9,7 @@ from numpy import real
 import matplotlib.pyplot as plt
 import constants as constants
 from get_nus import get_nus
+from allen import Allen_class
 
 ################################################################################
 ################################################################################
@@ -145,6 +146,7 @@ class conditions:
         self.n_dens = parameters.n_dens
         self.temp = parameters.temp
         self.v_dop = np.sqrt(2.*constants.k_B*self.temp/atom.mass)/constants.c
+        self.Trad = parameters.Trad
 
         # Get frequency vectors and size
         self.nus, self.nus_weights = get_nus(atom,self.v_dop_0)
@@ -227,15 +229,24 @@ class state:
 
         # Initialicing the atomic state instanciating ESE class for each point
         self.atomic = [ESE(cdts.v_dop, cdts.a_voigt, \
-                           vec, cdts.temp, cdts.JS, cdts.equi) for vec in cdts.B]
+                           vec, cdts.temp, cdts.JS, cdts.equi,iz) for iz,vec in enumerate(cdts.B)]
 
         # Initialicing the radiation state instanciating RTE class for each point
         self.radiation = [RTE(cdts.nus, cdts.v_dop) for z in cdts.zz]
 
+        # Get Allen class instance and gamma angles
+        Allen = Allen_class()
+        Allen.get_gamma(np.min(cdts.zz))
+
         # Define the IC for the downward and upward rays as a radiation class
         self.space_rad = RTE(cdts.nus, cdts.v_dop)
-        self.sun_rad = RTE(cdts.nus, cdts.v_dop)
-        self.sun_rad.make_IC(cdts.nus, cdts.temp)
+        self.sun_rad = []
+        for ray in cdts.rays:
+            self.sun_rad.append(RTE(cdts.nus, cdts.v_dop))
+            self.sun_rad[-1].make_IC(cdts.nus, ray, cdts.Trad, Allen)
+        for ray in cdts.orays:
+            self.sun_rad.append(RTE(cdts.nus, cdts.v_dop))
+            self.sun_rad[-1].make_IC(cdts.nus, ray, cdts.Trad, Allen)
 
     def update_mrc(self, cdts, itter):
         """Update the mrc of the current state by finding the

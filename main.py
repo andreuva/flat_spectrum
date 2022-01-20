@@ -165,7 +165,8 @@ def main():
     f.close()
 
     # Start the main loop for the Lambda iteration
-    for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
+   #for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
+    for itteration in range(cdt.max_iter):
 
         # Debug
         if debug:
@@ -175,7 +176,8 @@ def main():
         st.new_itter()
 
         # Go through all the rays in the cuadrature
-        for j, ray in enumerate(tqdm(cdt.rays, desc='propagating rays', leave=False)):
+       #for j, ray in enumerate(tqdm(cdt.rays, desc='propagating rays', leave=False)):
+        for j, ray in enumerate(cdt.rays):
 
             # Initialize optical depth
             tau = np.zeros((cdt.nus_N))
@@ -214,7 +216,7 @@ def main():
             # If bottom boundary
             elif iz0 == 0:
 
-                point_O = point(st.atomic[z], st.sun_rad, cdt.zz[z])
+                point_O = point(st.atomic[z], st.sun_rad[j], cdt.zz[z])
 
                 # Debug
                 if debug:
@@ -374,7 +376,7 @@ def main():
         if iz0 == -1:
             point_O = point(st.atomic[z], st.space_rad, cdt.zz[z])
         elif iz0 == 0:
-            point_O = point(st.atomic[z], st.sun_rad, cdt.zz[z])
+            point_O = point(st.atomic[z], st.sun_rad[cdt.rays_N+j], cdt.zz[z])
 
         # Get RT coefficients at initial point
         sf_o, kk_o = RT_coeficients.getRTcoefs(point_O.atomic, ray, cdt)

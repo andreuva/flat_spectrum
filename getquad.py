@@ -88,9 +88,9 @@ def main():
     '''
 
     # Params
-    ng = 2
-    nt = 1
-    filename = 'gaussian_quadrature_2x1.dat'
+    ng = 32
+    nt = 8
+    filename = 'gaussian_quadrature_32x8.dat'
 
     # Get each quadrature
     GQuad = gaussianQ(ng)

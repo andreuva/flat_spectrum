@@ -33,6 +33,9 @@ class RTcoefs:
         elif mode == 1:
             self.getRTcoefs = self.getRTcoefs_MT
 
+        # No warning sent yet
+        self.no_warning = True
+
 
     def getRTcoefs_ML(self, ese, ray, cdts):
         """ Provides the 4-vector of epsilon and the 4x4 K-matrix for the point
@@ -297,10 +300,6 @@ class RTcoefs:
           sum_rhos1 = 0
           sum_rhos2 = 0
           sum_rhos3 = 0
-          sum_eps0  = 0
-          sum_eps1  = 0
-          sum_eps2  = 0
-          sum_eps3  = 0
 
           # Point to terms involved
           termu = ese.atom.terms[line.terms[1]]
@@ -785,8 +784,15 @@ class RTcoefs:
         eps3 /= (eta0 + cts.vacuum)
 
         # Check physical absorption
-        if np.any(eta0 < 0):
-            print("Warning: eta_I < 0")
+        if np.any(eta0 < 0) and self.no_warning:
+            print(f"Warning: eta_I < 0 at iz = {ese.iz} dir = {ray.rinc}x{ray.raz}")
+            for ifreq,e0 in enumerate(eta0):
+                if e0 < 0.:
+                    print(f"  Lambda {cts.c*1e7/cdts.nus[ifreq]}: " + \
+                          f"{eta_a0[ifreq]} - {eta_s0[ifreq]} = " + \
+                          f"{e0}    MAX: {np.max(eta0)}")
+            self.no_warning = False
+            print(f"Will not bother you with more instances of this warning")
 
         # Build propagation matrix
         KK = [[eta0,eta1,eta2,eta3],[rho0,rho1,rho2]]

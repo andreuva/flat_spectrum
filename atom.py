@@ -697,6 +697,41 @@ class line_class():
 
 ################################################################################
 
+    def reduce_Jqq(self,f):
+        """ Reduce the Jqq components multiplying by f
+        """
+
+        # If special Helium case
+        if self.especial:
+
+            # For each component
+            for comp in self.jqq:
+
+                # Call the actual sum
+                self.jqq[comp] = self.actually_reduce_Jqq(self.jqq[comp],f)
+
+        # Usual multi-term
+        else:
+
+            # Call the actual sum
+            self.jqq = self.actually_reduce_Jqq(self.jqq,f)
+
+################################################################################
+
+    def actually_reduce_Jqq(self,jqq,f):
+        """ Reduce the Jqq components multiplying by the f factor, but seriously now
+        """
+
+        # For each q and q'
+        for qq in range(-1,2):
+            for qp in range(-1,2):
+
+                jqq[qq][qp] *= f
+
+        return jqq
+
+################################################################################
+
     def rotate_Jqq(self, DKQQ, JS):
         """ Method to rotate the Jqq for the line
         """
@@ -918,6 +953,9 @@ class HeI_1083():
         # Multi-term helium 10830 atom
         self.terms = []
 
+        # Internal switch
+        not_twoterm = False
+
         # Add the two terms. Energy cm^-1
         self.terms.append(term_class(0.0,1.0,      [1.], \
                      159855.9743297,[159855.9743297],JS,B,0))
@@ -926,14 +964,40 @@ class HeI_1083():
                                      169086.8428979, \
                                      169087.8308131],JS,B, \
                                      self.terms[-1].NN_next))
+        if not_twoterm:
+            self.terms.append(term_class(0.0,1.0,      [1.], \
+                         183236.7917,[183236.79170],JS,B, \
+                                     self.terms[-1].NN_next))
+            self.terms.append(term_class(1.0,1.0,[2.,1.,0.], \
+                         185564.6018,[185564.561920, \
+                                      185564.583895, \
+                                      185564.854540],JS,B, \
+                                      self.terms[-1].NN_next))
+            self.terms.append(term_class(2.0,1.0,[3.,2.,1.], \
+                         186101.5564,[186101.5461767, \
+                                      186101.5486891, \
+                                      186101.5928903],JS,B, \
+                                      self.terms[-1].NN_next))
         # Get dimension of rho vector
         self.ndim = self.terms[-1].NN_next
 
         # Add 10830 line. Inverse lifetime in s^-1
-        self.lines = [line_class(self.multiterm,[self.terms, (0, 1), (0, 1), \
-                                                 1.0216e+07, \
-                                                 125, 55, 15., 2.5], JS) ]
-#                                                 15,  5, 15., 2.5], JS) ]
+        self.lines = []
+        self.lines.append(line_class(self.multiterm,[self.terms, (0, 1), (0, 1), \
+                                     1.0216e+07, \
+                                     125, 55, 15., 2.5], JS))
+#                                    15,  5, 15., 2.5], JS))
+        if not_twoterm:
+            self.lines.append(line_class(self.multiterm,[self.terms, (0, 3), (0, 3), \
+                                                     9.4746e+06, \
+                                                     55, 35, 15., 2.5], JS))
+            self.lines.append(line_class(self.multiterm,[self.terms, (1, 2), (1, 2), \
+                                                     2.78532e7, \
+                                                     55, 35, 15., 2.5], JS))
+            self.lines.append(line_class(self.multiterm,[self.terms, (1, 4), (1, 4), \
+                                                     7.0702687e7, \
+                                                     55, 35, 15., 2.5], JS))
+            self.reduction_f = [1.,0.2,1.,1.,1.]
 
         # Set mass
         self.mass = 4.002602 * c.amu
@@ -1025,6 +1089,16 @@ class HeI_1083():
 
 ################################################################################
 
+    def reduce_Jqq(self,redf):
+        """ Call the method on the lines
+        """
+
+        # For each reduction factor and line
+        for f,line in zip(redf,self.lines):
+            line.reduce_Jqq(f)
+
+################################################################################
+
     def rotate_Jqq(self, DKQQ, JS):
         """ Method to rotate the Jqq
         """
@@ -1045,7 +1119,7 @@ class ESE:
         This class needs to be instantiated at every grid point.
     """
 
-    def __init__(self, v_dop, a_voigt, B, T, jsim, equilibrium=False):
+    def __init__(self, v_dop, a_voigt, B, T, jsim, equilibrium=False, iz=0):
         """ Initialize ESE class instance
             v_dop: Atom's Doppler width
             a_voigt: Damping parameter
@@ -1060,6 +1134,9 @@ class ESE:
 
         # Keep here the magnetic field vector [G]
         self.B = B[0]
+
+        # Store height index for debugging
+        self.iz = iz
 
         # If magnetic field > 0, get rotation matrix for JKQ
         if self.B > 0:
@@ -1235,6 +1312,15 @@ class ESE:
 
         # For each line
         self.atom.fill_Jqq()
+
+################################################################################
+
+    def reduce_Jqq(self,redf):
+        """ Just calls the same method for the atom
+        """
+
+        # For each line
+        self.atom.reduce_Jqq(redf)
 
 ################################################################################
 
@@ -2192,6 +2278,14 @@ class ESE:
 
         # Fill the missing Jqq
         self.fill_Jqq()
+
+        # Reduce illumination ad-hoc as Hazel
+        try:
+            self.reduce_Jqq(self.atom.reduction_f)
+        except AttributeError:
+            pass
+        except:
+            raise
 
         # Debug
         if self.debug:
@@ -3327,7 +3421,21 @@ class ESE:
         rho_old = self.rho.copy()
 
         # Solve SEE and store new density matrix
-        self.rho = linalg.solve(self.ESE_indep, indep)
+        try:
+            self.rho = linalg.solve(self.ESE_indep, indep)
+        except np.linalg.LinAlgError:
+            print('Sinfular matrix in SEE')
+            # For each line
+            for i in range(self.atom.ndim):
+                row = f'{i}: '
+                # For each column
+                for j in range(self.atom.ndim):
+                    row += f' {j}:{self.ESE_indep[i,j]:13.6e}'
+                row += f'  ; {indep[i]:13.6e}\n'
+                print(row)
+            raise
+        except:
+            raise
 
         # Debug
         if self.debug:
@@ -3572,8 +3680,8 @@ class ESE:
                     # Check sign
                     if self.rho[index[0]] < 0:
                         print(f"Warning: Negative population of the level: " + \
-                               "L={term.L},j={index[4]}, M={index[3]}," + \
-                               "j'={index[6]},M'={index[5]},real={index[7]}")
+                               "L={term.L},j={index[5]}, M={index[4]}," + \
+                               "j'={index[8]},M'={index[7]},real={index[9]}")
                         print(f"with population of rho={self.rho[index[0]]}")
 
                 # If not diagonal
