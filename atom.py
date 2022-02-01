@@ -513,8 +513,14 @@ class line_class():
         # If special Helium case
         if self.especial:
 
+            # Check nu0
+            if nu0 is None:
+                print('If line distinguishes components, it is necessary ' + \
+                      'to include the nu0 argument to add_contribution_profiles()')
+                sys.exit()
+
             # Get difference between components and resonance
-            dd = np.absolute(self.resos - n0)
+            dd = np.absolute(self.resos - nu0)
 
             # Get component closest to this resonance
             comp = self.resos[np.argmin(dd)]
@@ -589,7 +595,7 @@ class line_class():
 
 ################################################################################
 
-    def sumStokes(self, ray, stokes, nus_weights):
+    def sumStokes(self, ray, Tqq, stokes, nus_weights):
         """ Method to add Jqq contribution
         """
 
@@ -601,6 +607,7 @@ class line_class():
 
                 # Call the actual sum
                 self.jqq[comp] = self.actually_sumStokes(self.jqq[comp], \
+                                                         Tqq, \
                                                          self.prof[comp], \
                                                          ray,stokes,nus_weights)
 
@@ -612,17 +619,14 @@ class line_class():
                 print('Summing Stokes in line, no especial')
 
             # Call the actual sum
-            self.jqq = self.actually_sumStokes(self.jqq, self.prof, \
+            self.jqq = self.actually_sumStokes(self.jqq, Tqq, self.prof, \
                                                ray,stokes,nus_weights)
 
 ################################################################################
 
-    def actually_sumStokes(self, jqq, prof, ray, stokes, nus_weights):
+    def actually_sumStokes(self, jqq, Tqq, prof, ray, stokes, nus_weights):
         """ Method to add Jqq contribution, but seriously now
         """
-
-        # Get Tqq
-        TQQ = Tqq_all(ray.rinc,ray.raz)
 
         # For each Stokes parameter
         for i in range(4):
@@ -648,10 +652,10 @@ class line_class():
 
                     # Debug
                     if self.debug:
-                        print(f'    T{qq}{qp} {TQQ[i][f"{qq}{qp}"]}')
+                        print(f'    T{qq}{qp} {Tqq[i][f"{qq}{qp}"]}')
                         print(f'    Previous value J{qq}{qp} {jqq[qq][qp]}')
 
-                    jqq[qq][qp] += contr*TQQ[i][f'{qq}{qp}']
+                    jqq[qq][qp] += contr*Tqq[i][f'{qq}{qp}']
 
                     # Debug
                     if self.debug:
@@ -736,19 +740,19 @@ class line_class():
         """
 
         # If special Helium case
-        if self.special:
+        if self.especial:
 
             # For each component
             for comp in self.jqq:
 
                 # Call the actual sum
-                self.jqq[comp] = actually_rotate_Jqq(self.jqq[comp], DKQQ, JS)
+                self.jqq[comp] = self.actually_rotate_Jqq(self.jqq[comp], DKQQ, JS)
 
         # Usual rotation
         else:
 
             # Call the actual sum
-            self.jqq = actually_rotate_Jqq(self.jqq, DKQQ, JS)
+            self.jqq = self.actually_rotate_Jqq(self.jqq, DKQQ, JS)
 
 ################################################################################
 
@@ -792,7 +796,7 @@ class line_class():
                         continue
 
                     # Add contribution for qq'
-                    JKQ[K][Q] += jqq[qq][qp]*f2*JS.j3(1.,1.,K,q,-qp,-Q)
+                    JKQ[K][Q] += jqq[qq][qp]*f2*JS.j3(1.,1.,K,qq,-qp,-Q)
 
             # Compute negative Q
             if K > 0:
@@ -817,7 +821,7 @@ class line_class():
             JKQ_n[K] = {}
 
             # Compute positive Q
-            for Q in range(0,Q+1):
+            for Q in range(0,K+1):
 
                 # Initialize component
                 JKQ_n[K][Q] = 0.
@@ -826,7 +830,7 @@ class line_class():
                 for Qp in range(-K,K+1):
 
                     # Add contribution
-                    JKQ_n[K][Q] += D[K][Q][Qp]*JKQ[K][Qp]
+                    JKQ_n[K][Q] += DKQQ[K][Q][Qp]*JKQ[K][Qp]
 
             # Compute negative Q
             if K > 0:
@@ -984,18 +988,22 @@ class HeI_1083():
         self.lines = []
         self.lines.append(line_class(self.multiterm,[self.terms, (0, 1), (0, 1), \
                                      1.0216e+07, \
-                                     125, 55, 15., 2.5], JS))
+                                      75, 45, 15., 2.5], JS))
+#                                    125, 55, 15., 2.5], JS))
 #                                    15,  5, 15., 2.5], JS))
         if not_twoterm:
             self.lines.append(line_class(self.multiterm,[self.terms, (0, 3), (0, 3), \
                                                      9.4746e+06, \
-                                                     55, 35, 15., 2.5], JS))
+                                                     35, 15, 15., 2.5], JS))
+#                                                    55, 35, 15., 2.5], JS))
             self.lines.append(line_class(self.multiterm,[self.terms, (1, 2), (1, 2), \
                                                      2.78532e7, \
-                                                     55, 35, 15., 2.5], JS))
+                                                     35, 15, 15., 2.5], JS))
+#                                                    55, 35, 15., 2.5], JS))
             self.lines.append(line_class(self.multiterm,[self.terms, (1, 4), (1, 4), \
                                                      7.0702687e7, \
-                                                     55, 35, 15., 2.5], JS))
+                                                     35, 15, 15., 2.5], JS))
+#                                                    55, 35, 15., 2.5], JS))
             self.reduction_f = [1.,0.2,1.,1.,1.]
 
         # Set mass
@@ -1068,13 +1076,13 @@ class HeI_1083():
 
 ################################################################################
 
-    def sumStokes(self, ray, stokes, nus_weights):
+    def sumStokes(self, ray, Tqq, stokes, nus_weights):
         """ Method to add Jqq contribution
         """
 
         # For each line
         for line in self.lines:
-            line.sumStokes(ray, stokes, nus_weights)
+            line.sumStokes(ray, Tqq, stokes, nus_weights)
 
 ################################################################################
 
@@ -1122,7 +1130,7 @@ class ESE:
         """ Initialize ESE class instance
             v_dop: Atom's Doppler width
             a_voigt: Damping parameter
-            B: object of the magnetic field vector with xyz components (gauss)
+            B: object of the magnetic field vector with in polar coordinates (gauss,rad,rad)
             T: Temperature
             equilibrium: Decices the initialization
             return value: None
@@ -1133,16 +1141,19 @@ class ESE:
 
         # Keep here the magnetic field vector [G]
         self.B = B[0]
+        self.theta = B[1]
+        self.phi = B[2]
 
         # Store height index for debugging
         self.iz = iz
 
         # If magnetic field > 0, get rotation matrix for JKQ
-        if self.B > 0:
+        if self.B > 0 and np.absolute(B[1]) > 1e-8:
 
             # Get rotation matrixes
             self.calc_DKQQ(B[1],B[2])
             self.rotate = True
+            self.Tqq = {}
 
         else:
 
@@ -1151,7 +1162,8 @@ class ESE:
             self.rotate = False
 
         # Initialize atom
-        self.atom = HeI_1083(jsim,B=self.B,especial=False)
+       #self.atom = HeI_1083(jsim,B=self.B,especial=False)
+        self.atom = HeI_1083(jsim,B=self.B,especial=True)
 
         # If multi-term atom
         if self.atom.multiterm:
@@ -1298,10 +1310,14 @@ class ESE:
 
 ################################################################################
 
-    def sumStokes(self, ray, stokes, nus_weights):
+    def sumStokes(self, ray, stokes, nus_weights, jsim):
         """ Just calls the same method for the atom
         """
-        self.atom.sumStokes(ray, stokes, nus_weights)
+        # If need to rotate
+        if self.rotate:
+            self.atom.sumStokes(ray, self.get_Tqq(ray,jsim), stokes, nus_weights)
+        else:
+            self.atom.sumStokes(ray, ray.Tqq, stokes, nus_weights)
 
 ################################################################################
 
@@ -1361,6 +1377,166 @@ class ESE:
 
 ################################################################################
 
+    def get_Tqq(self,ray,jsim):
+        """ Compute Tqq in the magnetic reference frame from the vertical ones
+        """
+
+        # Try to get precomputed Tqq
+        tag = f'{ray.inc}:{ray.az}'
+        try:
+            return self.Tqq[tag]
+        except KeyError:
+           #print('Vertical')
+           #print(ray.Tqq)
+            self.Tqq[tag] = self.rotate_Tqq(ray.Tqq,jsim)
+           #print('Magn')
+           #print(self.Tqq)
+           #sys.exit()
+            return self.Tqq[tag]
+        except:
+            raise
+
+################################################################################
+
+    def rotate_Tqq(self,Tqq,jsim):
+        """ Rotates the Tqq tensors from vertical to magnetic
+        """
+
+        Tqqn = [{'-1-1':0j,'-10':0j,'-11':0j,'00':0j,'01':0j,'11':0j}, \
+                {'-1-1':0j,'-10':0j,'-11':0j,'00':0j,'01':0j,'11':0j}, \
+                {'-1-1':0j,'-10':0j,'-11':0j,'00':0j,'01':0j,'11':0j}, \
+                {'-1-1':0j,'-10':0j,'-11':0j,'00':0j,'01':0j,'11':0j}]
+
+        # Generate TKQ
+        TKQ = [ [[0.],[0.,0.,0.],[0.,0.,0.,0.,0.]], \
+                [[0.],[0.,0.,0.],[0.,0.,0.,0.,0.]], \
+                [[0.],[0.,0.,0.],[0.,0.,0.,0.,0.]], \
+                [[0.],[0.,0.,0.],[0.,0.,0.,0.,0.]] ]
+        nTKQ = [[[0.],[0.,0.,0.],[0.,0.,0.,0.,0.]], \
+                [[0.],[0.,0.,0.],[0.,0.,0.,0.,0.]], \
+                [[0.],[0.,0.,0.],[0.,0.,0.,0.,0.]], \
+                [[0.],[0.,0.,0.],[0.,0.,0.,0.,0.]] ]
+
+        # For each K
+        for K in range(3):
+
+            # For each Q
+            for iQ,Q in enumerate(range(-K,K+1)):
+
+                # For each q
+                for q in range(-1,2):
+
+                    # Valid qp
+                    qp = q - Q
+                    if np.absolute(qp) > 1.:
+                        continue
+
+                    # Factor
+                    ff = jsim.sign(1.+q)*np.sqrt(3.*(2.*K+1.))*jsim.j3(1.,1.,K,q,-qp,-Q)
+
+                    # For each Stokes
+                    for i in range(4):
+                        TKQ[i][K][iQ] += ff*Tqq[i][f'{q}{qp}'] 
+
+        # Rotate TKQ
+
+        # For each Stokes
+        for i in range(4):
+
+            # K = 0 does not rotate
+            nTKQ[i][0] = TKQ[i][0]
+
+            # For each multipole
+            for K in range(1,3):
+
+                # Negative Q
+                for Q in range(-K,1):
+
+                    # Q index
+                    iQ = Q + K
+
+                    # For each Q'
+                    for Qp in range(-K,K+1):
+
+                        # T idex
+                        iQp = Qp + K
+
+                        nTKQ[i][K][iQ] += TKQ[i][K][iQp]*self.DKQQ[K][Q][Qp]
+
+            # Positive Q
+            nTKQ[i][1][2] = -1.*np.conjugate(nTKQ[i][1][0])
+            nTKQ[i][2][3] = -1.*np.conjugate(nTKQ[i][2][1])
+            nTKQ[i][2][4] =     np.conjugate(nTKQ[i][2][0])
+
+
+        # For each q
+        for q in range(-1,2):
+
+            # For each qp
+            for qp in range(q,2):
+
+                # For each K
+                for K in range(3):
+
+                    # Valid Q
+                    Q = q - qp
+                    if np.absolute(Q) > K:
+                        continue
+                    iQ = Q + K
+
+                    # Factor
+                    ff = jsim.sign(1.+q)*np.sqrt((2.*K+1.)/3.)*jsim.j3(1.,1.,K,q,-qp,-Q)
+
+                    # For each Stokes parameter
+                    for i in range(4):
+                        Tqqn[i][f'{q}{qp}'] += ff*nTKQ[i][K][iQ]
+
+        # Do symmetrics
+        for q in range(-1,2):
+            for qp in range(-1,q):
+                # For each stokes
+                for i in range(4):
+                    Tqqn[i][f'{q}{qp}'] = np.conjugate(Tqqn[i][f'{qp}{q}'])
+
+        # And come back
+        return Tqqn
+
+################################################################################
+
+    def rotate_Tqq_doubtful(self,Tqq):
+        """ Rotates the Tqq tensors from vertical to magnetic
+        """
+
+        Tqqn = [{'-1-1':0j,'-10':0j,'-11':0j,'00':0j,'01':0j,'11':0j}, \
+                {'-1-1':0j,'-10':0j,'-11':0j,'00':0j,'01':0j,'11':0j}, \
+                {'-1-1':0j,'-10':0j,'-11':0j,'00':0j,'01':0j,'11':0j}, \
+                {'-1-1':0j,'-10':0j,'-11':0j,'00':0j,'01':0j,'11':0j}]
+
+        # For each q
+        for q in range(-1,2):
+            # For each qp
+            for qp in range(q,2):
+                tag = f'{q}{qp}'
+                # For each p
+                for p in range(-1,2):
+                    # For each pp
+                    for pp in range(-1,2):
+                        DP = self.DKQQ[1][p][q]*np.conjugate(self.DKQQ[1][pp][qp])
+                        # For each Stokes
+                        for i in range(4):
+                            Tqqn[i][tag] += DP*Tqq[i][f'{p}{pp}']
+        # Do symmetrics
+        for q in range(-1,2):
+            for qp in range(-1,q):
+                # For each stokes
+                for i in range(4):
+                    Tqqn[i][f'{q}{qp}'] = np.conjugate(Tqqn[i][f'{qp}{q}'])
+
+        # And come back
+        return Tqqn
+
+################################################################################
+
     def solveESE_ML(self, rad, cdt):
         """
             Called at every grid point at the end of the Lambda iteration.
@@ -1379,8 +1555,8 @@ class ESE:
         Bnorm = self.B
 
         # If there is magnetic field, need to rotate Jqq
-        if Bnorm > 0.:
-            self.rotate_Jqq(JS)
+       #if self.rotate:
+       #    self.rotate_Jqq(JS)
 
         # Initialize to zero the coefficients
         for i, p_lev in enumerate(self.atom.dens_elmnt_indep):
@@ -2337,10 +2513,10 @@ class ESE:
                             f.write(f'    J^{K:1d}{Q:2d} {JKQ[K][Q]}\n')
 
         # If there is magnetic field, need to rotate Jqq
-        if self.B > 0.:
+        if self.rotate:
 
             # Rotate Jqq
-            self.rotate_Jqq(JS)
+           #self.rotate_Jqq(JS)
 
             # Debug
             if self.debug:

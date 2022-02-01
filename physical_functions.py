@@ -640,7 +640,7 @@ class rotate_ist():
 ######################################################################
 ######################################################################
 
-    def get_DKQQ(self,Kmax,theta,chi,conjugate=None,backwards=None):
+    def get_DKQQ(self,kmax,theta,chi,conjugate=None,backwards=None):
         ''' Return the DKQQ tensor for the given maximum rank,
             angles, and rotation variables.
             Rotated an angle theta (polar) and chi (azimuth)
@@ -665,6 +665,8 @@ class rotate_ist():
         ceI = []
         ceIm = []
 
+        Kmax = kmax + 1
+
         # For each K to include
         for K in range(1,Kmax):
             ang = float(K)*chi
@@ -678,10 +680,9 @@ class rotate_ist():
 
         # Compute rotation tensor D[K][Q][Q'] and rotate
         DKQQ = {}
-        kmax = Kmax - 1
 
         # For each K multipole
-        for K in range(Kmax):
+        for K in range(1,Kmax):
 
             # Float and dimension in Q space
             rK = float(K)
@@ -746,7 +747,7 @@ class rotate_ist():
                             cei = ceI[kmax-aQ1]
 
                     # Add the DKQQ value
-                    DKQQ[K][aQ][aQ1] = cer*dkqq + j*cei*dkqq
+                    DKQQ[K][aQ][aQ1] = cer*dkqq + 1j*cei*dkqq
 
         # Return the new tensor
         return DKQQ

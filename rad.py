@@ -25,7 +25,7 @@ class RTE:
         for qq in [-1, 0, 1]:
             self.jqq[qq] = {}
             for qp in [-1, 0, 1]:
-                self.jqq[qq][qp] = np.zeros(len(nus))
+                self.jqq[qq][qp] = np.zeros(len(nus),dtype=np.complex128)
 
     def bb(self, T, nus):
         """ Black body radiation

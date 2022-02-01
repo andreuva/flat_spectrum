@@ -82,7 +82,7 @@ class Allen_class():
         lamb = c.c*1e4/nus
 
         # Intensity
-        return self.fI(nus)
+        return self.fI(lamb)
 
     def get_clv(self,ray,nus):
         """ Get CLV from Allen
@@ -92,8 +92,8 @@ class Allen_class():
         lamb = c.c*1e4/nus
 
         # u1 and u2
-        u1 = self.fu1(nus)
-        u2 = self.fu2(nus)
+        u1 = self.fu1(lamb)
+        u2 = self.fu2(lamb)
 
         # Get cosine of alpha
         mu = np.cos(ray.rinc)
@@ -101,7 +101,7 @@ class Allen_class():
         if arg >= 0.:
             cosa = np.sqrt(mu*mu - self.cosG*self.cosG)/self.sinG
         else:
-            return 0.
+            return 0.*u1
 
         # Return geometric factor
         return 1. - u1*(1. - cosa) - u2*(1. - cosa*cosa)

@@ -1,7 +1,8 @@
-import sys
+import sys,copy
 from physical_functions import voigt, jsymbols
 from atom import ESE
 from rad import RTE
+from physical_functions import Tqq_all
 
 import numpy as np
 from numpy.linalg import norm
@@ -52,9 +53,15 @@ class ray:
         if theta_crit > self.inc_glob:
 
             # Get inclination for CLV
-            theta_clv = 180.0 - \
-                        np.arcsin((constants.R_sun + z0)/constants.R_sun * \
-                                  np.sin(180. - self.inc_glob))
+            arg = (constants.R_sun + z0)/constants.R_sun * \
+                   np.sin(180. - self.inc_glob)
+            if abs(arg) <= 1.:
+                theta_clv = 180.0 - \
+                            np.arcsin((constants.R_sun + z0)/constants.R_sun * \
+                                      np.sin(180. - self.inc_glob))
+            else:
+                theta_clv = 180.
+
             # Get LV factor
             self.clv = 1 - 0.64 + 0.2 + 0.64*np.abs(np.cos(theta_clv)) - \
                        0.2*np.cos(theta_clv)**2
@@ -69,6 +76,9 @@ class ray:
         else:
             self.is_downward = False
 
+        # Calculate Tqq here once
+        self.Tqq = Tqq_all(self.rinc,self.raz)
+
 ################################################################################
 ################################################################################
 ################################################################################
@@ -81,12 +91,17 @@ class point:
         self.atomic = atomic
         self.z = height
 
-    def sumStokes(self, ray, nus_weights):
+    def sumStokes(self, ray, nus_weights, JS):
         """ Add contribution to Jqq
         """
 
         self.radiation.sumStokes(ray)
-        self.atomic.sumStokes(ray, self.radiation.stokes, nus_weights)
+        self.atomic.sumStokes(ray, self.radiation.stokes, nus_weights, JS)
+
+    def setradiationas(self,asthis):
+        """ Sets the stokes parameters as in asthis
+        """
+        self.radiation.stokes = copy.deepcopy(asthis.stokes)
 
 ################################################################################
 ################################################################################
@@ -154,6 +169,18 @@ class conditions:
 
         # Initialice the array of the magnetic field vector
         self.B = np.zeros((self.z_N, 3))
+
+        # Constant field
+        print('Ad-hoc constant field in conditions.__init__()')
+        for iz in range(self.z_N):
+            self.B[iz,0] = 1.
+           #self.B[iz,1] = 0.
+           #self.B[iz,2] = 0.
+            self.B[iz,1] = 30.*np.pi/180.
+            self.B[iz,2] = 120.*np.pi/180.
+        print(f'Bx {self.B[0,0]*np.sin(self.B[0,1])*np.cos(self.B[0,2])} ' + \
+              f'By {self.B[0,0]*np.sin(self.B[0,1])*np.sin(self.B[0,2])} ' + \
+              f'Bz {self.B[0,0]*np.cos(self.B[0,1])}')
 
         # If starting from equilibrium
         self.equi = parameters.initial_equilibrium
@@ -229,7 +256,7 @@ class state:
 
         # Initialicing the atomic state instanciating ESE class for each point
         self.atomic = [ESE(cdts.v_dop, cdts.a_voigt, \
-                           vec, cdts.temp, cdts.JS, cdts.equi,iz) for iz,vec in enumerate(cdts.B)]
+                vec, cdts.temp, cdts.JS, cdts.equi,iz) for iz,vec in enumerate(cdts.B)]
 
         # Initialicing the radiation state instanciating RTE class for each point
         self.radiation = [RTE(cdts.nus, cdts.v_dop) for z in cdts.zz]
@@ -243,10 +270,12 @@ class state:
         self.sun_rad = []
         for ray in cdts.rays:
             self.sun_rad.append(RTE(cdts.nus, cdts.v_dop))
-            self.sun_rad[-1].make_IC(cdts.nus, ray, cdts.Trad, Allen)
+            if ray.rinc < 0.5*np.pi:
+                self.sun_rad[-1].make_IC(cdts.nus, ray, cdts.Trad, Allen)
         for ray in cdts.orays:
             self.sun_rad.append(RTE(cdts.nus, cdts.v_dop))
-            self.sun_rad[-1].make_IC(cdts.nus, ray, cdts.Trad, Allen)
+            if ray.rinc < 0.5*np.pi:
+                self.sun_rad[-1].make_IC(cdts.nus, ray, cdts.Trad, Allen)
 
     def update_mrc(self, cdts, itter):
         """Update the mrc of the current state by finding the

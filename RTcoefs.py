@@ -52,8 +52,12 @@ class RTcoefs:
         # Point to J symbols
         jsim = cdts.JS
 
-        # Get all Tqq
-        TQQ = Tqq_all(ray.rinc,ray.raz)
+        # Get geomtrical tensors
+        # If there is need to rotate
+        if ese.rotate:
+            TQQ = ese.get_Tqq(ray,jsim)
+        else:
+            TQQ = ray.Tqq
 
         # Add density to global constant
         hnuN = self.hnu*cdts.n_dens
@@ -266,8 +270,12 @@ class RTcoefs:
         # Point to J symbols
         jsim = cdts.JS
 
-        # Get all Tqq
-        TQQ = Tqq_all(ray.rinc,ray.raz)
+        # Get geomtrical tensors
+        # If there is need to rotate
+        if ese.rotate:
+            TQQ = ese.get_Tqq(ray,jsim)
+        else:
+            TQQ = ray.Tqq
 
         # Add density to global constant
         hnuN = self.hnu*cdts.n_dens
@@ -788,9 +796,9 @@ class RTcoefs:
             print(f"Warning: eta_I < 0 at iz = {ese.iz} dir = {ray.rinc}x{ray.raz}")
             for ifreq,e0 in enumerate(eta0):
                 if e0 < 0.:
-                    print(f"  Lambda {cts.c*1e7/cdts.nus[ifreq]}: " + \
-                          f"{eta_a0[ifreq]} - {eta_s0[ifreq]} = " + \
-                          f"{e0}    MAX: {np.max(eta0)}")
+                    print(f"  Lambda {cts.c*1e7/cdts.nus[ifreq]:12.6f}: " + \
+                          f"{eta_a0[ifreq]:13.6e} - {eta_s0[ifreq]:13.6e} = " + \
+                          f"{e0:13.6e}    MAX: {np.max(eta0):13.6e}")
             self.no_warning = False
             print(f"Will not bother you with more instances of this warning")
 
