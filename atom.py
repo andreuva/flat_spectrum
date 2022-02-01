@@ -888,7 +888,7 @@ class line_class():
         if self.especial:
 
             # Get difference between components and resonance
-            dd = np.absolute(self.resos - n0)
+            dd = np.absolute(self.resos - nu0)
 
             # Get component closest to this resonance
             comp = self.resos[np.argmin(dd)]
@@ -3188,8 +3188,8 @@ class ESE:
                             if line.especial:
 
                                 # Get energies
-                                Ek  = terml.eigval[ik]*c.c
-                                Ek1 = terml.eigval[ik1]*c.c
+                                Ek  = termu.eigval[ik]*c.c
+                                Ek1 = termu.eigval[ik1]*c.c
 
                                 # And component frequency
                                 nu_kl   = Ek  - El
