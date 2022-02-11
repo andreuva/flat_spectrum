@@ -1,3 +1,4 @@
+import copy
 from physical_functions import jsymbols,rotate_ist
 import constants as c
 import numpy as np
@@ -45,7 +46,73 @@ def io_saverho(datadir,atomic):
         atom = atoml.atom
 
         for term in atom.terms:
+
+            indexes = copy.deepcopy(term.index)
+            rhos = copy.deepcopy(atoml.rho).tolist()[:term.NN_next]
+            LL = term.L
+            SS = term.S
+            maxJ = LL + SS
+
             f.write(f"Term L {term.L} S {term.S}\n")
+
+            # Initialize next index
+            ii = term.NN_next-1
+
+            # Initialize left index
+            i1 = -1
+
+            # Add missing indexes
+
+            # For each "left" M
+            for iM,M,Mblock in zip(range(term.nM),term.M,term.Mblock):
+                # For each "left" mu
+                for mu in range(Mblock):
+
+                    # Get mu, M index
+                    i1 += 1
+
+                    # Initialize right index
+                    i2 = -1
+
+                    # For each "right" M
+                    for iM1,M1,Mblock1 in zip(range(term.nM),term.M,term.Mblock):
+
+                        # If dM > 1, skip
+                        if int(round(np.absolute(M1 - M))) > int(round(2.*maxJ)):
+
+                            # Advance the index anyways
+                            i2 += Mblock1
+
+                            # And skip
+                            continue
+
+                        # For each "right" mu
+                        for mu1 in range(Mblock1):
+
+                            # Get mu1, M1 index
+                            i2 += 1
+
+                            # Only if i2 < i1
+                            if i2 < i1:
+
+                                for index in term.index:
+                                    ii2 = index[1]
+                                    ii1 = index[2]
+                                    if i1 == ii1 and i2 == ii2:
+                                        crrho = atoml.rho[index[0]]
+                                        cirho = atoml.rho[index[0]+1]
+                                        break
+
+                                ii += 1
+                                indexes.append([ii,i1,i2,iM,M,mu,iM1,M1,mu1,False])
+                                rhos.append(crrho)
+                                ii += 1
+                                indexes.append([ii,i1,i2,iM,M,mu,iM1,M1,mu1,True])
+                                rhos.append(-1.*cirho)
+
+            rhos = np.array(rhos)
+
+            # Output
             for J in term.J:
 
                 # Possible M
@@ -54,13 +121,19 @@ def io_saverho(datadir,atomic):
                 for Jp in term.J:
                     minK = int(round(np.absolute(J-Jp)))
                     maxK = int(round(J + Jp))
+
+                    # If need to rotate
                     if atoml.rotate:
                         DKQQ = rota.get_DKQQ(2,-atoml.theta,-atoml.phi,conjugate=True,backwards=True)
                         mrho = {}
+
                     for K in range(minK,maxK+1):
+
                         if atoml.rotate:
                             mrho[K] = {}
+
                         for Q in range(-K,K+1):
+
                             if atoml.rotate:
                                 mrho[K][Q] = 0j
 
@@ -73,41 +146,26 @@ def io_saverho(datadir,atomic):
                                 # Decide M'
                                 Mp = M - Q
 
-                                # Sign and weight
-                                SS = jsim.sign(J-M)* \
-                                     np.sqrt(2.*K + 1.)
-
                                 # Skip invalid M'
                                 if np.absolute(Mp) > Jp:
                                     continue
+
+                                # Sign and weight
+                                SW = jsim.sign(J-M)* \
+                                     np.sqrt(2.*K + 1.)
 
                                 # Go by the whole term
                                 for index in term.index:
 
                                     # Extract data
                                     ii,i1,i2,iM1,M1,mu1,iM2,M2,mu2,imag = index
-                                    # If M,M'
-                                    if (M1 != M or M2 != Mp) and \
-                                       (M1 != Mp or M2 != M):
 
+                                    # If M,M'
+                                    if (M1 != M or M2 != Mp):
                                         continue
 
-                                    # If crossed, conjugate
-                                    if M1 == Mp and M2 == M and i1 != i2:
-                                        iiM1 = iM2
-                                        ii1 = i2
-                                        iiM2 = iM1
-                                        ii2 = i1
-                                        conj = -1.0
-                                    else:
-                                        iiM1 = iM1
-                                        ii1 = i1
-                                        iiM2 = iM2
-                                        ii2 = i2
-                                        conj = 1.0
-
                                     # Run over J
-                                    for Jindex1 in term.index_muM[iiM1]:
+                                    for Jindex1 in term.index_muM[iM1]:
                                         J1 = Jindex1[2]
                                         iJ1 = Jindex1[1]
 
@@ -116,7 +174,7 @@ def io_saverho(datadir,atomic):
                                             continue
 
                                         # Run over J'
-                                        for Jindex2 in term.index_muM[iiM2]:
+                                        for Jindex2 in term.index_muM[iM2]:
                                             J2 = Jindex2[2]
                                             iJ2 = Jindex2[1]
 
@@ -125,23 +183,34 @@ def io_saverho(datadir,atomic):
                                                 continue
 
                                             # Contribution
-                                            CC = term.eigvec[ii1][iJ1]* \
-                                                 term.eigvec[ii2][iJ2]* \
-                                                 SS*jsim.j3(J,Jp,K,M,-Mp,-Q)
+                                            CC = term.eigvec[i1][iJ1]* \
+                                                 term.eigvec[i2][iJ2]* \
+                                                 SW*jsim.j3(J,Jp,K,M,-Mp,-Q)
 
                                             # If imag
                                             if imag:
-                                                rho += conj*CC*rrho[ii]*1j
+                                                rho += CC*rhos[ii]*1j
                                             else:
-                                                rho += CC*rrho[ii]
+                                                rho += CC*rhos[ii]
+
                             if atoml.rotate:
                                 mrho[K][Q] = rho
-                            # Print rhoKQ
-                            f.write(f'rho^{K:1d}_{Q:2d}({J:3f},{Jp:3f})_m = ' + \
-                                    f'{rho.real:13.6e}\n')
-                            if Q != 0:
+
+                                # Print rhoKQ
                                 f.write(f'rho^{K:1d}_{Q:2d}({J:3f},{Jp:3f})_m = ' + \
-                                        f'{rho.imag:13.6e}\n')
+                                        f'{rho.real:13.6e}\n')
+                                if Q != 0:
+                                    f.write(f'rho^{K:1d}_{Q:2d}({J:3f},{Jp:3f})_m = ' + \
+                                            f'{rho.imag:13.6e}\n')
+                            else:
+
+                                # Print rhoKQ
+                                f.write(f'rho^{K:1d}_{Q:2d}({J:3f},{Jp:3f})_v = ' + \
+                                        f'{rho.real:13.6e}\n')
+                                if Q != 0:
+                                    f.write(f'rho^{K:1d}_{Q:2d}({J:3f},{Jp:3f})_v = ' + \
+                                            f'{rho.imag:13.6e}\n')
+
                     if atoml.rotate:
                         for K in range(minK,maxK+1):
                             if K == 0:
@@ -157,14 +226,6 @@ def io_saverho(datadir,atomic):
                                 if Q != 0:
                                     f.write(f'rho^{K:1d}_{Q:2d}({J:3f},{Jp:3f})_v = ' + \
                                             f'{val.imag:13.6e}\n')
-                    else:
-                        for K in range(minK,maxK+1):
-                            for Q in range(-K,K+1):
-                                f.write(f'rho^{K:1d}_{Q:2d}({J:3f},{Jp:3f})_v = ' + \
-                                        f'{mrho[K][Q].real:13.6e}\n')
-                                if Q != 0:
-                                    f.write(f'rho^{K:1d}_{Q:2d}({J:3f},{Jp:3f})_v = ' + \
-                                            f'{mrho[K][Q].imag:13.6e}\n')
 
     # Close file
     f.close()

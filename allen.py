@@ -8,7 +8,12 @@ class Allen_class():
     """
 
     def __init__(self):
-        """ Create interpolation functions
+        """ Create interpolation functions to be used later.
+            Inputs: None
+            Outputs: None
+            Internal: Defines interpolation functions for CLV
+                      coefficients and continuum intensity (in
+                      wavelength)
         """
 
         # Size
@@ -19,13 +24,13 @@ class Allen_class():
                       0.3e0,0.32e0,0.35e0,0.37e0,0.38e0, \
                       0.4e0,0.45e0,0.5e0,0.55e0,0.6e0,0.8e0, \
                       1e0,1.5e0,2e0,3e0,5e0,10e0])
-        # u1
+        # u1 (CLV coefficient order 1)
         y1 = np.array([0.12e0,-1.30e0,-0.10e0,-0.10e0,0.38e0, \
                        0.74e0,0.88e0,0.98e0,1.03e0,0.92e0, \
                        0.91e0,0.99e0,0.97e0,0.93e0,0.88e0, \
                        0.73e0,0.64e0,0.57e0,0.48e0,0.35e0, \
                        0.22e0,0.15e0])
-        # u2
+        # u2 (CLV coefficient order 2)
         y2 = np.array([0.33e0,1.6e0,0.85e0,0.90e0,0.57e0,0.20e0, \
                        0.03e0,-0.10e0,-0.16e0,-0.05e0,-0.05e0, \
                        -0.17e0,-0.22e0,-0.23e0,-0.23e0,-0.22e0, \
@@ -51,34 +56,45 @@ class Allen_class():
                        0.041e0,0.0142e0,0.0062e0,0.0032e0,0.00095e0, \
                        0.00035e0,0.00018e0])
 
-        # Convert units
+        # Convert units to cgs in Hz bandwidth
         yI *= 1e10*xI*xI/(c.c*1e4)
 
         # Interpolation functions
-       #self.fu1 = inter(x,y1,kind='linear',bounds_error=None, \
-       #                 fill_value=(0.,0.),assume_sorted=True)
-       #self.fu2 = inter(x,y2,kind='linear',bounds_error=None, \
-       #                 fill_value=(0.,0.),assume_sorted=True)
-       #self.fI = inter(xI,yI,kind='linear',bounds_error=None, \
-       #                fill_value=(0.,0.),assume_sorted=True)
-        self.fu1 = inter.interp1d(x,y1,kind='linear',bounds_error=False, \
+        self.fu1 = inter.interp1d(x,y1,kind='linear', \
+                         bounds_error=False, \
                          fill_value=(y1[0],y1[-1]),assume_sorted=True)
-        self.fu2 = inter.interp1d(x,y2,kind='linear',bounds_error=False, \
+        self.fu2 = inter.interp1d(x,y2,kind='linear', \
+                         bounds_error=False, \
                          fill_value=(y2[0],y2[-1]),assume_sorted=True)
-        self.fI = inter.interp1d(xI,yI,kind='linear',bounds_error=False, \
+        self.fI = inter.interp1d(xI,yI,kind='linear', \
+                        bounds_error=False, \
                         fill_value=(yI[0],yI[-1]),assume_sorted=True)
 
+        # Initialize gamma angle
+        self.sinG = 0.999999
+        self.cosG = np.sqrt(1. - self.sinG*self.sinG)
+
     def get_gamma(self,h):
-        """ Get gamma angle functions for a given height
+        """ Get gamma angle functions for a given height.
+            Input: height [cm]
+            Output: None
+            Internal: Defines the cosine and the sine of the
+                      gamma angle, the angle of the cone subtending
+                      the Sun from a point at the height given in the
+                      input
         """
         self.sinG = c.R_sun / (c.R_sun + h)
         self.cosG = np.sqrt(1. - self.sinG*self.sinG)
 
     def get_radiation(self,nus):
-        """ Get radiation from Allen
+        """ Get radiation intensity from Allen
+            Input: numpy array of frequencies [Hz]
+            Output: continuum intensity at the requested frequencies
+                    [erg s^-1 cm^-2 sr^-1 Hz^-1]
+            Internal: None
         """
 
-        # Output lambda [micron]
+        # Convert to lambda [micron]
         lamb = c.c*1e4/nus
 
         # Intensity
@@ -86,16 +102,21 @@ class Allen_class():
 
     def get_clv(self,ray,nus):
         """ Get CLV from Allen
+            Input: numpy array of frequencies [Hz]
+            Output: CLV factor for the known height.
+            Note: The height is pre-determined because
+                  self.get_gamma() needs to be called first for
+                  the desired height.
         """
 
-        # Output lambda [micron]
+        # Convert input to lambda [micron]
         lamb = c.c*1e4/nus
 
-        # u1 and u2
+        # u1 and u2 from pre-defined interpolation functions
         u1 = self.fu1(lamb)
         u2 = self.fu2(lamb)
 
-        # Get cosine of alpha
+        # Get cosine of alpha angle (heliocentric angle)
         mu = np.cos(ray.rinc)
         arg = mu*mu - self.cosG*self.cosG
         if arg >= 0.:
@@ -105,5 +126,3 @@ class Allen_class():
 
         # Return geometric factor
         return 1. - u1*(1. - cosa) - u2*(1. - cosa*cosa)
-
-

@@ -211,12 +211,13 @@ class conditions:
         delt_v = line.nu*self.v_dop
 
         # Call profile calculation and apply normalization (physical)
-        profile = voigt((self.nus-v0)/delt_v, self.a_voigt)
+        profile = voigt((v0-self.nus)/delt_v, self.a_voigt)
         profile = profile / (np.sqrt(np.pi) * delt_v)
 
         # Apply normalization (numerical)
         normalization = np.sum(profile.real*self.nus_weights)
         profile.real = profile.real/normalization
+       #profile = np.real(profile)/normalization + 1j*np.imag(profile)
 
         return profile
 

@@ -10,9 +10,9 @@ def voigt(v, a):
     """
 
     ss = np.abs(v)+a
-    dd = .195e0*np.abs(v)-.176e0
-    zz = a - 1j*v
-    res = v*0j
+    dd = (.195e0*np.abs(v)-.176e0)
+    zz = a - 1.j*v
+    res = v*0.j
 
     # Run over frequencies
     for i,s,z,d in zip(range(len(ss)),ss,zz,dd):
@@ -90,31 +90,31 @@ def Tqq_all(theta,chi):
     out[1]['00'] = 0.5*st2
     out[1]['11'] = out[1]['-1-1']
     out[1]['-10'] = -0.5*s2i*cst*ec
-    out[1]['0-1'] = np.conjugate(out[0]['-10'])
+    out[1]['0-1'] = np.conjugate(out[1]['-10'])
     out[1]['-11'] = -0.25*(1+ct2)*e2c
-    out[1]['1-1'] = np.conjugate(out[0]['-11'])
+    out[1]['1-1'] = np.conjugate(out[1]['-11'])
     out[1]['01'] = -1.*out[1]['-10']
-    out[1]['10'] = np.conjugate(out[0]['01'])
+    out[1]['10'] = np.conjugate(out[1]['01'])
     # U
     out[2]['-1-1'] = 0.
     out[2]['00'] = 0.
     out[2]['11'] = 0.
     out[2]['-10'] = 0.5*s2i*1j*st*ec
-    out[2]['0-1'] = np.conjugate(out[0]['-10'])
+    out[2]['0-1'] = np.conjugate(out[2]['-10'])
     out[2]['-11'] = 0.5*ct*e2c*1j
-    out[2]['1-1'] = np.conjugate(out[0]['-11'])
+    out[2]['1-1'] = np.conjugate(out[2]['-11'])
     out[2]['01'] = -1.*out[2]['-10']
-    out[2]['10'] = np.conjugate(out[0]['01'])
+    out[2]['10'] = np.conjugate(out[2]['01'])
     # V
     out[3]['-1-1'] = -0.5*ct
     out[3]['00'] = 0.
     out[3]['11'] = 0.5*ct
     out[3]['-10'] = 0.5*s2i*st*ec
-    out[3]['0-1'] = np.conjugate(out[0]['-10'])
+    out[3]['0-1'] = np.conjugate(out[3]['-10'])
     out[3]['-11'] = 0.
     out[3]['1-1'] = 0.
     out[3]['01'] = out[3]['-10']
-    out[3]['10'] = np.conjugate(out[0]['01'])
+    out[3]['10'] = np.conjugate(out[3]['01'])
 
     # And return full Tqq
     return out
