@@ -45,5 +45,6 @@ initial_equilibrium = True   # Start from equilibrium
 #dir = f'output_testing_2/'
 #dir = f'output_hazel_like_B0/'
 #dir = f'output_hazel_like_B1-30-120/'
-dir = f'output_hazel_like_B1-0-0/'
+#dir = f'output_hazel_like_B1-0-0/'
+dir = f'output_jiri_test/'
 

@@ -1011,7 +1011,7 @@ class HeI_1083():
         self.terms = []
 
         # Internal switch
-        not_twoterm = True
+        not_twoterm = False
 
         # Add the two terms. Energy cm^-1
         self.terms.append(term_class(0.0,1.0,      [1.], \
@@ -1076,6 +1076,8 @@ class HeI_1083():
             red = 0.5*(self.terms[1].LE[0] + self.terms[1].LE[1]) - \
                   self.terms[0].LE[0]
             blue = self.terms[1].LE[2] - self.terms[0].LE[0]
+            red *= c.c
+            blue *= c.c
             self.lines[0].resos = [red,blue]
 
             # Define profiles
@@ -1216,8 +1218,8 @@ class ESE:
             self.rotate = False
 
         # Initialize atom
-        self.atom = HeI_1083(jsim,B=self.B,especial=False)
-       #self.atom = HeI_1083(jsim,B=self.B,especial=True)
+       #self.atom = HeI_1083(jsim,B=self.B,especial=False)
+        self.atom = HeI_1083(jsim,B=self.B,especial=True)
 
         # If multi-term atom
         if self.atom.multiterm:

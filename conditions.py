@@ -171,16 +171,16 @@ class conditions:
         self.B = np.zeros((self.z_N, 3))
 
         # Constant field
-        print('Ad-hoc constant field in conditions.__init__()')
-        for iz in range(self.z_N):
-            self.B[iz,0] = 1.
-           #self.B[iz,1] = 0.
-           #self.B[iz,2] = 0.
-            self.B[iz,1] = 30.*np.pi/180.
-            self.B[iz,2] = 120.*np.pi/180.
-        print(f'Bx {self.B[0,0]*np.sin(self.B[0,1])*np.cos(self.B[0,2])} ' + \
-              f'By {self.B[0,0]*np.sin(self.B[0,1])*np.sin(self.B[0,2])} ' + \
-              f'Bz {self.B[0,0]*np.cos(self.B[0,1])}')
+       #print('Ad-hoc constant field in conditions.__init__()')
+       #for iz in range(self.z_N):
+       #    self.B[iz,0] = 1.
+       #   #self.B[iz,1] = 0.
+       #   #self.B[iz,2] = 0.
+       #    self.B[iz,1] = 30.*np.pi/180.
+       #    self.B[iz,2] = 120.*np.pi/180.
+       #print(f'Bx {self.B[0,0]*np.sin(self.B[0,1])*np.cos(self.B[0,2])} ' + \
+       #      f'By {self.B[0,0]*np.sin(self.B[0,1])*np.sin(self.B[0,2])} ' + \
+       #      f'Bz {self.B[0,0]*np.cos(self.B[0,1])}')
 
         # If starting from equilibrium
         self.equi = parameters.initial_equilibrium
