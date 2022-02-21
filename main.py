@@ -157,7 +157,7 @@ def main():
     #############
 
     # Plot quadrature
-    plot_quadrature(cdt, directory=pm.dir)
+   #plot_quadrature(cdt, directory=pm.dir)
 
     # Debug
     debug = False
@@ -171,8 +171,8 @@ def main():
     f.close()
 
     # Start the main loop for the Lambda iteration
-    for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
-   #for itteration in range(cdt.max_iter):
+   #for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
+    for itteration in range(cdt.max_iter):
 
         # Debug
         if debug:
@@ -182,8 +182,8 @@ def main():
         st.new_itter()
 
         # Go through all the rays in the cuadrature
-        for j, ray in enumerate(tqdm(cdt.rays, desc='propagating rays', leave=False)):
-       #for j, ray in enumerate(cdt.rays):
+       #for j, ray in enumerate(tqdm(cdt.rays, desc='propagating rays', leave=False)):
+        for j, ray in enumerate(cdt.rays):
 
             # Initialize optical depth
             tau = np.zeros((cdt.nus_N))

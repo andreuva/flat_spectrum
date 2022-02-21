@@ -171,16 +171,16 @@ class conditions:
         self.B = np.zeros((self.z_N, 3))
 
         # Constant field
-       #print('Ad-hoc constant field in conditions.__init__()')
-       #for iz in range(self.z_N):
-       #    self.B[iz,0] = 1.
+        print('Ad-hoc constant field in conditions.__init__()')
+        for iz in range(self.z_N):
+            self.B[iz,0] = 1.
        #   #self.B[iz,1] = 0.
        #   #self.B[iz,2] = 0.
-       #    self.B[iz,1] = 30.*np.pi/180.
-       #    self.B[iz,2] = 120.*np.pi/180.
-       #print(f'Bx {self.B[0,0]*np.sin(self.B[0,1])*np.cos(self.B[0,2])} ' + \
-       #      f'By {self.B[0,0]*np.sin(self.B[0,1])*np.sin(self.B[0,2])} ' + \
-       #      f'Bz {self.B[0,0]*np.cos(self.B[0,1])}')
+            self.B[iz,1] = 30.*np.pi/180.
+            self.B[iz,2] = 120.*np.pi/180.
+        print(f'Bx {self.B[0,0]*np.sin(self.B[0,1])*np.cos(self.B[0,2])} ' + \
+              f'By {self.B[0,0]*np.sin(self.B[0,1])*np.sin(self.B[0,2])} ' + \
+              f'Bz {self.B[0,0]*np.cos(self.B[0,1])}')
 
         # If starting from equilibrium
         self.equi = parameters.initial_equilibrium
@@ -258,6 +258,8 @@ class state:
         # Initialicing the atomic state instanciating ESE class for each point
         self.atomic = [ESE(cdts.v_dop, cdts.a_voigt, \
                 vec, cdts.temp, cdts.JS, cdts.equi,iz) for iz,vec in enumerate(cdts.B)]
+        for atomic in self.atomic:
+            atomic.initialize_profiles(cdts.nus_N)
 
         # Initialicing the radiation state instanciating RTE class for each point
         self.radiation = [RTE(cdts.nus, cdts.v_dop) for z in cdts.zz]

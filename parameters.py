@@ -10,14 +10,14 @@ zf = 2175.5*1e5   # geometrical height of the slab [cm] (around 3 arcsec)
 #zn = 35          # Points in z in the slab
 #zn = 3            # Points in z in the slab
 #zn = 100         # Points in z in the slab
-zn = 10          # Points in z in the slab
+zn = 30           # Points in z in the slab
 alpha = 0.        # angle between the vertical of the slav and the radial line [deg]
 
 #ray_quad = "gaussian_quadrature_8x8.dat" # file where the angular quadrature is saved
 #ray_quad = "gaussian_quadrature_8x4.dat" # file where the angular quadrature is saved
-#ray_quad = "gaussian_quadrature_16x4.dat"# file where the angular quadrature is saved
+ray_quad = "gaussian_quadrature_16x4.dat"# file where the angular quadrature is saved
 #ray_quad = "gaussian_quadrature_32x4.dat"# file where the angular quadrature is saved
-ray_quad = "gaussian_quadrature_32x8.dat" # file where the angular quadrature is saved
+#ray_quad = "gaussian_quadrature_32x8.dat" # file where the angular quadrature is saved
 #ray_quad = 'gaussian_quadrature_2x1.dat'
 ray_out = [[0.1,0.],[1.0,0.]]             # List of mu,phi for emergent radiation directions
 #ray_out = [[0.112,11.]]             # List of mu,phi for emergent radiation directions
@@ -33,7 +33,7 @@ n_dens = 5.8e4               # Density wich defines the optical thickness [cm^-3
 temp = 8.665251563142749e3 # Temperature of the slab [K] (6 km/s)
 Trad = 6e3                 # Black body star temperature for radiation [K]
 
-max_iter =   1       # Maximum itterations for the forward method
+max_iter = 200       # Maximum itterations for the forward method
 tolerance_p = 5e-6   # tolerated relative change in populations
 #tolerance_c = 5e-5  # tolerated relative change in coherences
 tolerance_c = 5e-4   # tolerated relative change in coherences
@@ -46,5 +46,6 @@ initial_equilibrium = True   # Start from equilibrium
 #dir = f'output_hazel_like_B0/'
 #dir = f'output_hazel_like_B1-30-120/'
 #dir = f'output_hazel_like_B1-0-0/'
-dir = f'output_jiri_test/'
+#dir = f'output_jiri_test/'
+dir = f'output_profiling-a/'
 

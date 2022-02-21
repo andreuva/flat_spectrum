@@ -76,7 +76,7 @@ class RTcoefs:
         for line in ese.atom.lines:
 
             # Initialize profiles
-            line.initialize_profiles(cdts.nus_N)
+            line.initialize_profiles()
 
             # Get levels quantum numbers
             Ll = line.levels[0]
@@ -285,7 +285,7 @@ class RTcoefs:
         for line in ese.atom.lines:
 
           # Initialize profiles
-          line.initialize_profiles(cdts.nus_N)
+          line.initialize_profiles()
 
           # Initialize line contributions
           sum_etaa0 = 0
@@ -755,6 +755,8 @@ class RTcoefs:
         KK = [[eta0,eta1,eta2,eta3],[rho0,rho1,rho2]]
 
         # Build source function
-        SS = np.array([eps0,eps1,eps2,eps3])
+       #SS = np.concatenate((eps0,eps1,eps2,eps3)).reshape((4,cdts.nus_N))
+        SS = [eps0,eps1,eps2,eps3]
+
 
         return SS, KK

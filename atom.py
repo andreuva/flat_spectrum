@@ -533,8 +533,8 @@ class line_class():
 
 ################################################################################
 
-    def initialize_profiles(self, nus_N):
-        """ Initialize to zero the line profiles
+    def initialize_profiles_first(self, nus_N):
+        """ Initialize to zero the line profiles the first time
             Input: number of wavelengths
             Output: None
             Internal: Makes self.prof equal to zero (or the components
@@ -549,6 +549,25 @@ class line_class():
         # Usual multi-term
         else:
             self.prof = np.zeros((nus_N))
+
+################################################################################
+
+    def initialize_profiles(self):
+        """ Initialize to zero the line profiles
+            Input: None
+            Output: None
+            Internal: Makes self.prof equal to zero (or the components
+                      of the dictionary is self.especial)
+        """
+
+        # If special Helium case
+        if self.especial:
+            # For each component
+            for comp in self.prof:
+                self.prof[comp] *= 0.0
+        # Usual multi-term
+        else:
+            self.prof *= 0.0
 
 ################################################################################
 
@@ -571,7 +590,7 @@ class line_class():
                 sys.exit()
 
             # Get difference between components and resonance
-            dd = np.absolute(self.resos - nu0)
+            dd = np.absolute(self.resos - nu0 - self.nu)
 
             # Get component closest to this resonance
             comp = self.resos[np.argmin(dd)]
@@ -1119,6 +1138,17 @@ class HeI_1083():
 
 ################################################################################
 
+    def initialize_profiles(self, nus_N):
+        """ Method to initialize vectors in atom profiles
+        """
+
+        # For each line
+        for line in self.lines:
+            # Reset profile
+            line.initialize_profiles_first(nus_N)
+
+################################################################################
+
     def reset_jqq(self, nus_N):
         """ Method to reset Jqq and profiles for atom
         """
@@ -1128,7 +1158,7 @@ class HeI_1083():
             # Reset Jqq
             line.reset_radiation()
             # Reset profile
-            line.initialize_profiles(nus_N)
+            line.initialize_profiles()
 
 ################################################################################
 
@@ -1356,6 +1386,13 @@ class ESE:
             self.N_rho = len(self.rho)
             self.coherences = self.N_rho - self.populations
             self.ESE_indep = np.zeros((self.N_rho, self.N_rho))
+
+################################################################################
+
+    def initialize_profiles(self, nus_N):
+        """ Just calls the same method for the atom
+        """
+        self.atom.initialize_profiles(nus_N)
 
 ################################################################################
 
@@ -2522,7 +2559,7 @@ class ESE:
         if self.debug:
 
             # Open debug file
-            f = open('debug_SEE_MT','w')
+            f = open(f'debug_SEE_MT-{self.iz}','w')
 
             # Write Jqq pre-rotation
             f.write("J_qq'\n")
@@ -2617,10 +2654,30 @@ class ESE:
                                     JKQ[K][Q] += cdt.JS.sign(1 + qq)* \
                                                  np.sqrt(3.*(2.*K + 1.))* \
                                                  cdt.JS.j3(1.,1.,K,qq,-qp,-Q)* \
-                                                 line.jqq[comp][qq][qp]
+                                                 line.jqq[qq][qp]
                         for K in range(0,3):
                             for Q in range(-K,K+1):
                                 f.write(f'    J^{K:1d}{Q:2d} {JKQ[K][Q]}\n')
+
+
+        # Debug
+        if self.debug:
+
+            # If forbidden elements
+            if len(self.atom.forbidden) > 0:
+
+                f.write('\nForbidden elements:\n')
+
+                # Write forbidden indexes
+                for term in self.atom.terms:
+                    for index in term.index:
+                        if index[0] in self.atom.forbidden:
+                            i,ii,ii1,iM,M,mu,iM1,M1,mu1,imag = index
+                            f.write(f'[{i:2d}][{ii:2d},{ii1:2d}] ' + \
+                                    f'rho({mu:2d},{M:3.1f};{mu1:2d},{M1:3.1f})\n')
+
+                # Write Jqq pre-rotation
+                f.write('\n')
 
 
         #
@@ -2877,7 +2934,7 @@ class ESE:
                     # Absorption
 
                     # Only once per upper level magnetic component
-                    if iu == iu1 and not imagu and i not in self.atom.forbidden:
+                    if iu == iu1 and not imagu and j not in self.atom.forbidden:
 
                         # Get Ju value
                         Ju = termu.index_muM[iMu][muu][2]
@@ -3219,7 +3276,7 @@ class ESE:
                     # Emission
 
                     # Only once per lower level magnetic component
-                    if il == il1 and not imagl and j not in self.atom.forbidden:
+                    if il == il1 and not imagl and i not in self.atom.forbidden:
 
                         # Get Jl value
                         Jl = terml.index_muM[iMl][mul][2]
@@ -3239,7 +3296,7 @@ class ESE:
                                 # Debug
                                 if self.debug:
                                     f.write('Skip emission relaxation for '+ \
-                                            f'{k} {muk}{Mk} {muk1,Mk1} {imagk}')
+                                            f'{k} {muk}{Mk} {muk1,Mk1} {imagk}\n')
                                 continue
 
                             # If especial
