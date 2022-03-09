@@ -1,7 +1,8 @@
-import sys
+import sys,copy
 from physical_functions import voigt, jsymbols
 from atom import ESE
 from rad import RTE
+from physical_functions import Tqq_all
 
 import numpy as np
 from numpy.linalg import norm
@@ -9,6 +10,7 @@ from numpy import real
 import matplotlib.pyplot as plt
 import constants as constants
 from get_nus import get_nus
+from allen import Allen_class
 
 ################################################################################
 ################################################################################
@@ -29,9 +31,9 @@ class ray:
         self.raz = self.az*constants.degtorad
 
         # Rotate the RF to the global one and store the result as a attribute
-        xyz_slab = np.array([np.sin(self.inc)*np.cos(self.az),
-                             np.sin(self.inc)*np.sin(self.az),
-                             np.cos(self.inc)])
+        xyz_slab = np.array([np.sin(self.rinc)*np.cos(self.raz),
+                             np.sin(self.rinc)*np.sin(self.raz),
+                             np.cos(self.rinc)])
         rotation_matrix = np.array([[np.cos(alpha), 0, np.sin(-alpha)],
                                     [0,             1,              0],
                                     [np.sin(alpha), 0,  np.cos(alpha)]])
@@ -51,9 +53,15 @@ class ray:
         if theta_crit > self.inc_glob:
 
             # Get inclination for CLV
-            theta_clv = 180.0 - \
-                        np.arcsin((constants.R_sun + z0)/constants.R_sun * \
-                                  np.sin(180. - self.inc_glob))
+            arg = (constants.R_sun + z0)/constants.R_sun * \
+                   np.sin(180. - self.inc_glob)
+            if abs(arg) <= 1.:
+                theta_clv = 180.0 - \
+                            np.arcsin((constants.R_sun + z0)/constants.R_sun * \
+                                      np.sin(180. - self.inc_glob))
+            else:
+                theta_clv = 180.
+
             # Get LV factor
             self.clv = 1 - 0.64 + 0.2 + 0.64*np.abs(np.cos(theta_clv)) - \
                        0.2*np.cos(theta_clv)**2
@@ -68,6 +76,9 @@ class ray:
         else:
             self.is_downward = False
 
+        # Calculate Tqq here once
+        self.Tqq = Tqq_all(self.rinc,self.raz)
+
 ################################################################################
 ################################################################################
 ################################################################################
@@ -80,12 +91,17 @@ class point:
         self.atomic = atomic
         self.z = height
 
-    def sumStokes(self, ray, nus_weights):
+    def sumStokes(self, ray, nus_weights, JS):
         """ Add contribution to Jqq
         """
 
         self.radiation.sumStokes(ray)
-        self.atomic.sumStokes(ray, self.radiation.stokes, nus_weights)
+        self.atomic.sumStokes(ray, self.radiation.stokes, nus_weights, JS)
+
+    def setradiationas(self,asthis):
+        """ Sets the stokes parameters as in asthis
+        """
+        self.radiation.stokes = copy.deepcopy(asthis.stokes)
 
 ################################################################################
 ################################################################################
@@ -145,6 +161,7 @@ class conditions:
         self.n_dens = parameters.n_dens
         self.temp = parameters.temp
         self.v_dop = np.sqrt(2.*constants.k_B*self.temp/atom.mass)/constants.c
+        self.Trad = parameters.Trad
 
         # Get frequency vectors and size
         self.nus, self.nus_weights = get_nus(atom,self.v_dop_0)
@@ -152,6 +169,21 @@ class conditions:
 
         # Initialice the array of the magnetic field vector
         self.B = np.zeros((self.z_N, 3))
+
+        # Constant field
+        print('Ad-hoc constant field in conditions.__init__()')
+        for iz in range(self.z_N):
+            self.B[iz,0] = 1.
+       #   #self.B[iz,1] = 0.
+       #   #self.B[iz,2] = 0.
+            self.B[iz,1] = 30.*np.pi/180.
+            self.B[iz,2] = 120.*np.pi/180.
+        print(f'Bx {self.B[0,0]*np.sin(self.B[0,1])*np.cos(self.B[0,2])} ' + \
+              f'By {self.B[0,0]*np.sin(self.B[0,1])*np.sin(self.B[0,2])} ' + \
+              f'Bz {self.B[0,0]*np.cos(self.B[0,1])}')
+
+        # If starting from equilibrium
+        self.equi = parameters.initial_equilibrium
 
         # Maximum lambda itterations
         self.max_iter = int(parameters.max_iter)
@@ -179,12 +211,13 @@ class conditions:
         delt_v = line.nu*self.v_dop
 
         # Call profile calculation and apply normalization (physical)
-        profile = voigt((self.nus-v0)/delt_v, self.a_voigt)
+        profile = voigt((v0-self.nus)/delt_v, self.a_voigt)
         profile = profile / (np.sqrt(np.pi) * delt_v)
 
         # Apply normalization (numerical)
         normalization = np.sum(profile.real*self.nus_weights)
         profile.real = profile.real/normalization
+       #profile = np.real(profile)/normalization + 1j*np.imag(profile)
 
         return profile
 
@@ -224,15 +257,28 @@ class state:
 
         # Initialicing the atomic state instanciating ESE class for each point
         self.atomic = [ESE(cdts.v_dop, cdts.a_voigt, \
-                           vec, cdts.temp, cdts.JS) for vec in cdts.B]
+                vec, cdts.temp, cdts.JS, cdts.equi,iz) for iz,vec in enumerate(cdts.B)]
+        for atomic in self.atomic:
+            atomic.initialize_profiles(cdts.nus_N)
 
         # Initialicing the radiation state instanciating RTE class for each point
         self.radiation = [RTE(cdts.nus, cdts.v_dop) for z in cdts.zz]
 
+        # Get Allen class instance and gamma angles
+        Allen = Allen_class()
+        Allen.get_gamma(np.min(cdts.zz))
+
         # Define the IC for the downward and upward rays as a radiation class
         self.space_rad = RTE(cdts.nus, cdts.v_dop)
-        self.sun_rad = RTE(cdts.nus, cdts.v_dop)
-        self.sun_rad.make_IC(cdts.nus, cdts.temp)
+        self.sun_rad = []
+        for ray in cdts.rays:
+            self.sun_rad.append(RTE(cdts.nus, cdts.v_dop))
+            if ray.rinc < 0.5*np.pi:
+                self.sun_rad[-1].make_IC(cdts.nus, ray, cdts.Trad, Allen)
+        for ray in cdts.orays:
+            self.sun_rad.append(RTE(cdts.nus, cdts.v_dop))
+            if ray.rinc < 0.5*np.pi:
+                self.sun_rad[-1].make_IC(cdts.nus, ray, cdts.Trad, Allen)
 
     def update_mrc(self, cdts, itter):
         """Update the mrc of the current state by finding the

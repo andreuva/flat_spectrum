@@ -33,6 +33,9 @@ class RTcoefs:
         elif mode == 1:
             self.getRTcoefs = self.getRTcoefs_MT
 
+        # No warning sent yet
+        self.no_warning = True
+
 
     def getRTcoefs_ML(self, ese, ray, cdts):
         """ Provides the 4-vector of epsilon and the 4x4 K-matrix for the point
@@ -49,8 +52,12 @@ class RTcoefs:
         # Point to J symbols
         jsim = cdts.JS
 
-        # Get all Tqq
-        TQQ = Tqq_all(ray.rinc,ray.raz)
+        # Get geomtrical tensors
+        # If there is need to rotate
+        if ese.rotate:
+            TQQ = ese.get_Tqq(ray,jsim)
+        else:
+            TQQ = ray.Tqq
 
         # Add density to global constant
         hnuN = self.hnu*cdts.n_dens
@@ -69,7 +76,7 @@ class RTcoefs:
         for line in ese.atom.lines:
 
             # Initialize profiles
-            line.initialize_profiles(cdts.nus_N)
+            line.initialize_profiles()
 
             # Get levels quantum numbers
             Ll = line.levels[0]
@@ -263,24 +270,22 @@ class RTcoefs:
         # Point to J symbols
         jsim = cdts.JS
 
-        # Get all Tqq
-        TQQ = Tqq_all(ray.rinc,ray.raz)
+        # Get geomtrical tensors
+        # If there is need to rotate
+        if ese.rotate:
+            TQQ = ese.get_Tqq(ray,jsim)
+        else:
+            TQQ = ray.Tqq
+
 
         # Add density to global constant
         hnuN = self.hnu*cdts.n_dens
-
-        # Initialize RT coefficients
-       #eta_a = copy.copy(self.rtc4prototype)
-       #eta_s = copy.copy(eta_a)
-       #rho_a = copy.copy(self.rtc3prototype)
-       #rho_s = copy.copy(rho_a)
-       #eps = copy.copy(eta_a)
 
         # For each transition
         for line in ese.atom.lines:
 
           # Initialize profiles
-          line.initialize_profiles(cdts.nus_N)
+          line.initialize_profiles()
 
           # Initialize line contributions
           sum_etaa0 = 0
@@ -297,10 +302,6 @@ class RTcoefs:
           sum_rhos1 = 0
           sum_rhos2 = 0
           sum_rhos3 = 0
-          sum_eps0  = 0
-          sum_eps1  = 0
-          sum_eps2  = 0
-          sum_eps3  = 0
 
           # Point to terms involved
           termu = ese.atom.terms[line.terms[1]]
@@ -490,99 +491,71 @@ class RTcoefs:
                                 jl1 = il1
                                 conj = False
 
+                              # Initialize rho
+                              rho = 0j
+
                               # Find rho index
                               for index in terml.index:
 
-                                # jlMl,jl1Ml1
+                                # ju'Mu',juMu
                                 if index[1] == jl0 and index[2] == jl1:
 
-                                  # Get rho
-                                  rho = ese.rho[index[0]]
+                                    # Add real
+                                    rho += ese.rho[index[0]]
 
-                                  # Get imaginary
-                                  imag = index[-1]
-
-                                  # If imaginary rho component
-                                  if imag:
-
-                                    # If conjugate
-                                    if conj:
-
-                                      # Eta0 contribution
-                                      contr = CCb*np.imag(Tqq0voigt)*rho
-
-                                      # Add to RT
-                                      sum_etaa0 += contr
-                                      sum_etaa1 += CCb*np.imag(Tqq1voigt)*rho
-                                      sum_etaa2 += CCb*np.imag(Tqq2voigt)*rho
-                                      sum_etaa3 += CCb*np.imag(Tqq3voigt)*rho
-                                      sum_rhoa1 -= CCb*np.real(Tqq1voigt)*rho
-                                      sum_rhoa2 -= CCb*np.real(Tqq2voigt)*rho
-                                      sum_rhoa3 -= CCb*np.real(Tqq3voigt)*rho
-
-                                    # Not conjugate
-                                    else:
-
-                                      # Eta0 contribution
-                                      contr = -CCb*np.imag(Tqq0voigt)*rho
-
-                                      # Add to RT
-                                      sum_etaa0 -= CCb*np.imag(Tqq0voigt)*rho
-                                      sum_etaa1 -= CCb*np.imag(Tqq1voigt)*rho
-                                      sum_etaa2 -= CCb*np.imag(Tqq2voigt)*rho
-                                      sum_etaa3 -= CCb*np.imag(Tqq3voigt)*rho
-                                      sum_rhoa1 += CCb*np.real(Tqq1voigt)*rho
-                                      sum_rhoa2 += CCb*np.real(Tqq2voigt)*rho
-                                      sum_rhoa3 += CCb*np.real(Tqq3voigt)*rho
-
-                                    # And break because imaginary always comes
-                                    # later
+                                    # Not diagonal
+                                    if jl0 != jl1:
+                                        if conj:
+                                            rho -= 1j*ese.rho[index[0]+1]
+                                        else:
+                                            rho += 1j*ese.rho[index[0]+1]
+                                    # And exit
                                     break
 
-                                  # If real rho component
-                                  else:
+                              # Scale
+                              rho *= CCb
 
-                                    # Eta0 contribution
-                                    contr = CCb*np.real(Tqq0voigt)*rho
+                              # Contribution
+                              contr = np.real(rho*Tqq0voigt)
+                              c1 = rho*Tqq1voigt
+                              c2 = rho*Tqq2voigt
+                              c3 = rho*Tqq3voigt
 
-                                    # Add to RT
-                                    sum_etaa0 += CCb*np.real(Tqq0voigt)*rho
-                                    sum_etaa1 += CCb*np.real(Tqq1voigt)*rho
-                                    sum_etaa2 += CCb*np.real(Tqq2voigt)*rho
-                                    sum_etaa3 += CCb*np.real(Tqq3voigt)*rho
-                                    sum_rhoa1 += CCb*np.imag(Tqq1voigt)*rho
-                                    sum_rhoa2 += CCb*np.imag(Tqq2voigt)*rho
-                                    sum_rhoa3 += CCb*np.imag(Tqq3voigt)*rho
+                              sum_etaa0 += contr
+                              sum_etaa1 += np.real(c1)
+                              sum_etaa2 += np.real(c2)
+                              sum_etaa3 += np.real(c3)
+                              sum_rhoa1 += np.imag(c1)
+                              sum_rhoa2 += np.imag(c2)
+                              sum_rhoa3 += np.imag(c3)
 
+                              '''
+                              try:
+                                  import matplotlib.pyplot as plt
+                              except:
+                                  pass
+                              lamb = cts.c.cgs*(1e7*unt.nm/unt.cm)/cdts.nus
+                              plt.plot(lamb,contr.real)
+                              plt.plot(lamb,contr.real,marker='*')
+                              plt.plot(lamb,contr.imag)
+                              plt.plot(lamb,contr.imag,marker='*')
+                              print('Plot no_weight contribution')
+                              plt.show()
 
-                                  '''
-                                  try:
-                                      import matplotlib.pyplot as plt
-                                  except:
-                                      pass
-                                  lamb = cts.c.cgs*(1e7*unt.nm/unt.cm)/cdts.nus
-                                  plt.plot(lamb,contr.real)
-                                  plt.plot(lamb,contr.real,marker='*')
-                                  plt.plot(lamb,contr.imag)
-                                  plt.plot(lamb,contr.imag,marker='*')
-                                  print('Plot no_weight contribution')
-                                  plt.show()
+                              try:
+                                  import matplotlib.pyplot as plt
+                              except:
+                                  pass
+                              lamb = cts.c.cgs*(1e7*unt.nm/unt.cm)/cdts.nus
+                              plt.plot(lamb,cdts.nus_weights)
+                              plt.plot(lamb,cdts.nus_weights,marker='*')
+                              print('Plot weight')
+                              plt.show()
+                              '''
 
-                                  try:
-                                      import matplotlib.pyplot as plt
-                                  except:
-                                      pass
-                                  lamb = cts.c.cgs*(1e7*unt.nm/unt.cm)/cdts.nus
-                                  plt.plot(lamb,cdts.nus_weights)
-                                  plt.plot(lamb,cdts.nus_weights,marker='*')
-                                  print('Plot weight')
-                                  plt.show()
-                                  '''
+                              contr = contr*cdts.nus_weights
+                              line.add_contribution_profiles(contr, nu0)
 
-                                  # Add contribution to profile
-                                  contr = contr.real*cdts.nus_weights
-                                  line.add_contribution_profiles(contr, nu0)
-                                 #line.add_contribution_profiles(contr, cdts.nus, nu0)
 
                       #
                       # Emission
@@ -655,60 +628,43 @@ class RTcoefs:
                                 ju1 = iu1
                                 conj = False
 
+                              # Initialize rho
+                              rho = 0j
+
                               # Find rho index
                               for index in termu.index:
 
-                                # juMu,ju1Mu1
+                                # ju'Mu',juMu
                                 if index[1] == ju0 and index[2] == ju1:
 
-                                  # Get rho
-                                  rho = ese.rho[index[0]]
+                                    # Add real
+                                    rho += ese.rho[index[0]]
 
-                                  # Get imaginary
-                                  imag = index[-1]
-
-                                  # If imaginary rho component
-                                  if imag:
-
-                                    # If conjugate
-                                    if conj:
-
-                                      # Add to RT
-                                      sum_etas0 += CCb*np.imag(Tqq0voigt)*rho
-                                      sum_etas1 += CCb*np.imag(Tqq1voigt)*rho
-                                      sum_etas2 += CCb*np.imag(Tqq2voigt)*rho
-                                      sum_etas3 += CCb*np.imag(Tqq3voigt)*rho
-                                      sum_rhos1 -= CCb*np.real(Tqq1voigt)*rho
-                                      sum_rhos2 -= CCb*np.real(Tqq2voigt)*rho
-                                      sum_rhos3 -= CCb*np.real(Tqq3voigt)*rho
-
-                                    # Not conjugate
-                                    else:
-
-                                      # Add to RT
-                                      sum_etas0 -= CCb*np.imag(Tqq0voigt)*rho
-                                      sum_etas1 -= CCb*np.imag(Tqq1voigt)*rho
-                                      sum_etas2 -= CCb*np.imag(Tqq2voigt)*rho
-                                      sum_etas3 -= CCb*np.imag(Tqq3voigt)*rho
-                                      sum_rhos1 += CCb*np.real(Tqq1voigt)*rho
-                                      sum_rhos2 += CCb*np.real(Tqq2voigt)*rho
-                                      sum_rhos3 += CCb*np.real(Tqq3voigt)*rho
-
-                                    # And break because imaginary always comes
-                                    # later
+                                    # Not diagonal
+                                    if ju0 != ju1:
+                                        if conj:
+                                            rho -= 1j*ese.rho[index[0]+1]
+                                        else:
+                                            rho += 1j*ese.rho[index[0]+1]
+                                    # And exit
                                     break
 
-                                  # If real rho component
-                                  else:
+                              # Scale
+                              rho *= CCb
 
-                                    # Add to RT
-                                    sum_etas0 += CCb*np.real(Tqq0voigt)*rho
-                                    sum_etas1 += CCb*np.real(Tqq1voigt)*rho
-                                    sum_etas2 += CCb*np.real(Tqq2voigt)*rho
-                                    sum_etas3 += CCb*np.real(Tqq3voigt)*rho
-                                    sum_rhos1 += CCb*np.imag(Tqq1voigt)*rho
-                                    sum_rhos2 += CCb*np.imag(Tqq2voigt)*rho
-                                    sum_rhos3 += CCb*np.imag(Tqq3voigt)*rho
+                              # Contribution
+                              c0 = np.real(rho*Tqq0voigt)
+                              c1 = rho*Tqq1voigt
+                              c2 = rho*Tqq2voigt
+                              c3 = rho*Tqq3voigt
+
+                              sum_etas0 += c0
+                              sum_etas1 += np.real(c1)
+                              sum_etas2 += np.real(c2)
+                              sum_etas3 += np.real(c3)
+                              sum_rhos1 += np.imag(c1)
+                              sum_rhos2 += np.imag(c2)
+                              sum_rhos3 += np.imag(c3)
 
           # Get final constants for the RT coefficients
          #hnu3 = hnu * self.hcm2*line.nu3
@@ -742,20 +698,20 @@ class RTcoefs:
               eps2   += hnutohnu3 * sum_etas2
               eps3   += hnutohnu3 * sum_etas3
           except NameError:
-              eta_a0 = sum_etaa0
-              eta_a1 = sum_etaa1
-              eta_a2 = sum_etaa2
-              eta_a3 = sum_etaa3
-              eta_s0 = sum_etas0
-              eta_s1 = sum_etas1
-              eta_s2 = sum_etas2
-              eta_s3 = sum_etas3
-              rho_a0 = sum_rhoa1
-              rho_a1 = sum_rhoa2
-              rho_a2 = sum_rhoa3
-              rho_s0 = sum_rhos1
-              rho_s1 = sum_rhos2
-              rho_s2 = sum_rhos3
+              eta_a0 =  sum_etaa0
+              eta_a1 =  sum_etaa1
+              eta_a2 =  sum_etaa2
+              eta_a3 =  sum_etaa3
+              eta_s0 =  sum_etas0
+              eta_s1 =  sum_etas1
+              eta_s2 =  sum_etas2
+              eta_s3 =  sum_etas3
+              rho_a0 =  sum_rhoa1
+              rho_a1 = -sum_rhoa2
+              rho_a2 =  sum_rhoa3
+              rho_s0 =  sum_rhos1
+              rho_s1 = -sum_rhos2
+              rho_s2 =  sum_rhos3
               eps0   = hnutohnu3 * sum_etas0
               eps1   = hnutohnu3 * sum_etas1
               eps2   = hnutohnu3 * sum_etas2
@@ -785,14 +741,22 @@ class RTcoefs:
         eps3 /= (eta0 + cts.vacuum)
 
         # Check physical absorption
-        if np.any(eta0 < 0):
-            print("Warning: eta_I < 0")
+        if np.any(eta0 < 0) and self.no_warning:
+            print(f"Warning: eta_I < 0 at iz = {ese.iz} dir = {ray.rinc}x{ray.raz}")
+            for ifreq,e0 in enumerate(eta0):
+                if e0 < 0.:
+                    print(f"  Lambda {cts.c*1e7/cdts.nus[ifreq]:12.6f}: " + \
+                          f"{eta_a0[ifreq]:13.6e} - {eta_s0[ifreq]:13.6e} = " + \
+                          f"{e0:13.6e}    MAX: {np.max(eta0):13.6e}")
+            self.no_warning = False
+            print(f"Will not bother you with more instances of this warning")
 
         # Build propagation matrix
         KK = [[eta0,eta1,eta2,eta3],[rho0,rho1,rho2]]
 
-
         # Build source function
-        SS = np.array([eps0,eps1,eps2,eps3])
+       #SS = np.concatenate((eps0,eps1,eps2,eps3)).reshape((4,cdts.nus_N))
+        SS = [eps0,eps1,eps2,eps3]
+
 
         return SS, KK

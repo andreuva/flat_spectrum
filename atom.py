@@ -1,8 +1,7 @@
 import numpy as np
-import os,sys
+import os,sys,copy
 import scipy.linalg as linalg
 import constants as c
-from astropy.modeling.models import BlackBody as bb
 from physical_functions import Tqq_all, jsymbols, rotate_ist
 
 ################################################################################
@@ -13,15 +12,82 @@ class term_class():
     """Class that defines the energy term of the atomic model
     """
 
-    def __init__(self, LL, SS, JJ, energy, Energy, JS, B=0, i0=0):
+    def __init__(self, LL, SS, JJ, Energy, JS, B=0, i0=0):
         """ Initialize the term class
+            Input:
+               LL: Orbital angular momentum
+               SS: Spin angular momentum
+               JJ: List of total angular momentum for the levels
+                   within the term.
+               EE: Energy for each J level [cm^-1]
+               JS: Instance of Racah algebra class already initialized
+                   (passed to take advantage of memoization)
+                B: Magnetic field strength [G]
+               i0: Global density matrix index corresponding to the
+                   first index of this term within the atom
+            Output: None
+            Internal:
+              self.L: Term orbital angular momentum
+              self.S: Term spin angular momentum
+              self.TE: Term energy
+              self.LE: List of energies of the different levels
+              self.nM: Number of possible M magnetic number values in
+                       this term
+              self.M: Possible M magnetic number values in this term
+              self.nJ: Number of levels within the term
+              self.g: Degeneracy of the term
+              self.NN: Number of density matrix elements for the term
+              self.Mblock: Index data for the blocks of M magnetic
+                           number
+              self.index_nuM: List of indexes of all jM combinations.
+                              Each element has:
+                               index, J level, J value, j level, M value
+              self.eigval: List of the Hamiltonian eigenvalues, ordered
+                           by Mblock indexes (self.index_muM[0]).
+              self.eigvec: List of the Hamiltonian eigenvectors, ordered
+                           by Mblock indexes (self.index_muM[0]), with
+                           each element a vector with indexes given by
+                           self.index_nuM[1].
+              self.i0: Initial global atomic index for the density
+                       matrix elements of this term
+              self.index: Indexing of the density matrix elements.
+                          Notation: rho(jM,j'M').
+                          For each element of the list, a list with:
+                            index: Proper index of the matrix element
+                            jM index: Position in index_muM of the jM
+                                      level
+                            j'M' index: Position in index_muM of the
+                                        j'M' level
+                            M index: index of M in self.Mblock
+                            M value: M magnetic number
+                            mu index: index of j in self.index_muM
+                            M' index: index of M' in self.Mblock
+                            M' value: M' magnetic number
+                            mu' index: index of j' in self.index_muM
+                            Imag: Bool indicating if element is imaginary
+                                  (True) or real (False)
+              self.NN: Number of density matrix elements for this term
+              self.NN_next: First index for the density matrix element
+                            of the next term, if any
+
+            Notes:
+                JJ and Energy must have the same dimension and it
+              needs to be consistent with the orbital and spin
+              angular momentum.
+                Only independent density matrix elements are indexed and
+              used in the code
         """
 
-        # Debug mode
-        self.debug = False
+        # Initialize term energy
+        self.TE = 0.
+        deg = 0.
 
-        # Save term energy
-        self.TE = energy
+        # Compute term energy
+        for j,E in zip(JJ,Energy):
+            f = (2.*j + 1.)
+            self.TE += f*E
+            deg += f
+        self.TE /= deg
 
         # Save quantum numbers
         self.L = LL
@@ -74,14 +140,6 @@ class term_class():
         # Diagonalize
         #
 
-        if self.debug:
-            print('\n\n======================')
-            print(f'\nTerm S={SS} L={LL} E={Energy}')
-            if maxJ != minJ:
-                print(f'J c [{minJ},{maxJ}]')
-            else:
-                print(f'J = {minJ}')
-
         # Get magnetic field modulus
         Bnorm = B
 
@@ -98,24 +156,16 @@ class term_class():
         self.index_muM = []
         ii = -1
 
-        if self.debug:
-            print(f'M c [{-maxJ},{maxJ}] ({nM})')
-
         # For each M
         for M in self.M:
 
-            if self.debug:
-                print(f'\n\nM={M}\n')
-
             # Initialize matrices
-            matr = np.zeros((smax,smax))
             ene = np.zeros((smax))
+            diag = np.zeros((smax))
+            odiag = np.zeros((smax))
 
             # Minimum J
             Jm = np.max([np.absolute(M), minJ])
-
-            if self.debug:
-                print(f'Minimum J={Jm}')
 
             # Append a new block
             self.index_muM.append([])
@@ -143,8 +193,6 @@ class term_class():
                 ii += 1
                 mu = i
                 self.index_muM[-1].append([ii,k,J,mu,M])
-                if self.debug:
-                    print(f'Added index: [{ii},{k},{J},{mu},{M}]')
 
                 # For each J
                 for J1 in self.J[i:]:
@@ -160,14 +208,10 @@ class term_class():
                     if dJ > 1:
                         continue
 
-                    if self.debug:
-                        print(f'Level J ={J}')
-                        print(f"Level J'={J1}")
-
                     # J1 factor
                     pJ1 = np.sqrt(2.0*J1 + 1.0)
 
-                    # B atomic part
+                    # Atomic part
                     comm = (-1.0)**(int(round(maxJ+J+J1+M)))* \
                            pJ*pJ1*pS* \
                            JS.j3(J1,J,1.0,-M,M,0.0)* \
@@ -176,64 +220,50 @@ class term_class():
                     # Advance row
                     i1 += 1
 
-                    # Put matrix element in its place
-                    matr[i1,i] = comm
-
-                    if self.debug:
-                        print(f'comm [{i1},{i}]={comm}')
-
                     # If diagonal
                     if i == i1:
-                        matr[i,i] += M
                         ene[i] = E
+                        diag[i] = comm + M
                     else:
-                        matr[i,i1] = matr[i1,i]
+                        odiag[i1-1] = comm
 
-                    if self.debug:
-                        print(f'Component [{i1},{i}]={matr[i1,i]}')
-
-            # Size of this block
+            # Size of this block, append to list of sizes
             nblock = i + 1
             self.Mblock.append(nblock)
-
-            if self.debug:
-                print(f'Block size={nblock}')
 
             # Reset local solutions
             ly = []
 
-            # Real matrix to diagonalize
-            rmatr = np.zeros((nblock,nblock))
-
-            # Compute larmor
+            # Compute larmor factor
             larmor = c.nuL*Bnorm
 
             # Multiply by larmor
-            rmatr = matr[:nblock,:nblock]*larmor
+            diag = diag[:nblock]*larmor
+            odiag = odiag[:nblock-1]*larmor
 
             # Add energy
             for j in range(nblock):
-                rmatr[j,j] += ene[j]
+                diag[j] += ene[j]
 
-            # Diagonalize
-            w, v = np.linalg.eigh(rmatr)
-           #w = np.linalg.eigvalsh(rmatr)
-           #v = None
+            # Diagonalize if there is dimensionality
+            if nblock > 1:
+                w, v = linalg.eigh_tridiagonal(diag, odiag, \
+                                               check_finite=False)
+            else:
+                w = diag[0:1]
+                v = np.array([[1.0]])
 
             # Store in term data
             for iv in range(nblock):
-                self.eigval.append(w[iv])
-                self.eigvec.append(v[:,iv])
 
-            if self.debug:
-                print(f'\nB={Bnorm} L={larmor}')
-                print('Matrix:')
-                print(rmatr)
-                print('Diagonal:')
-                print(w)
-                if v is not None:
-                    for i in range(len(w)):
-                        print(w[i],v[:,i])
+                # Append eigenvalue
+                self.eigval.append(w[iv])
+
+                # Ensure diagonal elements positive (arbitrary)
+                if v[iv,iv] < 0:
+                    self.eigvec.append(-v[:,iv])
+                else:
+                    self.eigvec.append(v[:,iv])
 
         #
         # Index the density matrix elements
@@ -248,6 +278,7 @@ class term_class():
 
         # For each "left" M
         for iM,M,Mblock in zip(range(self.nM),self.M,self.Mblock):
+
             # For each "left" mu
             for mu in range(Mblock):
 
@@ -282,28 +313,12 @@ class term_class():
                             if i1 == i2:
                                 ii += 1
                                 self.index.append([ii+self.i0,i1,i2,iM,M,mu,iM1,M1,mu1,False])
+                            # Not diagonal
                             else:
                                 ii += 1
                                 self.index.append([ii+self.i0,i1,i2,iM,M,mu,iM1,M1,mu1,False])
                                 ii += 1
                                 self.index.append([ii+self.i0,i1,i2,iM,M,mu,iM1,M1,mu1,True])
-
-        # Debug
-        if self.debug:
-            for iM,Mindex in enumerate(self.index_muM):
-                print(f'Mblock {iM}:')
-                for index in Mindex:
-                    vec = f'({self.eigvec[index[0]][0]})'
-                    for i in range(1,self.eigvec[index[0]].size):
-                        vec += f',{self.eigvec[index[0]][i]}'
-                    vec += f')'
-                    print(f'  i {index[0]} mu iJ {index[1]} J {index[2]} ' + \
-                          f'mu {index[3]} M {index[4]} -> E ' + \
-                          f'{self.eigval[index[0]]} Ev ' + vec)
-            for index in self.index:
-                print(f'Index {index[0]:2d}: ' + \
-                      f'({index[5]:1d}{index[4]:2d},{index[8]:1d}{index[7]:2d}) ' + \
-                      f'{index[9]}  ;  {index[1]},{index[2]}  ; {index[3]},{index[6]}')
 
         # Save number of independent density matrix elements
         self.NN = ii + 1
@@ -314,7 +329,9 @@ class term_class():
 ################################################################################
 
 class level():
-    """Class that defines the energy level of the atomic model"""
+    """Class that defines the energy level of the atomic model
+       (Not updated for MT version)
+    """
 
     def __init__(self, energy, JJ, g):
         """ Initialize the level class
@@ -347,45 +364,85 @@ class level():
 ################################################################################
 ################################################################################
 
-class line_FS():
-    """Class that defines the lines of the atomic model for a multi-term atom
-    """
-
-    def __init__(self, levels, line_levels, jlju, Alu):
-
-        self.levels = line_levels
-        self.jlju = jlju
-
-        self.gl = levels[line_levels[0]].g
-        self.gu = levels[line_levels[1]].g
-
-        self.wavelength = 1/(levels[line_levels[1]].E - levels[line_levels[0]].E)
-        self.energy = c.h * c.c / self.wavelength
-        self.nu = self.energy/c.h
-        self.nu3 = self.nu*self.nu*self.nu
-
-        self.A_lu = Alu
-        self.A_ul = Alu
-        self.B_lu = Alu * (c.c**2/(2*c.h*self.nu**3))
-        self.B_ul = self.B_lu * (levels[line_levels[1]].g/levels[line_levels[0]].g)
-
-        self.dJ = levels[line_levels[1]].J - levels[line_levels[0]].J
-
-################################################################################
-################################################################################
-################################################################################
-
 class line_class():
     """Class that defines the lines of the atomic model
     """
 
     def __init__(self, multiterm, data, JS):
+        """ Initialize the line class.
+            Input:
+               multiterm: bool that specifies that this is for a multi-term
+                          atom
+               data: List with data depending on the type of model
+                 multiterm: a list with:
+                    List of terms of the atom
+                    List of indexes of the terms involved in the transition
+                    List of indexes of the terms involved in the transition
+                      (yes, it is here twice, not sure why)
+                    Einstein coefficient for espontaneous emission [s^-1]
+                    Number of frequencies to discretize the frequencies for
+                      this line
+                    Number of those frequencies to discretize just the core
+                    Number of Doppler widths for half the range of this line
+                    Number of those Doppler widths just for the core
+                    JS: Instance of Racah algebra class already initialized
+                        (passed to take advantage of memoization)
+                 multilevel: a list with:
+                    Upper level orbital angular momentum
+                    Lower level orbital angular momentum
+                    spin angular momentum
+                    Upper level total angular momentum
+                    Lower level total angular momentum
+                    Upper level energy [cm^-1]
+                    Lower level energy [cm^-1]
+                    Einstein coefficient for espontaneous emission [s^-1]
+                    Number of frequencies to discretize the frequencies for
+                      this line
+                    Number of those frequencies to discretize just the core
+                    Number of Doppler widths for half the range of this line
+                    Number of those Doppler widths just for the core
+            Output: None
+            Internal:
+              self.multiterm: Identifies the line as one in a multi-term atom
+              Depending on the type of model
+                multiterm:
+                  self.terms: Stores the terms of the atom (again?)
+                  self.jlju: Indexes of the involved terms
+                  self.dL: Jump in orbitan momentum
+                multilevel:
+                  self.dJ: Jump in total momentum
+                common:
+                  self.nw: Number of frequencies to discretize the
+                           frequencies for this line
+                  self.nwc: Number of those frequencies to discretize just
+                            the core
+                  self.dw: Number of Doppler widths for half the range of
+                           this line
+                  self.dwc: Number of those Doppler widths just for the core
+                  self.gl: degeneracy lower term
+                  self.gu: degeneracy upper term
+                  self.wavelength: Resonance wavelength [cm]
+                  self.energy: Resonance energy [erg]
+                  self.nu: Resonance frequency [Hz]
+                  self.nu3: Resonance frequency to the power of three [Hz^3]
+                  self.A_ul: Einstein coefficient for spontaneous emission [s^-1]
+                  self.B_ul: Einstein coefficient for stimulated emission
+                             [erg^-1 cm^2 Hz sr]
+                  self.B_lu: Einstein coefficient for absorption [erg^-1 cm^2 Hz sr]
+                  self.especial: Bool that tells if this line is to be split in
+                                 components
+                  self.prof: Space to store later the profiles to integrate Jqq'
+                  self.jqq: Jqq' integrated over the line profile
+            Note: self.prof is an array if self.especial is False, but is a
+                  dictionary with the arrays identified by a resonance if
+                  self.especial is True
+                  Likewise, self.jqq is a list of lists (both size 3) or a
+                  dictionary with this list of lists identified by a resonance
+                  is self.especial is True
+        """
 
         # Distinguish
         self.multiterm = multiterm
-
-        # Debugging
-        self.debug = False
 
         # If multi-term
         if self.multiterm:
@@ -420,22 +477,6 @@ class line_class():
 
             # Get L jump
             self.dL = terms[line_terms[1]].L - terms[line_terms[0]].L
-
-            # Initialize fine structure components
-            self.lines = []
-
-            # Fill fine structure components
-           #Lu = terms[line_terms[1]].L
-           #Ll = terms[line_terms[0]].L
-           #S = terms[line_terms[1]].S
-           #for Ju,Eu in zip(terms[line_terms[1]].J,terms[line_terms[1]].LE):
-           #    for Jl,El in zip(terms[line_terms[0]].J,terms[line_terms[0]].LE):
-
-           #        # Check dipole
-           #        if np.absolute(Ju - Jl) > 1.25 or np.absolute(Jl + Ju) < 0.25:
-           #            continue
-
-           #        self.lines.append(line_FS(Lu,Ll,S,Ju,Jl,Eu,El,Alu))
 
             # Especial treatment
             self.especial = False
@@ -492,12 +533,17 @@ class line_class():
 
 ################################################################################
 
-    def initialize_profiles(self, nus_N):
-        """ Initialize to zero the profiles
+    def initialize_profiles_first(self, nus_N):
+        """ Initialize to zero the line profiles the first time
+            Input: number of wavelengths
+            Output: None
+            Internal: Makes self.prof equal to zero (or the components
+                      of the dictionary is self.especial)
         """
 
         # If special Helium case
         if self.especial:
+            # For each component
             for comp in self.prof:
                 self.prof[comp] = np.zeros((nus_N))
         # Usual multi-term
@@ -506,16 +552,45 @@ class line_class():
 
 ################################################################################
 
+    def initialize_profiles(self):
+        """ Initialize to zero the line profiles
+            Input: None
+            Output: None
+            Internal: Makes self.prof equal to zero (or the components
+                      of the dictionary is self.especial)
+        """
+
+        # If special Helium case
+        if self.especial:
+            # For each component
+            for comp in self.prof:
+                self.prof[comp] *= 0.0
+        # Usual multi-term
+        else:
+            self.prof *= 0.0
+
+################################################################################
+
     def add_contribution_profiles(self, contr, nu0=None):
-   #def add_contribution_profiles(self, contr, nus, nu0=None):
-        """ Add Contritubion to profile
+        """ Add Contritubion to the line profile
+            Input:
+              Contribution: Profile contribution already multiplied
+                            by the frequency weights
+              nu0: If self.especial, the contribution is added to the
+                   closest component. This frequency is in [Hz]
         """
 
         # If special Helium case
         if self.especial:
 
+            # Check nu0
+            if nu0 is None:
+                print('If line distinguishes components, it is necessary ' + \
+                      'to include the nu0 argument to add_contribution_profiles()')
+                sys.exit()
+
             # Get difference between components and resonance
-            dd = np.absolute(self.resos - n0)
+            dd = np.absolute(self.resos - nu0 - self.nu)
 
             # Get component closest to this resonance
             comp = self.resos[np.argmin(dd)]
@@ -526,25 +601,16 @@ class line_class():
         # Usual contribution
         else:
 
-            '''
-            try:
-                import matplotlib.pyplot as plt
-            except:
-                pass
-            lamb = c.c.cgs*(1e7*u.nm/u.cm)/nus
-            plt.plot(lamb,contr)
-            plt.plot(lamb,contr,marker='*')
-            print('Plot contribution')
-            plt.show()
-            '''
-
             self.prof += contr
 
 ################################################################################
 
     def normalize_profiles(self):
-   #def normalize_profiles(self,nus):
         """ Normalizes the profiles to its integral
+            Input: None
+            Output: None
+            Internal: Normalizes self.prof. The contributions must have
+                      been previously added.
         """
 
         # If special Helium case
@@ -555,23 +621,13 @@ class line_class():
         else:
             self.prof /= self.prof.sum()
 
-            '''
-            print(f'Profile normalized to: {self.prof.sum()}')
-            try:
-                import matplotlib.pyplot as plt
-            except:
-                pass
-            lamb = c.c.cgs*(1e7*u.nm/u.cm)/nus
-            plt.plot(lamb,self.prof)
-            plt.plot(lamb,self.prof,marker='*')
-            print('Plot normalized')
-            plt.show()
-            '''
-
 ################################################################################
 
     def reset_radiation(self):
-        """ Initialize to zero the profiles
+        """ Initialize to zero the profile integrated jqq
+            Input: None
+            Output: None
+            Internal: self.jqq is set to zero
         """
 
         # If special Helium case
@@ -590,8 +646,19 @@ class line_class():
 
 ################################################################################
 
-    def sumStokes(self, ray, stokes, nus_weights):
-        """ Method to add Jqq contribution
+    def sumStokes(self, ray, Tqq, stokes, nus_weights):
+        """ Method to add a contribution to the Jqq 
+            Input:
+              ray: Object with the propagation direction information
+              Tqq: Geometrical tensors in the pertinent reference frame
+              stokes: Stokes spectrum for the point and propagation direction
+              nus_weights: Frequency weights for the integral
+            Output: None
+            Internal: self.jqq gets updated with the contribution for this
+                      direction
+            Note: This routine manages the call of the actual routine
+                  adding the contribution, so we can easily account for the
+                  self.especial case
         """
 
         # If special Helium case
@@ -602,42 +669,38 @@ class line_class():
 
                 # Call the actual sum
                 self.jqq[comp] = self.actually_sumStokes(self.jqq[comp], \
+                                                         Tqq, \
                                                          self.prof[comp], \
                                                          ray,stokes,nus_weights)
 
         # Usual multi-term
         else:
 
-            # Debug
-            if self.debug:
-                print('Summing Stokes in line, no especial')
-
             # Call the actual sum
-            self.jqq = self.actually_sumStokes(self.jqq, self.prof, \
+            self.jqq = self.actually_sumStokes(self.jqq, Tqq, self.prof, \
                                                ray,stokes,nus_weights)
 
 ################################################################################
 
-    def actually_sumStokes(self, jqq, prof, ray, stokes, nus_weights):
+    def actually_sumStokes(self, jqq, Tqq, prof, ray, stokes, nus_weights):
         """ Method to add Jqq contribution, but seriously now
+            Input:
+              jqq: List of lists for the line integrated Jqq'
+              ray: Object with the propagation direction information
+              Tqq: Geometrical tensors in the pertinent reference frame
+              prof: Normalized profiles to integrate stokes over
+              stokes: Stokes spectrum for the point and propagation direction
+              nus_weights: Frequency weights for the integral
+            Output: frequency integrated contribution to the Jqq' for this
+                    propagation direction
+            Note: We only compute Jqq' for q'>=q
         """
-
-        # Get Tqq
-        TQQ = Tqq_all(ray.rinc,ray.raz)
 
         # For each Stokes parameter
         for i in range(4):
 
-            # Debug
-            if self.debug:
-                print(f'  Adding Stokes {i}, angular weight {ray.weight}')
-
             # Get profile
             contr = (stokes[i]*prof*ray.weight).sum()
-
-            # Debug
-            if self.debug:
-                print(f'  Computed contribution to add {contr}')
 
             # If no contribution, skip
             if np.absolute(contr) <= 0.:
@@ -647,23 +710,20 @@ class line_class():
             for qq in range(-1,2):
                 for qp in range(qq,2):
 
-                    # Debug
-                    if self.debug:
-                        print(f'    T{qq}{qp} {TQQ[i][f"{qq}{qp}"]}')
-                        print(f'    Previous value J{qq}{qp} {jqq[qq][qp]}')
-
-                    jqq[qq][qp] += contr*TQQ[i][f'{qq}{qp}']
-
-                    # Debug
-                    if self.debug:
-                        print(f'    New value J{qq}{qp} {jqq[qq][qp]}')
+                    jqq[qq][qp] += contr*Tqq[i][f'{qq}{qp}']
 
         return jqq
 
 ################################################################################
 
     def fill_Jqq(self):
-        """ Get the q q' components that have not been computed yet
+        """ Get the q q' components of Jqq' that have not been computed yet
+            Input: None
+            Output: None
+            Internal: Update the self.jqq dictionary/list
+            Note: This routine manages the call of the actual routine
+                  computing the missing Jqq', so we can easily account
+                  for the self.especial case
         """
 
         # If special Helium case
@@ -684,14 +744,65 @@ class line_class():
 ################################################################################
 
     def actually_fill_Jqq(self,jqq):
-        """ Get the q q0 components that have not been computed yet, but seriously now
+        """ Get the q q' components of Jqq' that have not been computed yet,
+            but seriously now
+            Input:
+              jqq: List of lists for the line integrated Jqq' (only q'>=q)
+            Output: frequency integrated Jqq' with all qq' combinations
+                    propagation direction
         """
 
         # For each q and q'
         for qq in range(-1,2):
             for qp in range(-1,qq):
-
                 jqq[qq][qp] = np.conjugate(jqq[qp][qq])
+        return jqq
+
+################################################################################
+
+    def reduce_Jqq(self,f):
+        """ Reduce the Jqq components multiplying by f
+            Input:
+              f: factor to multiply the Jqq with
+            Output: None
+            Internal: Update the self.jqq after multiplying by this factor
+            Note: This routine manages the call of the actual routine
+                  applying the factor, so we can easily account for the
+                  self.especial case
+                  This is implemented because Hazel has it, and I needed
+                  to properly compare between the two codes
+        """
+
+        # If special Helium case
+        if self.especial:
+
+            # For each component
+            for comp in self.jqq:
+
+                # Call the actual sum
+                self.jqq[comp] = self.actually_reduce_Jqq(self.jqq[comp],f)
+
+        # Usual multi-term
+        else:
+
+            # Call the actual sum
+            self.jqq = self.actually_reduce_Jqq(self.jqq,f)
+
+################################################################################
+
+    def actually_reduce_Jqq(self,jqq,f):
+        """ Reduce the Jqq components multiplying by f, but seriously now
+            Input:
+              jqq: List of lists for the line integrated Jqq'
+              f: factor to multiply the Jqq with
+            Output: Input multiplied by the f factor
+        """
+
+        # For each q and q'
+        for qq in range(-1,2):
+            for qp in range(-1,2):
+
+                jqq[qq][qp] *= f
 
         return jqq
 
@@ -702,19 +813,19 @@ class line_class():
         """
 
         # If special Helium case
-        if self.special:
+        if self.especial:
 
             # For each component
             for comp in self.jqq:
 
                 # Call the actual sum
-                self.jqq[comp] = actually_rotate_Jqq(self.jqq[comp], DKQQ, JS)
+                self.jqq[comp] = self.actually_rotate_Jqq(self.jqq[comp], DKQQ, JS)
 
         # Usual rotation
         else:
 
             # Call the actual sum
-            self.jqq = actually_rotate_Jqq(self.jqq, DKQQ, JS)
+            self.jqq = self.actually_rotate_Jqq(self.jqq, DKQQ, JS)
 
 ################################################################################
 
@@ -758,7 +869,7 @@ class line_class():
                         continue
 
                     # Add contribution for qq'
-                    JKQ[K][Q] += jqq[qq][qp]*f2*JS.j3(1.,1.,K,q,-qp,-Q)
+                    JKQ[K][Q] += jqq[qq][qp]*f2*JS.j3(1.,1.,K,qq,-qp,-Q)
 
             # Compute negative Q
             if K > 0:
@@ -783,7 +894,7 @@ class line_class():
             JKQ_n[K] = {}
 
             # Compute positive Q
-            for Q in range(0,Q+1):
+            for Q in range(0,K+1):
 
                 # Initialize component
                 JKQ_n[K][Q] = 0.
@@ -792,7 +903,7 @@ class line_class():
                 for Qp in range(-K,K+1):
 
                     # Add contribution
-                    JKQ_n[K][Q] += D[K][Q][Qp]*JKQ[K][Qp]
+                    JKQ_n[K][Q] += DKQQ[K][Q][Qp]*JKQ[K][Qp]
 
             # Compute negative Q
             if K > 0:
@@ -850,7 +961,7 @@ class line_class():
         if self.especial:
 
             # Get difference between components and resonance
-            dd = np.absolute(self.resos - n0)
+            dd = np.absolute(self.resos - nu0)
 
             # Get component closest to this resonance
             comp = self.resos[np.argmin(dd)]
@@ -918,22 +1029,55 @@ class HeI_1083():
         # Multi-term helium 10830 atom
         self.terms = []
 
+        # Internal switch
+        not_twoterm = False
+
         # Add the two terms. Energy cm^-1
         self.terms.append(term_class(0.0,1.0,      [1.], \
-                     159855.9743297,[159855.9743297],JS,B,0))
+                                    [159855.9743297],JS,B,0))
         self.terms.append(term_class(1.0,1.0,[2.,1.,0.], \
-                     169086.9102   ,[169086.7664725, \
+                                    [169086.7664725, \
                                      169086.8428979, \
                                      169087.8308131],JS,B, \
                                      self.terms[-1].NN_next))
+        if not_twoterm:
+            self.terms.append(term_class(0.0,1.0,      [1.], \
+                                     [183236.79170],JS,B, \
+                                     self.terms[-1].NN_next))
+            self.terms.append(term_class(1.0,1.0,[2.,1.,0.], \
+                                     [185564.561920, \
+                                      185564.583895, \
+                                      185564.854540],JS,B, \
+                                      self.terms[-1].NN_next))
+            self.terms.append(term_class(2.0,1.0,[3.,2.,1.], \
+                                     [186101.5461767, \
+                                      186101.5486891, \
+                                      186101.5928903],JS,B, \
+                                      self.terms[-1].NN_next))
         # Get dimension of rho vector
         self.ndim = self.terms[-1].NN_next
 
         # Add 10830 line. Inverse lifetime in s^-1
-        self.lines = [line_class(self.multiterm,[self.terms, (0, 1), (0, 1), \
-                                                 1.0216e+07, \
-                                                 125, 55, 15., 2.5], JS) ]
-#                                                 15,  5, 15., 2.5], JS) ]
+        self.lines = []
+        self.lines.append(line_class(self.multiterm,[self.terms, (0, 1), (0, 1), \
+                                     1.0216e+07, \
+                                     125, 55, 15., 2.5], JS))
+#                                     75, 45, 15., 2.5], JS))
+#                                    15,  5, 15., 2.5], JS))
+        if not_twoterm:
+            self.lines.append(line_class(self.multiterm,[self.terms, (0, 3), (0, 3), \
+                                                     9.4746e+06, \
+                                                     35, 15, 15., 2.5], JS))
+#                                                    55, 35, 15., 2.5], JS))
+            self.lines.append(line_class(self.multiterm,[self.terms, (1, 2), (1, 2), \
+                                                     2.78532e7, \
+                                                     35, 15, 15., 2.5], JS))
+#                                                    55, 35, 15., 2.5], JS))
+            self.lines.append(line_class(self.multiterm,[self.terms, (1, 4), (1, 4), \
+                                                     7.0702687e7, \
+                                                     35, 15, 15., 2.5], JS))
+#                                                    55, 35, 15., 2.5], JS))
+            self.reduction_f = [1.,0.2,1.,1.,1.]
 
         # Set mass
         self.mass = 4.002602 * c.amu
@@ -951,6 +1095,8 @@ class HeI_1083():
             red = 0.5*(self.terms[1].LE[0] + self.terms[1].LE[1]) - \
                   self.terms[0].LE[0]
             blue = self.terms[1].LE[2] - self.terms[0].LE[0]
+            red *= c.c
+            blue *= c.c
             self.lines[0].resos = [red,blue]
 
             # Define profiles
@@ -992,6 +1138,17 @@ class HeI_1083():
 
 ################################################################################
 
+    def initialize_profiles(self, nus_N):
+        """ Method to initialize vectors in atom profiles
+        """
+
+        # For each line
+        for line in self.lines:
+            # Reset profile
+            line.initialize_profiles_first(nus_N)
+
+################################################################################
+
     def reset_jqq(self, nus_N):
         """ Method to reset Jqq and profiles for atom
         """
@@ -1001,17 +1158,17 @@ class HeI_1083():
             # Reset Jqq
             line.reset_radiation()
             # Reset profile
-            line.initialize_profiles(nus_N)
+            line.initialize_profiles()
 
 ################################################################################
 
-    def sumStokes(self, ray, stokes, nus_weights):
+    def sumStokes(self, ray, Tqq, stokes, nus_weights):
         """ Method to add Jqq contribution
         """
 
         # For each line
         for line in self.lines:
-            line.sumStokes(ray, stokes, nus_weights)
+            line.sumStokes(ray, Tqq, stokes, nus_weights)
 
 ################################################################################
 
@@ -1022,6 +1179,16 @@ class HeI_1083():
         # For each line
         for line in self.lines:
             line.fill_Jqq()
+
+################################################################################
+
+    def reduce_Jqq(self,redf):
+        """ Call the method on the lines
+        """
+
+        # For each reduction factor and line
+        for f,line in zip(redf,self.lines):
+            line.reduce_Jqq(f)
 
 ################################################################################
 
@@ -1045,11 +1212,11 @@ class ESE:
         This class needs to be instantiated at every grid point.
     """
 
-    def __init__(self, v_dop, a_voigt, B, T, jsim, equilibrium=False):
+    def __init__(self, v_dop, a_voigt, B, T, jsim, equilibrium=False, iz=0):
         """ Initialize ESE class instance
             v_dop: Atom's Doppler width
             a_voigt: Damping parameter
-            B: object of the magnetic field vector with xyz components (gauss)
+            B: object of the magnetic field vector with in polar coordinates (gauss,rad,rad)
             T: Temperature
             equilibrium: Decices the initialization
             return value: None
@@ -1060,13 +1227,19 @@ class ESE:
 
         # Keep here the magnetic field vector [G]
         self.B = B[0]
+        self.theta = B[1]
+        self.phi = B[2]
+
+        # Store height index for debugging
+        self.iz = iz
 
         # If magnetic field > 0, get rotation matrix for JKQ
-        if self.B > 0:
+        if self.B > 0 and np.absolute(B[1]) > 1e-8:
 
             # Get rotation matrixes
             self.calc_DKQQ(B[1],B[2])
             self.rotate = True
+            self.Tqq = {}
 
         else:
 
@@ -1075,7 +1248,8 @@ class ESE:
             self.rotate = False
 
         # Initialize atom
-        self.atom = HeI_1083(jsim,B=self.B,especial=False)
+       #self.atom = HeI_1083(jsim,B=self.B,especial=False)
+        self.atom = HeI_1083(jsim,B=self.B,especial=True)
 
         # If multi-term atom
         if self.atom.multiterm:
@@ -1215,6 +1389,13 @@ class ESE:
 
 ################################################################################
 
+    def initialize_profiles(self, nus_N):
+        """ Just calls the same method for the atom
+        """
+        self.atom.initialize_profiles(nus_N)
+
+################################################################################
+
     def reset_jqq(self, nus_N):
         """ Just calls the same method for the atom
         """
@@ -1222,10 +1403,14 @@ class ESE:
 
 ################################################################################
 
-    def sumStokes(self, ray, stokes, nus_weights):
+    def sumStokes(self, ray, stokes, nus_weights, jsim):
         """ Just calls the same method for the atom
         """
-        self.atom.sumStokes(ray, stokes, nus_weights)
+        # If need to rotate
+        if self.rotate:
+            self.atom.sumStokes(ray, self.get_Tqq(ray,jsim), stokes, nus_weights)
+        else:
+            self.atom.sumStokes(ray, ray.Tqq, stokes, nus_weights)
 
 ################################################################################
 
@@ -1235,6 +1420,15 @@ class ESE:
 
         # For each line
         self.atom.fill_Jqq()
+
+################################################################################
+
+    def reduce_Jqq(self,redf):
+        """ Just calls the same method for the atom
+        """
+
+        # For each line
+        self.atom.reduce_Jqq(redf)
 
 ################################################################################
 
@@ -1276,6 +1470,166 @@ class ESE:
 
 ################################################################################
 
+    def get_Tqq(self,ray,jsim):
+        """ Compute Tqq in the magnetic reference frame from the vertical ones
+        """
+
+        # Try to get precomputed Tqq
+        tag = f'{ray.inc}:{ray.az}'
+        try:
+            return self.Tqq[tag]
+        except KeyError:
+           #print('Vertical')
+           #print(ray.Tqq)
+            self.Tqq[tag] = self.rotate_Tqq(ray.Tqq,jsim)
+           #print('Magn')
+           #print(self.Tqq)
+           #sys.exit()
+            return self.Tqq[tag]
+        except:
+            raise
+
+################################################################################
+
+    def rotate_Tqq(self,Tqq,jsim):
+        """ Rotates the Tqq tensors from vertical to magnetic
+        """
+
+        Tqqn = [{'-1-1':0j,'-10':0j,'-11':0j,'00':0j,'01':0j,'11':0j}, \
+                {'-1-1':0j,'-10':0j,'-11':0j,'00':0j,'01':0j,'11':0j}, \
+                {'-1-1':0j,'-10':0j,'-11':0j,'00':0j,'01':0j,'11':0j}, \
+                {'-1-1':0j,'-10':0j,'-11':0j,'00':0j,'01':0j,'11':0j}]
+
+        # Generate TKQ
+        TKQ = [ [[0.],[0.,0.,0.],[0.,0.,0.,0.,0.]], \
+                [[0.],[0.,0.,0.],[0.,0.,0.,0.,0.]], \
+                [[0.],[0.,0.,0.],[0.,0.,0.,0.,0.]], \
+                [[0.],[0.,0.,0.],[0.,0.,0.,0.,0.]] ]
+        nTKQ = [[[0.],[0.,0.,0.],[0.,0.,0.,0.,0.]], \
+                [[0.],[0.,0.,0.],[0.,0.,0.,0.,0.]], \
+                [[0.],[0.,0.,0.],[0.,0.,0.,0.,0.]], \
+                [[0.],[0.,0.,0.],[0.,0.,0.,0.,0.]] ]
+
+        # For each K
+        for K in range(3):
+
+            # For each Q
+            for iQ,Q in enumerate(range(-K,K+1)):
+
+                # For each q
+                for q in range(-1,2):
+
+                    # Valid qp
+                    qp = q - Q
+                    if np.absolute(qp) > 1.:
+                        continue
+
+                    # Factor
+                    ff = jsim.sign(1.+q)*np.sqrt(3.*(2.*K+1.))*jsim.j3(1.,1.,K,q,-qp,-Q)
+
+                    # For each Stokes
+                    for i in range(4):
+                        TKQ[i][K][iQ] += ff*Tqq[i][f'{q}{qp}'] 
+
+        # Rotate TKQ
+
+        # For each Stokes
+        for i in range(4):
+
+            # K = 0 does not rotate
+            nTKQ[i][0] = TKQ[i][0]
+
+            # For each multipole
+            for K in range(1,3):
+
+                # Negative Q
+                for Q in range(-K,1):
+
+                    # Q index
+                    iQ = Q + K
+
+                    # For each Q'
+                    for Qp in range(-K,K+1):
+
+                        # T idex
+                        iQp = Qp + K
+
+                        nTKQ[i][K][iQ] += TKQ[i][K][iQp]*self.DKQQ[K][Q][Qp]
+
+            # Positive Q
+            nTKQ[i][1][2] = -1.*np.conjugate(nTKQ[i][1][0])
+            nTKQ[i][2][3] = -1.*np.conjugate(nTKQ[i][2][1])
+            nTKQ[i][2][4] =     np.conjugate(nTKQ[i][2][0])
+
+
+        # For each q
+        for q in range(-1,2):
+
+            # For each qp
+            for qp in range(q,2):
+
+                # For each K
+                for K in range(3):
+
+                    # Valid Q
+                    Q = q - qp
+                    if np.absolute(Q) > K:
+                        continue
+                    iQ = Q + K
+
+                    # Factor
+                    ff = jsim.sign(1.+q)*np.sqrt((2.*K+1.)/3.)*jsim.j3(1.,1.,K,q,-qp,-Q)
+
+                    # For each Stokes parameter
+                    for i in range(4):
+                        Tqqn[i][f'{q}{qp}'] += ff*nTKQ[i][K][iQ]
+
+        # Do symmetrics
+        for q in range(-1,2):
+            for qp in range(-1,q):
+                # For each stokes
+                for i in range(4):
+                    Tqqn[i][f'{q}{qp}'] = np.conjugate(Tqqn[i][f'{qp}{q}'])
+
+        # And come back
+        return Tqqn
+
+################################################################################
+
+    def rotate_Tqq_doubtful(self,Tqq):
+        """ Rotates the Tqq tensors from vertical to magnetic
+        """
+
+        Tqqn = [{'-1-1':0j,'-10':0j,'-11':0j,'00':0j,'01':0j,'11':0j}, \
+                {'-1-1':0j,'-10':0j,'-11':0j,'00':0j,'01':0j,'11':0j}, \
+                {'-1-1':0j,'-10':0j,'-11':0j,'00':0j,'01':0j,'11':0j}, \
+                {'-1-1':0j,'-10':0j,'-11':0j,'00':0j,'01':0j,'11':0j}]
+
+        # For each q
+        for q in range(-1,2):
+            # For each qp
+            for qp in range(q,2):
+                tag = f'{q}{qp}'
+                # For each p
+                for p in range(-1,2):
+                    # For each pp
+                    for pp in range(-1,2):
+                        DP = self.DKQQ[1][p][q]*np.conjugate(self.DKQQ[1][pp][qp])
+                        # For each Stokes
+                        for i in range(4):
+                            Tqqn[i][tag] += DP*Tqq[i][f'{p}{pp}']
+        # Do symmetrics
+        for q in range(-1,2):
+            for qp in range(-1,q):
+                # For each stokes
+                for i in range(4):
+                    Tqqn[i][f'{q}{qp}'] = np.conjugate(Tqqn[i][f'{qp}{q}'])
+
+        # And come back
+        return Tqqn
+
+################################################################################
+
     def solveESE_ML(self, rad, cdt):
         """
             Called at every grid point at the end of the Lambda iteration.
@@ -1294,8 +1648,8 @@ class ESE:
         Bnorm = self.B
 
         # If there is magnetic field, need to rotate Jqq
-        if Bnorm > 0.:
-            self.rotate_Jqq(JS)
+       #if self.rotate:
+       #    self.rotate_Jqq(JS)
 
         # Initialize to zero the coefficients
         for i, p_lev in enumerate(self.atom.dens_elmnt_indep):
@@ -2193,11 +2547,19 @@ class ESE:
         # Fill the missing Jqq
         self.fill_Jqq()
 
+        # Reduce illumination ad-hoc as Hazel
+        try:
+            self.reduce_Jqq(self.atom.reduction_f)
+        except AttributeError:
+            pass
+        except:
+            raise
+
         # Debug
         if self.debug:
 
             # Open debug file
-            f = open('debug_SEE_MT','w')
+            f = open(f'debug_SEE_MT-{self.iz}','w')
 
             # Write Jqq pre-rotation
             f.write("J_qq'\n")
@@ -2216,9 +2578,9 @@ class ESE:
                                     Q = qq - qp
                                     if np.absolute(Q) > K:
                                         continue
-                                    JKQ[K][Q] += ESE.jsim.sign(1 + qq)* \
+                                    JKQ[K][Q] += cdt.JS.sign(1 + qq)* \
                                                  np.sqrt(3.*(2.*K + 1.))* \
-                                                 ESE.jsim.j3(1.,1.,K,qq,-qp,-Q)* \
+                                                 cdt.JS.j3(1.,1.,K,qq,-qp,-Q)* \
                                                  line.jqq[comp][qq][qp]
                         for K in range(0,3):
                             for Q in range(-K,K+1):
@@ -2235,19 +2597,19 @@ class ESE:
                                 Q = qq - qp
                                 if np.absolute(Q) > K:
                                     continue
-                                JKQ[K][Q] += ESE.jsim.sign(1 + qq)* \
+                                JKQ[K][Q] += cdt.JS.sign(1 + qq)* \
                                              np.sqrt(3.*(2.*K + 1.))* \
-                                             ESE.jsim.j3(1.,1.,K,qq,-qp,-Q)* \
+                                             cdt.JS.j3(1.,1.,K,qq,-qp,-Q)* \
                                              line.jqq[qq][qp]
                     for K in range(0,3):
                         for Q in range(-K,K+1):
                             f.write(f'    J^{K:1d}{Q:2d} {JKQ[K][Q]}\n')
 
         # If there is magnetic field, need to rotate Jqq
-        if self.B > 0.:
+        if self.rotate:
 
             # Rotate Jqq
-            self.rotate_Jqq(JS)
+           #self.rotate_Jqq(JS)
 
             # Debug
             if self.debug:
@@ -2270,9 +2632,9 @@ class ESE:
                                         Q = qq - qp
                                         if np.absolute(Q) > K:
                                             continue
-                                        JKQ[K][Q] += ESE.jsim.sign(1 + qq)* \
+                                        JKQ[K][Q] += cdt.JS.sign(1 + qq)* \
                                                      np.sqrt(3.*(2.*K + 1.))* \
-                                                     ESE.jsim.j3(1.,1.,K,qq,-qp,-Q)* \
+                                                     cdt.JS.j3(1.,1.,K,qq,-qp,-Q)* \
                                                      line.jqq[comp][qq][qp]
                             for K in range(0,3):
                                 for Q in range(-K,K+1):
@@ -2289,13 +2651,33 @@ class ESE:
                                     Q = qq - qp
                                     if np.absolute(Q) > K:
                                         continue
-                                    JKQ[K][Q] += ESE.jsim.sign(1 + qq)* \
+                                    JKQ[K][Q] += cdt.JS.sign(1 + qq)* \
                                                  np.sqrt(3.*(2.*K + 1.))* \
-                                                 ESE.jsim.j3(1.,1.,K,qq,-qp,-Q)* \
-                                                 line.jqq[comp][qq][qp]
+                                                 cdt.JS.j3(1.,1.,K,qq,-qp,-Q)* \
+                                                 line.jqq[qq][qp]
                         for K in range(0,3):
                             for Q in range(-K,K+1):
                                 f.write(f'    J^{K:1d}{Q:2d} {JKQ[K][Q]}\n')
+
+
+        # Debug
+        if self.debug:
+
+            # If forbidden elements
+            if len(self.atom.forbidden) > 0:
+
+                f.write('\nForbidden elements:\n')
+
+                # Write forbidden indexes
+                for term in self.atom.terms:
+                    for index in term.index:
+                        if index[0] in self.atom.forbidden:
+                            i,ii,ii1,iM,M,mu,iM1,M1,mu1,imag = index
+                            f.write(f'[{i:2d}][{ii:2d},{ii1:2d}] ' + \
+                                    f'rho({mu:2d},{M:3.1f};{mu1:2d},{M1:3.1f})\n')
+
+                # Write Jqq pre-rotation
+                f.write('\n')
 
 
         #
@@ -2345,7 +2727,8 @@ class ESE:
 
                     # Debug
                     if self.debug:
-                        f.write(f'MK {index[0]} {index[0]-1}  {-Gamma}\n')
+                        f.write(f'MK {index[0]} {index[0]-1}  {-Gamma} ' + \
+                                f'{index[1]} -> {EE} {index[2]} -> {EE1}\n')
 
                 # If real row
                 else:
@@ -2354,7 +2737,8 @@ class ESE:
 
                     # Debug
                     if self.debug:
-                        f.write(f'MK {index[0]} {index[0]+1}  {Gamma}\n')
+                        f.write(f'MK {index[0]} {index[0]+1}  {Gamma} ' + \
+                                f'{index[1]} -> {EE} {index[2]} -> {EE1}\n')
 
         #
         # Radiative terms
@@ -2550,7 +2934,7 @@ class ESE:
                     # Absorption
 
                     # Only once per upper level magnetic component
-                    if iu == iu1 and not imagu and i not in self.atom.forbidden:
+                    if iu == iu1 and not imagu and j not in self.atom.forbidden:
 
                         # Get Ju value
                         Ju = termu.index_muM[iMu][muu][2]
@@ -2892,7 +3276,7 @@ class ESE:
                     # Emission
 
                     # Only once per lower level magnetic component
-                    if il == il1 and not imagl and j not in self.atom.forbidden:
+                    if il == il1 and not imagl and i not in self.atom.forbidden:
 
                         # Get Jl value
                         Jl = terml.index_muM[iMl][mul][2]
@@ -2912,15 +3296,15 @@ class ESE:
                                 # Debug
                                 if self.debug:
                                     f.write('Skip emission relaxation for '+ \
-                                            f'{k} {muk}{Mk} {muk1,Mk1} {imagk}')
+                                            f'{k} {muk}{Mk} {muk1,Mk1} {imagk}\n')
                                 continue
 
                             # If especial
                             if line.especial:
 
                                 # Get energies
-                                Ek  = terml.eigval[ik]*c.c
-                                Ek1 = terml.eigval[ik1]*c.c
+                                Ek  = termu.eigval[ik]*c.c
+                                Ek1 = termu.eigval[ik1]*c.c
 
                                 # And component frequency
                                 nu_kl   = Ek  - El
@@ -3311,7 +3695,31 @@ class ESE:
 
         # Debug
         if self.debug:
+            def formated(val):
+                if np.absolute(val) > 0.:
+                    return f'{val:13.6e}'
+                else:
+                    return '  ---        '
             f.write('SEE:\n')
+            # For each line
+            for i in range(self.atom.ndim):
+                row = f'{i}: '
+                # For each column
+                for j in range(self.atom.ndim):
+                    row += f' {j}:{formated(self.ESE_indep[i,j])}'
+                row += f'  ; {formated(indep[i])}\n'
+                f.write(row+'\n')
+               #if i == 27 or i == 28 or i == 82 or i == 83:
+               #    print(self.ESE_indep[i,:])
+
+        # Copy old rho
+        rho_old = self.rho.copy()
+
+        # Solve SEE and store new density matrix
+        try:
+            self.rho = linalg.solve(self.ESE_indep, indep)
+        except np.linalg.LinAlgError:
+            print('Sinfular matrix in SEE')
             # For each line
             for i in range(self.atom.ndim):
                 row = f'{i}: '
@@ -3319,15 +3727,10 @@ class ESE:
                 for j in range(self.atom.ndim):
                     row += f' {j}:{self.ESE_indep[i,j]:13.6e}'
                 row += f'  ; {indep[i]:13.6e}\n'
-                f.write(row+'\n')
-                if i == 27 or i == 28 or i == 82 or i == 83:
-                    print(self.ESE_indep[i,:])
-
-        # Copy old rho
-        rho_old = self.rho.copy()
-
-        # Solve SEE and store new density matrix
-        self.rho = linalg.solve(self.ESE_indep, indep)
+                print(row)
+            raise
+        except:
+            raise
 
         # Debug
         if self.debug:
@@ -3336,7 +3739,7 @@ class ESE:
                 for index in term.index:
                     i,ii,ii1,iM,M,mu,iM1,M1,mu1,imag = index
                     f.write(f'[{i:2d}][{ii:2d},{ii1:2d}] ' + \
-                            f'rho({mu:2d}{M:2d},{mu1:2d}{M1:2d}) = '+ \
+                            f'rho({mu:2d},{M:3.1f};{mu1:2d},{M1:3.1f}) = '+ \
                             f'{rho_old[i]:13.6e}  {self.rho[i]:13.6e}\n')
 
             f.write('\n')
@@ -3346,8 +3749,78 @@ class ESE:
             print('')
             f.write("rho^K_Q(J,J'):\n")
             for term in self.atom.terms:
-                f.write(f"Term L {term.L} S {term.S}\n")
-                print(f"Term L {term.L} S {term.S}")
+
+                indexes = copy.deepcopy(term.index)
+                rhos0 = copy.deepcopy(rho_old).tolist()[:term.NN_next]
+                rhos1 = copy.deepcopy(self.rho).tolist()[:term.NN_next]
+                LL = term.L
+                SS = term.S
+                maxJ = LL + SS
+                f.write(f"Term L {LL} S {SS}\n")
+                print(f"Term L {LL} S {SS}")
+
+                # Initialize next index
+                ii = term.NN_next-1
+
+                # Initialize left index
+                i1 = -1
+
+                # Add missing indexes
+
+                # For each "left" M
+                for iM,M,Mblock in zip(range(term.nM),term.M,term.Mblock):
+                    # For each "left" mu
+                    for mu in range(Mblock):
+
+                        # Get mu, M index
+                        i1 += 1
+
+                        # Initialize right index
+                        i2 = -1
+
+                        # For each "right" M
+                        for iM1,M1,Mblock1 in zip(range(term.nM),term.M,term.Mblock):
+
+                            # If dM > 1, skip
+                            if int(round(np.absolute(M1 - M))) > int(round(2.*maxJ)):
+
+                                # Advance the index anyways
+                                i2 += Mblock1
+
+                                # And skip
+                                continue
+
+                            # For each "right" mu
+                            for mu1 in range(Mblock1):
+
+                                # Get mu1, M1 index
+                                i2 += 1
+
+                                # Only if i2 < i1
+                                if i2 < i1:
+
+                                    for index in term.index:
+                                        ii2 = index[1]
+                                        ii1 = index[2]
+                                        if i1 == ii1 and i2 == ii2:
+                                            crrho0 = rho_old[index[0]]
+                                            cirho0 = rho_old[index[0]+1]
+                                            crrho1 = self.rho[index[0]]
+                                            cirho1 = self.rho[index[0]+1]
+                                            break
+
+                                    ii += 1
+                                    indexes.append([ii,i1,i2,iM,M,mu,iM1,M1,mu1,False])
+                                    rhos0.append(crrho0)
+                                    rhos1.append(crrho0)
+                                    ii += 1
+                                    indexes.append([ii,i1,i2,iM,M,mu,iM1,M1,mu1,True])
+                                    rhos0.append(-1.*cirho0)
+                                    rhos1.append(-1.*cirho1)
+                rhos0 = np.array(rhos0)
+                rhos1 = np.array(rhos1)
+
+                # Output
                 for J in term.J:
 
                     # Possible M
@@ -3356,76 +3829,44 @@ class ESE:
                     for Jp in term.J:
                         minK = int(round(np.absolute(J-Jp)))
                         maxK = int(round(J + Jp))
+
                         for K in range(minK,maxK+1):
                             for Q in range(-K,K+1):
 
                                 # Initialize rhoKQ
-                                rho0 = 0.
-                                rho1 = 0.
+                                rho0 = 1j*0.
+                                rho1 = 1j*0.
 
                                 # For each M
                                 for M in Ms:
 
+                                    #
+                                    # Known contribution
+                                    #
+
                                     # Decide M'
                                     Mp = M - Q
-
-                                    # Sign and weight
-                                    SS = ESE.jsim.sign(J-M)* \
-                                         np.sqrt(2.*K + 1.)
-
-                                   ## If J=Jp=K=1
-                                   #if np.absolute(J-1.0)<0.25 and \
-                                   #   np.absolute(Jp-1.0)<0.25 and \
-                                   #   K == 1 and Q == -1:
-                                   #    print(f'For J {J} Jp {Jp} ; M {M} Mp {Mp}')
 
                                     # Skip invalid M'
                                     if np.absolute(Mp) > Jp:
                                         continue
 
+                                    # Sign and weight
+                                    SW = JS.sign(J-M)* \
+                                         np.sqrt(2.*K + 1.)
+
                                     # Go by the whole term
-                                    for index in term.index:
+                                    for index in indexes:
 
                                         # Extract data
                                         ii,i1,i2,iM1,M1,mu1,iM2,M2,mu2,imag = index
 
-                                       ## If J=Jp=K=1
-                                       #if np.absolute(J-1.0)<0.25 and \
-                                       #   np.absolute(Jp-1.0)<0.25 and \
-                                       #   K == 1 and Q == -1:
-                                       #    print('' + \
-                                       #          f'     Checking ii {ii} i1 ' + \
-                                       #          f'{i1} i2 {i2} iM1 {iM1} M1 ' + \
-                                       #          f'{M1} mu1 {mu1} iM2 {iM2} ' + \
-                                       #          f'M2 {M2} mu2 {mu2} imag {imag}')
-
                                         # If M,M'
-                                        if (M1 != M or M2 != Mp) and \
-                                           (M1 != Mp or M2 != M):
-
-                                           #if np.absolute(J-1.0)<0.25 and \
-                                           #   np.absolute(Jp-1.0)<0.25 and \
-                                           #   K == 1 and Q == -1:
-                                           #    print('Invalid M pair')
-
+                                        if (M1 != M or M2 != Mp):
                                             continue
 
-                                        # If crossed, conjugate
-                                        if M1 == Mp and M2 == M and i1 != i2:
-                                            iiM1 = iM2
-                                            ii1 = i2
-                                            iiM2 = iM1
-                                            ii2 = i1
-                                            conj = -1.0
-                                        else:
-                                            iiM1 = iM1
-                                            ii1 = i1
-                                            iiM2 = iM2
-                                            ii2 = i2
-                                            conj = 1.0
-
                                         # Run over J
-                                        for Jindex1 in term.index_muM[iiM1]:
+                                        for Jindex1 in term.index_muM[iM1]:
                                             J1 = Jindex1[2]
                                             iJ1 = Jindex1[1]
 
@@ -3434,7 +3875,7 @@ class ESE:
                                                 continue
 
                                             # Run over J'
-                                            for Jindex2 in term.index_muM[iiM2]:
+                                            for Jindex2 in term.index_muM[iM2]:
                                                 J2 = Jindex2[2]
                                                 iJ2 = Jindex2[1]
 
@@ -3442,74 +3883,18 @@ class ESE:
                                                 if np.absolute(J2-Jp) > 0.25:
                                                     continue
 
-                                               ## If J=Jp=K=1
-                                               #if np.absolute(J1-1.0)<0.25 and \
-                                               #   np.absolute(J2-1.0)<0.25 and \
-                                               #   K == 1 and Q == -1:
-                                               #    print('' + \
-                                               #          f'K {K:1d} Q {Q:2d} M ' + \
-                                               #          f'{int(M):2d} Mp ' + \
-                                               #          f'{int(Mp):2d} J ' + \
-                                               #          f'{int(J):1d} Jp ' + \
-                                               #          f'{int(Jp):1d} M1 ' + \
-                                               #          f'{int(M1):2d} M2 ' + \
-                                               #          f'{int(M2):2d} J1 ' + \
-                                               #          f'{int(J1):1d} J2 ' + \
-                                               #          f'{int(J2):1d}')
-
                                                 # Contribution
-                                                CC = term.eigvec[ii1][iJ1]* \
-                                                     term.eigvec[ii2][iJ2]* \
-                                                     SS*ESE.jsim.j3(J,Jp,K,M,-Mp,-Q)
+                                                CC = term.eigvec[i1][iJ1]* \
+                                                     term.eigvec[i2][iJ2]* \
+                                                     SW*JS.j3(J,Jp,K,M,-Mp,-Q)
 
                                                 # If imag
                                                 if imag:
-                                                    rho0 += conj*CC*rho_old[ii]*1j
-                                                    rho1 += conj*CC*self.rho[ii]*1j
-
-                                                   ## If J=Jp=K=1
-                                                   #if np.absolute(J1-1.0)<0.25 and \
-                                                   #   np.absolute(J2-1.0)<0.25 and \
-                                                   #   K == 1 and Q == -1:
-                                                   #    conjp = conj
-                                                   #    print(f'Contribution from ' + \
-                                                   #          f'{ii1:2d},{ii2:2d} ' + \
-                                                   #          f'({i1:2d}{i2:2d}) ' + \
-                                                   #          f'total ' + \
-                                                   # f'{conj*CC*self.rho[ii]:9.6e} ' + \
-                                                   #          f'conj {conjp:4.1f} ' + \
-                                                   #          f'e1 ' + \
-                                                   # f'{term.eigvec[ii1][iJ1]:9.6e} ' + \
-                                                   #          f'e2 ' + \
-                                                   # f'{term.eigvec[ii2][iJ2]:9.6e} ' + \
-                                                   #          f'sig ' + \
-                                                   # f'{ESE.jsim.sign(J-M):4.1f} ' + \
-                                                   #          f'fj3 ' + \
-                                                   # f'{np.sqrt(2.*K+1)*ESE.jsim.j3(J,Jp,K,M,-Mp,-Q):9.6e} ' + \
-                                                   #          f'CC {CC:9.6e} rho ' + \
-                                                   # f'{self.rho[ii]:9.6e} mu1M1 ' + \
-                                                   #          f'{mu1},{M1} mu2M2 ' + \
-                                                   #          f'{mu2},{M2}  ' + \
-                                                   #          f'iM1 {iM1} iM2 {iM2} ' + \
-                                                   #          f'ii {ii}')
+                                                    rho0 += CC*rhos0[ii]*1j
+                                                    rho1 += CC*rhos1[ii]*1j
                                                 else:
-                                                    rho0 += CC*rho_old[ii]
-                                                    rho1 += CC*self.rho[ii]
-                                                   ## If J=Jp=K=1
-                                                   #if np.absolute(J1-1.0)<0.25 and \
-                                                   #   np.absolute(J2-1.0)<0.25 and \
-                                                   #   K == 1 and Q == -1:
-                                                   #    conj = 1.0
-                                                   #    conjp = 0.
-                                                   #    print( \
-#f'Contribution from {ii1:2d},{ii2:2d} ({i1:2d}{i2:2d}) ' + \
-#f'total {conj*CC*self.rho[ii]:9.6e} ' + \
-#f'conj {conjp:4.1f} e1 {term.eigvec[ii1][iJ1]:9.6e} ' + \
-#f'e2 {term.eigvec[ii2][iJ2]:9.6e} ' + \
-#f'sig {ESE.jsim.sign(J-M):4.1f} ' + \
-#f'fj3 {np.sqrt(2.*K+1)*ESE.jsim.j3(J,Jp,K,M,-Mp,-Q):9.6e} ' + \
-#f'CC {CC:9.6e} rho {self.rho[ii]:9.6e} mu1M1 {mu1},{M1} mu2M2 {mu2},{M2}  ' + \
-#f'iM1 {iM1} iM2 {iM2} ii {ii}')
+                                                    rho0 += CC*rhos0[ii]
+                                                    rho1 += CC*rhos1[ii]
 
                                 # Print rhoKQ
                                 f.write(f'rho^{K:1d}_{Q:2d}({J:3f},{Jp:3f}) = ' + \
@@ -3572,8 +3957,8 @@ class ESE:
                     # Check sign
                     if self.rho[index[0]] < 0:
                         print(f"Warning: Negative population of the level: " + \
-                               "L={term.L},j={index[4]}, M={index[3]}," + \
-                               "j'={index[6]},M'={index[5]},real={index[7]}")
+                               "L={term.L},j={index[5]}, M={index[4]}," + \
+                               "j'={index[8]},M'={index[7]},real={index[9]}")
                         print(f"with population of rho={self.rho[index[0]]}")
 
                 # If not diagonal

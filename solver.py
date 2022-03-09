@@ -7,18 +7,20 @@ import constants as c
 def BESSER(point_M, point_O, point_P, \
            sf_m, sf_o, sf_p, \
            kk_m, kk_o, kk_p, \
-           ray, cdt, tau_tot, quad=True,clv=1):
+           ray, cdt, tau_tot, quad, \
+           tau, clv=1):
     """ Solve SC step with BESSER
     """
 
     # Compute optical depth step
     tauMO = 0.5*(kk_m[0][0] + kk_o[0][0])*np.absolute((point_O.z - point_M.z)/np.cos(ray.rinc)) + c.vacuum
+    tau += tauMO
 
     # Add to total tau
     tau_tot = np.append(tau_tot, tau_tot[-1] + tauMO[cdt.nus_N//2])
 
     # Compute exponentials
-    exp_tauMO = np.zeros(tauMO.shape)
+    exp_tauMO = np.empty(tauMO.shape)
     # Small linear
     small = (tauMO < 1e-7)
    #small = (tauMO < 1e-299)
@@ -118,7 +120,8 @@ def BESSER(point_M, point_O, point_P, \
     if quad:
 
         # Compute optical depth step
-        tauOP = 0.5*(kk_o[0][0] + kk_p[0][0])*np.absolute((point_O.z - point_M.z)/np.cos(ray.rinc)) + c.vacuum
+        tauOP = 0.5*(kk_o[0][0] + kk_p[0][0])* \
+                np.absolute((point_O.z - point_M.z)/np.cos(ray.rinc)) + c.vacuum
 
         # Compute BESSER coefficients
         wm,wo,wc = rt_omega(exp_tauMO,tauMO)
@@ -126,13 +129,22 @@ def BESSER(point_M, point_O, point_P, \
         # BESSER coefficient
         cm = BESSER_interp(tauMO, tauOP, sf_m, sf_o, sf_p)
 
-        point_O.radiation.stokes = sumstkl(v2, \
-                                           matvec(kappa, wm*sf_m + wo*sf_o + wc*cm))
+        ss = [wm*sf_m[0] + wo*sf_o[0] +  wc*cm[0], \
+              wm*sf_m[1] + wo*sf_o[1] +  wc*cm[1],
+              wm*sf_m[2] + wo*sf_o[2] +  wc*cm[2],
+              wm*sf_m[3] + wo*sf_o[3] +  wc*cm[3]]
+        ss = matvec(kappa,ss)
+        point_O.radiation.stokes = sumstkl(v2, ss)
+
     # Lineal
     else:
 
-        point_O.radiation.stokes = sumstkl(v2, \
-                                           matvec(kappa, psi_m*sf_m + psi_o*sf_o))
+        ss = [psi_m*sf_m[0] + psi_o*sf_o[0], \
+              psi_m*sf_m[1] + psi_o*sf_o[1], \
+              psi_m*sf_m[2] + psi_o*sf_o[2], \
+              psi_m*sf_m[3] + psi_o*sf_o[3]]
+        ss = matvec(kappa, ss)
+        point_O.radiation.stokes = sumstkl(v2, ss)
 
     return tau_tot
 
@@ -495,6 +507,57 @@ def correctyab(y,a,b):
 
 #@jit(nopython=True)
 def BESSER_interp(tauMO, tauOP, sf_m, sf_o, sf_p):
+
+    Cm = []
+
+    # For Stokes
+    for j in range(4):
+        Cm.append(copy.copy(sf_o[j]))
+        # For frequency
+        for m, hm, hp, ym, yo, yp in zip(range(tauMO.size), tauMO, tauOP, sf_m[j],
+                                         sf_o[j], sf_p[j]):
+
+            # If both greater than 0
+            if hm > 0. and hm > 0.:
+
+                dm = (yo - ym)/hm
+                dp = (yp - yo)/hp
+
+            else:
+
+                continue
+
+            # If steps opposite sign
+            if dm*dp <= 0.:
+                continue
+
+            # If same sign
+
+            yder = (hm*dp + hp*dm)/(hm + hp)
+            cm = yo - 0.5*hm*yder
+            cp = yo + 0.5*hm*yder
+
+            condm = ybetwab(cm, ym, yo)
+            condp = ybetwab(cp, yo, yp)
+
+            if condm and condp:
+                Cm[j][m] = cm
+            elif not condm:
+                Cm[j][m] = correctyab(cm,ym,yo)
+            elif not condp:
+                cpp = correctyab(cp,yo,yp)
+                yder = 2.0*(cpp - yo)/hp
+                cm = yo - 0.5*hm*yder
+                condpp = ybetwab(cm,ym,yo)
+
+                if condpp:
+                    Cm[j][m] = cm
+                else:
+                    Cm[j][m] = correctyab(cm,ym,yo)
+    return Cm
+
+#@jit(nopython=True)
+def BESSER_interp_deactivated(tauMO, tauOP, sf_m, sf_o, sf_p):
 
     Cm = copy.copy(sf_o)
 

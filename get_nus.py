@@ -161,7 +161,7 @@ def get_nus(atom, vdop):
         if init:
 
             # Trapezoidal only one side
-            wnus[ii] = 0.5*(wnus[ii+1] - wnus[ii])
+            wnus[ii] = 0.5*(nus[ii+1] - nus[ii])
 
             # Next point cannot be first
             init = False

@@ -25,7 +25,7 @@ class RTE:
         for qq in [-1, 0, 1]:
             self.jqq[qq] = {}
             for qp in [-1, 0, 1]:
-                self.jqq[qq][qp] = np.zeros(len(nus))
+                self.jqq[qq][qp] = np.zeros(len(nus),dtype=np.complex128)
 
     def bb(self, T, nus):
         """ Black body radiation
@@ -37,13 +37,15 @@ class RTE:
 
         return (2.*c.h*numc*numc*nus)/(np.exp(arg) - 1.)
 
-    def make_IC(self, nus, T):
+    def make_IC(self, nus, ray, T, Allen):
         """ Get continuum radiation
         """
 
         # If a point is defined as IC put Q=U=V=0 and I to BB
         self.stokes = self.stokes*0
-        self.stokes[0] = self.bb(T,nus)
+       #self.stokes[0] = self.bb(T,nus)
+       #self.stokes[0] = self.bb(T,nus) * Allen.get_clv(ray,nus)
+        self.stokes[0] = Allen.get_radiation(nus) * Allen.get_clv(ray,nus)
 
     def check_I(self):
         """ Check physical intensity

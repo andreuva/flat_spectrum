@@ -4,6 +4,8 @@ from conditions import conditions, state, point
 import parameters as pm
 from solver import BESSER, LinSC_old, BESSER_old
 from plot_utils import *
+import constants as c
+from iopy import io_saverho,io_saverad
 
 # Import needed libraries
 import numpy as np
@@ -32,6 +34,11 @@ def main():
     if not os.path.exists(datadir):
         os.makedirs(datadir)
     datadir = pm.dir + 'out/'
+
+    # Clean
+    for fil in os.listdir(datadir):
+        if not os.path.isdir(datadir+fil):
+            os.remove(datadir+fil)
 
     #############
     # Debug SEE #
@@ -150,7 +157,7 @@ def main():
     #############
 
     # Plot quadrature
-    plot_quadrature(cdt, directory=pm.dir)
+   #plot_quadrature(cdt, directory=pm.dir)
 
     # Debug
     debug = False
@@ -164,7 +171,8 @@ def main():
     f.close()
 
     # Start the main loop for the Lambda iteration
-    for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
+   #for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
+    for itteration in range(cdt.max_iter):
 
         # Debug
         if debug:
@@ -174,7 +182,11 @@ def main():
         st.new_itter()
 
         # Go through all the rays in the cuadrature
-        for j, ray in enumerate(tqdm(cdt.rays, desc='propagating rays', leave=False)):
+       #for j, ray in enumerate(tqdm(cdt.rays, desc='propagating rays', leave=False)):
+        for j, ray in enumerate(cdt.rays):
+
+            # Initialize optical depth
+            tau = np.zeros((cdt.nus_N))
 
             # Reset lineal and set cent_limb_coef
             cent_limb_coef = 1
@@ -198,10 +210,14 @@ def main():
             # Deal with very first point computing first and second
             z = iz0
 
+            # Allocate point
+            point_O = point(st.atomic[z], st.radiation[z], cdt.zz[z])
+
             # If top boundary
             if iz0 == -1:
 
-                point_O = point(st.atomic[z], st.space_rad, cdt.zz[z])
+                # Set Stokes
+                point_O.setradiationas(st.space_rad)
 
                 # Debug
                 if debug:
@@ -210,11 +226,18 @@ def main():
             # If bottom boundary
             elif iz0 == 0:
 
-                point_O = point(st.atomic[z], st.sun_rad, cdt.zz[z])
+                # Set Stokes
+                point_O.setradiationas(st.sun_rad[j])
 
                 # Debug
                 if debug:
                     print(f'Defined first point at bottom boundary')
+
+                point_O.sumStokes(ray,cdt.nus_weights,cdt.JS)
+
+                # Debug
+                if debug:
+                    print(f'Added Jqq contribution at point {z}')
 
             # Get RT coefficients at initial point
             sf_o, kk_o = RT_coeficients.getRTcoefs(point_O.atomic, ray, cdt)
@@ -222,14 +245,6 @@ def main():
             # Debug
             if debug:
                 print(f'Got RT coefficients at point {z}')
-
-            # If lower bottom, add to Jqq
-            if iz0 == 0:
-                point_O.sumStokes(ray,cdt.nus_weights)
-
-                # Debug
-                if debug:
-                    print(f'Added Jqq contribution at point {z}')
 
             # Get next point and its RT coefficients
             z += step
@@ -288,7 +303,8 @@ def main():
                 tau_tot = BESSER(point_M, point_O, point_P, \
                                  sf_m, sf_o, sf_p, \
                                  kk_m, kk_o, kk_p, \
-                                 ray, cdt, tau_tot, not lineal, cent_limb_coef)
+                                 ray, cdt, tau_tot, not lineal, \
+                                 tau, cent_limb_coef)
 
                 # Debug
                 if debug:
@@ -310,8 +326,16 @@ def main():
                                                 *point_O.radiation.stokes[i]))
                         f.close()
 
+                        # Store optical depth
+                        f = open(datadir + f'tau_{itteration:03d}_{j:02d}', 'w')
+                        N_nus = point_O.radiation.nus.size
+                        f.write(f'{N_nus}\n')
+                        for nu,ta in zip(point_O.radiation.nus,tau):
+                            f.write(f'{1e7*c.c/nu:25.16f}  {ta:23.16e}\n')
+                        f.close()
+
                 # Add to Jqq
-                point_O.sumStokes(ray,cdt.nus_weights)
+                point_O.sumStokes(ray,cdt.nus_weights,cdt.JS)
 
                 # Debug
                 if debug:
@@ -336,8 +360,20 @@ def main():
             print(f'FINISHED DUE TO MAXIMUM ITERATIONS {cdt.max_iter}')
             print('----------------------------------')
 
+    # Save the rho quantities
+    io_saverho(datadir,st.atomic)
+    io_saverad(datadir,st.atomic)
+
+    # Remove unused boundaries
+    for j in cdt.rays:
+        st.sun_rad.pop(0)
+
     # Go through all the rays in the emergent directions
-    for j, ray in enumerate(tqdm(cdt.orays, desc='emerging rays', leave=False)):
+   #for j, ray in enumerate(tqdm(cdt.orays, desc='emerging rays', leave=False)):
+    for j, ray in enumerate(cdt.orays):
+
+        # Initialize optical depth
+        tau = np.zeros((cdt.nus_N))
 
         # Reset lineal and set cent_limb_coef
         cent_limb_coef = 1
@@ -353,12 +389,14 @@ def main():
             iz0 = 0
             iz1 = cdt.z_N
 
+
         # Deal with very first point computing first and second
+        point_O = point(st.atomic[z], st.radiation[z], cdt.zz[z])
         z = iz0
         if iz0 == -1:
-            point_O = point(st.atomic[z], st.space_rad, cdt.zz[z])
+            point_O.setradiationas(st.space_rad)
         elif iz0 == 0:
-            point_O = point(st.atomic[z], st.sun_rad, cdt.zz[z])
+            point_O.setradiationas(st.sun_rad[j])
 
         # Get RT coefficients at initial point
         sf_o, kk_o = RT_coeficients.getRTcoefs(point_O.atomic, ray, cdt)
@@ -396,7 +434,8 @@ def main():
             tau_tot = BESSER(point_M, point_O, point_P, \
                              sf_m, sf_o, sf_p, \
                              kk_m, kk_o, kk_p, \
-                             ray, cdt, tau_tot, not lineal, cent_limb_coef)
+                             ray, cdt, tau_tot, not lineal, \
+                             tau, cent_limb_coef)
 
         # Store last Stokes parameters
         f = open(datadir + f'stokes_{j:02d}', 'wb')
@@ -405,6 +444,13 @@ def main():
         f.write(struct.pack('d'*N_nus,*point_O.radiation.nus))
         for i in range(4):
             f.write(struct.pack('d'*N_nus,*point_O.radiation.stokes[i]))
+        f.close()
+
+        f = open(datadir + f'tau_{j:02d}', 'w')
+        N_nus = point_O.radiation.nus.size
+        f.write(f'{N_nus}\n')
+        for nu,ta in zip(point_O.radiation.nus,tau):
+            f.write(f'{1e7*c.c/nu:25.16f}  {ta:23.16e}\n')
         f.close()
 
 if __name__ == '__main__':

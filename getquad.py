@@ -5,16 +5,19 @@ def gaussianQ(n1):
     ''' Returns gaussian nodes and weights for a given order
     '''
 
-    x0 = 0.0
-    x1 = 1.0
+    nang = (n1 + 1)//2
+    da = (n1 % 2) - 1
+    x0 = -1.
+    x1 = 1.
+    n = n1
 
     n2 = (n1+1)//2
 
     xp = 0.5*(x1+x0)
     xm = 0.5*(x1-x0)
 
-    xx = np.zeros(n1)
-    ww = np.zeros(n1)
+    x = np.zeros(n1)
+    w = np.zeros(n1)
 
     for i1 in range(1,n2+1):
 
@@ -39,18 +42,41 @@ def gaussianQ(n1):
             if np.absolute(mu1 - mu0) <= 1e-15:
                 break
 
-        xx[i1-1] = xp - xm*mu0
-        ww[i1-1] = 2.0*xm/((1.0 - mu0*mu0)*d4*d4)
+        x[i1-1] = xp - xm*mu0
+        w[i1-1] = 2.0*xm/((1.0 - mu0*mu0)*d4*d4)
 
-        xx[n1-i1] = xp + xm*mu0
-        ww[n1-i1] = ww[i1-1]
+        x[n1-i1] = xp + xm*mu0
+        w[n1-i1] = w[i1-1]
 
-        # Normalize
-        ww = ww/ww.sum()
+    xx = np.zeros(n)
+    ww = np.zeros(n)
 
-    return {'n': n1, 'x': xx, 'w': ww}
+    # Reorder the nodes and weights second half
+    for ii in range(n,nang-da-1,-1):
 
-def trapezoidalQ(n1, circ=None):
+      xx[n - ii] = x[ii-1]
+      ww[n - ii] = w[ii-1]
+
+    for ii in range(1,nang-da):
+
+      xx[nang + ii - 1] = x[nang - da - ii - 1]
+      ww[nang + ii - 1] = w[nang - da - ii - 1]
+
+    X = np.zeros(2*n)
+    W = np.zeros(2*n)
+
+    for ii in range(1,n+1):
+        X[ii-1] = .5*(xx[n - ii] - 1.)
+        W[ii-1] = .5*ww[n - ii]
+        X[2*n-ii] = .5*(xx[ii-1] + 1.)
+        W[2*n-ii] = .5*ww[ii-1]
+
+    # Normalize
+    W = W/W.sum()
+
+    return {'n': n1, 'x': X, 'w': W}
+
+def trapezoidalQ(n0, circ=None):
     ''' Returns trapezoidal nodes and weights for a given octant
     '''
 
@@ -61,6 +87,8 @@ def trapezoidalQ(n1, circ=None):
         icirc = circ
         if not isinstance(icirc, bool):
             icirc = False
+
+    n1 = n0*4
 
     xx = np.zeros((n1))
     ww = np.zeros((n1))
@@ -88,9 +116,9 @@ def main():
     '''
 
     # Params
-    ng = 2
+    ng = 4
     nt = 1
-    filename = 'gaussian_quadrature_2x1.dat'
+    filename = f'gaussian_quadrature_{ng*2}x{nt*4}.dat'
 
     # Get each quadrature
     GQuad = gaussianQ(ng)
@@ -98,8 +126,8 @@ def main():
 
     # Create file
     f = open(filename, 'w')
-    for i in range(ng):
-        for j in range(nt):
+    for i in range(ng*2):
+        for j in range(nt*4):
             f.write(f"{GQuad['w'][i]*TQuad['w'][j]} {180.0*np.arccos(GQuad['x'][i])/np.pi} {180.0*TQuad['x'][j]/np.pi}\n")
     f.close()
 

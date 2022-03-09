@@ -4,6 +4,7 @@
 *_array.txt
 checks/
 *.out*
+output*/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -143,7 +144,12 @@ gaussian_quadrature_2x8.dat
 error_analisis.py
 
 # Output results
-output_
+output_*
 
 # Quadratures
 _quadrature_
+
+# Special folder
+donotsavethisfolder
+donotsavethisfolder/*
+
