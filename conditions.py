@@ -183,6 +183,8 @@ class conditions:
 
         # Maximum lambda itterations
         self.max_iter = int(parameters.max_iter)
+        self.tolerance_p = parameters.tolerance_p
+        self.tolerance_c = parameters.tolerance_c
 
         # Auxiliar Identity tensor and matrix to not reallocate them later computations
         self.Id_tens = np.repeat(np.identity(4)[:, :, np.newaxis], self.nus_N, axis=2)

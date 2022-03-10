@@ -18,11 +18,11 @@ from tqdm import tqdm
 
 # np.seterr(all='raise')
 
-def main():
+def main(cdt=conditions(pm)):
     """ Main code
     """
 
-    # Initializating the conditions, state and RT coefficients
+    # Initializating state and RT coefficients
     cdt = conditions(pm)
     RT_coeficients = RTcoefs(cdt.nus,cdt.nus_weights,cdt.mode)
     st = state(cdt)
@@ -41,7 +41,7 @@ def main():
             os.remove(datadir+fil)
 
     # Plot quadrature
-    #plot_quadrature(cdt, directory=pm.dir)
+    # plot_quadrature(cdt, directory=cdt.datadir)
 
     # verbose
     verbose = False
@@ -65,8 +65,8 @@ def main():
         st.new_itter()
 
         # Go through all the rays in the cuadrature
-       #for j, ray in enumerate(tqdm(cdt.rays, desc='propagating rays', leave=False)):
-        for j, ray in enumerate(tqdm(cdt.rays, desc=f'propagating rays it{itteration}')):
+        # for j, ray in enumerate(cdt.rays):
+        for j, ray in enumerate(tqdm(cdt.rays, desc=f'propagating rays itteration {itteration}')):
 
             # Initialize optical depth
             tau = np.zeros((cdt.nus_N))
@@ -233,7 +233,7 @@ def main():
         f.close()
 
         # If converged
-        if (st.mrc_p < pm.tolerance_p and st.mrc_c < pm.tolerance_c):
+        if (st.mrc_p < cdt.tolerance_p and st.mrc_c < cdt.tolerance_c):
             print('\n----------------------------------')
             print(f'FINISHED WITH A TOLERANCE OF {st.mrc_p};{st.mrc_c}')
             print('----------------------------------')
@@ -252,7 +252,8 @@ def main():
         st.sun_rad.pop(0)
 
     # Go through all the rays in the emergent directions
-   #for j, ray in enumerate(tqdm(cdt.orays, desc='emerging rays', leave=False)):
+    outputs = []
+    # for j, ray in enumerate(tqdm(cdt.orays, desc='emerging rays', leave=False)):
     for j, ray in enumerate(cdt.orays):
 
         # Initialize optical depth
@@ -330,7 +331,7 @@ def main():
         #     f.write(struct.pack('d'*N_nus,*point_O.radiation.stokes[i]))
         f.write(f'Number of frequencies:\t{N_nus}\n')
         f.write(f'frequencies(cgs)\t\tI\t\tQ\t\tU\t\tV\n')
-        f.write('----------------------------------------------------------')
+        f.write('----------------------------------------------------------\n')
         for i in range(N_nus):
             f.write(f'{point_O.radiation.nus[i]:25.16e}\t' + \
                     f'{point_O.radiation.stokes[0][i]:25.16e}\t' + \
@@ -343,10 +344,14 @@ def main():
         N_nus = point_O.radiation.nus.size
         f.write(f'Number of wavelengths:\t{N_nus}\n')
         f.write(f'wavelengths(nm)\ttau\n')
-        f.write('----------------------------------------------------------')
+        f.write('----------------------------------------------------------\n')
         for nu,ta in zip(point_O.radiation.nus,tau):
             f.write(f'{1e7*c.c/nu:25.16f}  {ta:23.16e}\n')
         f.close()
+
+        # add the ray, wavelegnths, taus, and stokes to a variable and output it
+        outputs.append([ray, point_O.radiation.nus, tau, point_O.radiation.stokes])
+    return outputs
 
 if __name__ == '__main__':
     main()
