@@ -1,12 +1,8 @@
 import parameters as pm
-from physical_functions import Tqq_all
-from plot_utils import plot_quantity
-
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
 import constants as cts
-# from py3nj import wigner3j
 
 
 class RTcoefs:
@@ -34,7 +30,7 @@ class RTcoefs:
             self.getRTcoefs = self.getRTcoefs_MT
 
         # No warning sent yet
-        self.no_warning = True
+        self.no_warning = False
 
 
     def getRTcoefs_ML(self, ese, ray, cdts):
@@ -66,11 +62,11 @@ class RTcoefs:
         dB = 1.3996*ese.B
 
         # Initialize RT coefficients
-       #eta_a = copy.copy(self.rtc4prototype)
-       #eta_s = copy.copy(eta_a)
-       #rho_a = copy.copy(self.rtc3prototype)
-       #rho_s = copy.copy(rho_a)
-       #eps = copy.copy(eta_a)
+        eta_a = copy.copy(self.rtc4prototype)
+        eta_s = copy.copy(eta_a)
+        rho_a = copy.copy(self.rtc3prototype)
+        rho_s = copy.copy(rho_a)
+        eps = copy.copy(eta_a)
 
         # For each transition
         for line in ese.atom.lines:
@@ -244,10 +240,10 @@ class RTcoefs:
 
         # Build propagation matrix
         KK = [eta,rho]
-       #KK = np.array([[eta[0],  eta[1],  eta[2],  eta[3]],
-       #               [eta[1],  eta[0],  rho[2], -rho[1]],
-       #               [eta[2], -rho[2],  eta[0],  rho[0]],
-       #               [eta[3],  rho[1], -rho[0],  eta[0]]])
+        #KK = np.array([[eta[0],  eta[1],  eta[2],  eta[3]],
+        #               [eta[1],  eta[0],  rho[2], -rho[1]],
+        #               [eta[2], -rho[2],  eta[0],  rho[0]],
+        #               [eta[3],  rho[1], -rho[0],  eta[0]]])
 
         # Build source function
         SS = eps/(eta[0]+cts.vacuum)
@@ -442,20 +438,6 @@ class RTcoefs:
                           Tqq2voigt = TQQ[2][tag]*voigt
                           Tqq3voigt = TQQ[3][tag]*voigt
 
-                          '''
-                          try:
-                              import matplotlib.pyplot as plt
-                          except:
-                              pass
-                          lamb = cts.c.cgs*(1e7*unt.nm/unt.cm)/cdts.nus
-                          plt.plot(lamb,Tqq0voigt.real)
-                          plt.plot(lamb,Tqq0voigt.real,marker='*')
-                          plt.plot(lamb,Tqq0voigt.imag)
-                          plt.plot(lamb,Tqq0voigt.imag,marker='*')
-                          print('Plot T00*Voigt')
-                          plt.show()
-                          '''
-
                           # Get jl'
                           for mul1_index in Ml1block:
 
@@ -529,37 +511,10 @@ class RTcoefs:
                               sum_rhoa2 += np.imag(c2)
                               sum_rhoa3 += np.imag(c3)
 
-                              '''
-                              try:
-                                  import matplotlib.pyplot as plt
-                              except:
-                                  pass
-                              lamb = cts.c.cgs*(1e7*unt.nm/unt.cm)/cdts.nus
-                              plt.plot(lamb,contr.real)
-                              plt.plot(lamb,contr.real,marker='*')
-                              plt.plot(lamb,contr.imag)
-                              plt.plot(lamb,contr.imag,marker='*')
-                              print('Plot no_weight contribution')
-                              plt.show()
-
-                              try:
-                                  import matplotlib.pyplot as plt
-                              except:
-                                  pass
-                              lamb = cts.c.cgs*(1e7*unt.nm/unt.cm)/cdts.nus
-                              plt.plot(lamb,cdts.nus_weights)
-                              plt.plot(lamb,cdts.nus_weights,marker='*')
-                              print('Plot weight')
-                              plt.show()
-                              '''
-
                               contr = contr*cdts.nus_weights
                               line.add_contribution_profiles(contr, nu0)
 
-
-                      #
                       # Emission
-                      #
 
                       # For each Jl'
                       for Jl1_index in Mlblock:
@@ -672,8 +627,6 @@ class RTcoefs:
 
           # Normalize line profile
           line.normalize_profiles()
-         ## For debug
-         #line.normalize_profiles(cdts.nus)
 
           # Add to line contribution
           # rho U is negative because is the upper part of the triangular
@@ -755,7 +708,7 @@ class RTcoefs:
         KK = [[eta0,eta1,eta2,eta3],[rho0,rho1,rho2]]
 
         # Build source function
-       #SS = np.concatenate((eps0,eps1,eps2,eps3)).reshape((4,cdts.nus_N))
+        # SS = np.concatenate((eps0,eps1,eps2,eps3)).reshape((4,cdts.nus_N))
         SS = [eps0,eps1,eps2,eps3]
 
 

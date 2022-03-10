@@ -9,7 +9,7 @@ from iopy import io_saverho,io_saverad
 
 # Import needed libraries
 import numpy as np
-import pickle,struct,sys
+import pickle, struct, sys
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
@@ -59,14 +59,14 @@ def main():
     for itteration in range(cdt.max_iter):
 
 
-        print(f'Starting iteration {itteration+1}')
+        # print(f'Starting iteration {itteration+1}')
 
         # Reset the internal state for a new itteration
         st.new_itter()
 
         # Go through all the rays in the cuadrature
        #for j, ray in enumerate(tqdm(cdt.rays, desc='propagating rays', leave=False)):
-        for j, ray in enumerate(cdt.rays):
+        for j, ray in enumerate(tqdm(cdt.rays, desc=f'propagating rays it{itteration}')):
 
             # Initialize optical depth
             tau = np.zeros((cdt.nus_N))
@@ -321,17 +321,29 @@ def main():
                              tau, cent_limb_coef)
 
         # Store last Stokes parameters
-        f = open(datadir + f'stokes_{j:02d}', 'wb')
+        # f = open(datadir + f'stokes_{j:02d}', 'wb')
+        f = open(datadir + f'stokes_{j:02d}.out', 'w')
         N_nus = point_O.radiation.nus.size
-        f.write(struct.pack('i',N_nus))
-        f.write(struct.pack('d'*N_nus,*point_O.radiation.nus))
-        for i in range(4):
-            f.write(struct.pack('d'*N_nus,*point_O.radiation.stokes[i]))
+        # f.write(struct.pack('i',N_nus))
+        # f.write(struct.pack('d'*N_nus,*point_O.radiation.nus))
+        # for i in range(4):
+        #     f.write(struct.pack('d'*N_nus,*point_O.radiation.stokes[i]))
+        f.write(f'Number of frequencies:\t{N_nus}\n')
+        f.write(f'frequencies(cgs)\t\tI\t\tQ\t\tU\t\tV\n')
+        f.write('----------------------------------------------------------')
+        for i in range(N_nus):
+            f.write(f'{point_O.radiation.nus[i]:25.16e}\t' + \
+                    f'{point_O.radiation.stokes[0][i]:25.16e}\t' + \
+                    f'{point_O.radiation.stokes[1][i]:25.16e}\t' + \
+                    f'{point_O.radiation.stokes[2][i]:25.16e}\t' + \
+                    f'{point_O.radiation.stokes[3][i]:25.16e}\n')
         f.close()
 
-        f = open(datadir + f'tau_{j:02d}', 'w')
+        f = open(datadir + f'tau_{j:02d}.out', 'w')
         N_nus = point_O.radiation.nus.size
-        f.write(f'{N_nus}\n')
+        f.write(f'Number of wavelengths:\t{N_nus}\n')
+        f.write(f'wavelengths(nm)\ttau\n')
+        f.write('----------------------------------------------------------')
         for nu,ta in zip(point_O.radiation.nus,tau):
             f.write(f'{1e7*c.c/nu:25.16f}  {ta:23.16e}\n')
         f.close()

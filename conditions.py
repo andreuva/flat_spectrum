@@ -5,8 +5,6 @@ from rad import RTE
 from physical_functions import Tqq_all
 
 import numpy as np
-from numpy.linalg import norm
-from numpy import real
 import matplotlib.pyplot as plt
 import constants as constants
 from get_nus import get_nus
@@ -171,16 +169,14 @@ class conditions:
         self.B = np.zeros((self.z_N, 3))
 
         # Constant field
-        print('Ad-hoc constant field in conditions.__init__()')
+        # print('Ad-hoc constant field in conditions.__init__()')
         for iz in range(self.z_N):
             self.B[iz,0] = 1.
-       #   #self.B[iz,1] = 0.
-       #   #self.B[iz,2] = 0.
             self.B[iz,1] = 30.*np.pi/180.
             self.B[iz,2] = 120.*np.pi/180.
-        print(f'Bx {self.B[0,0]*np.sin(self.B[0,1])*np.cos(self.B[0,2])} ' + \
-              f'By {self.B[0,0]*np.sin(self.B[0,1])*np.sin(self.B[0,2])} ' + \
-              f'Bz {self.B[0,0]*np.cos(self.B[0,1])}')
+        # print(f'Bx {self.B[0,0]*np.sin(self.B[0,1])*np.cos(self.B[0,2])} ' + \
+        #       f'By {self.B[0,0]*np.sin(self.B[0,1])*np.sin(self.B[0,2])} ' + \
+        #       f'Bz {self.B[0,0]*np.cos(self.B[0,1])}')
 
         # If starting from equilibrium
         self.equi = parameters.initial_equilibrium
@@ -217,7 +213,7 @@ class conditions:
         # Apply normalization (numerical)
         normalization = np.sum(profile.real*self.nus_weights)
         profile.real = profile.real/normalization
-       #profile = np.real(profile)/normalization + 1j*np.imag(profile)
+        # profile = np.real(profile)/normalization + 1j*np.imag(profile)
 
         return profile
 
@@ -282,7 +278,8 @@ class state:
 
     def update_mrc(self, cdts, itter):
         """Update the mrc of the current state by finding the
-           maximum mrc over all points in z (computed in ESE method)"""
+           maximum mrc over all points in z (computed in ESE method)
+        """
 
         # For each point
         for i, point in enumerate(self.atomic):

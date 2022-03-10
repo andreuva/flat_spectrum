@@ -3673,9 +3673,7 @@ class ESE:
                 else:
                     indep[i] = 0
         print('AD-HOC SYSTEM LOWER TERM ISOTROPIC')
-        '''
 
-        '''
         print('AD-HOC SYSTEM UPPER TERM ISOTROPIC')
         for index in self.atom.terms[1].index:
 
@@ -3699,7 +3697,7 @@ class ESE:
                 if np.absolute(val) > 0.:
                     return f'{val:13.6e}'
                 else:
-                    return '  ---        '
+                    return '    ---    '
             f.write('SEE:\n')
             # For each line
             for i in range(self.atom.ndim):
@@ -3840,9 +3838,7 @@ class ESE:
                                 # For each M
                                 for M in Ms:
 
-                                    #
                                     # Known contribution
-                                    #
 
                                     # Decide M'
                                     Mp = M - Q
@@ -3902,8 +3898,6 @@ class ESE:
                                 if Q != 0:
                                     f.write(f'rho^{K:1d}_{Q:2d}({J:3f},{Jp:3f}) = ' + \
                                             f'{rho0.imag:13.6e}  {rho1.imag:13.6e}\n')
-
-       #sys.exit()
 
         # Get maximum relative change and check population sum
         MRC_p = 0.0
