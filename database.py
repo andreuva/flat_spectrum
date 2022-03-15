@@ -1,24 +1,159 @@
 from RTcoefs import RTcoefs
-from conditions import conditions, state, point
+from conditions import conditions #, state, point
 import parameters_rtcoefs as pm
+# import constants as cts
+from atom import ESE
+from tqdm import tqdm
 import numpy as np
+from tensors import JKQ_to_Jqq, Jqq_to_JKQ
+import matplotlib.pyplot as plt
 
-if __name__ == '__main__':
 
+def print_params(cdts=conditions(pm), B=np.zeros(3)):
+    ray = cdts.orays[1]
+    # print the parameters of the conditions instance
+    print('------------------------------------------------------')
+    print(f'computed ray:\ninclination={ray.inc}\nazimut={ray.az}\n')
+    print(f'v_dop_0={cdts.v_dop_0:1.3e}')
+    print(f'v_dop={cdts.v_dop:1.3e}')
+    print(f'a_voigt={cdts.a_voigt:1.3e}\n')
+    print(f'T={cdts.temp:1.3e}')
+    print(f'n_dens={cdts.n_dens:1.3e}\n')
+    print(f'zn={cdts.z_N}')
+    print(f'B=[{B[0]:1.3e}, {B[1]:1.3e}, {B[2]:1.3e}]')
+    print('------------------------------------------------------\n')
+
+
+def compute_profile(pm=pm, B=np.zeros(3)):
+    # Initialize the conditions, state and rtcoefs objects
+    # given a set of parameters via the parameters_rtcoefs module
     cdt = conditions(pm)
-    st = state(cdt)
+    # print_params(cdt, B)
+
+    # st = state(cdt)
     RT_coeficients = RTcoefs(cdt.nus,cdt.nus_weights,cdt.mode)
 
-    # select the ray direction as the otuput ray
-    ray = cdt.orays[0]
-    point_O = point(st.atomic[0], st.radiation[0], cdt.zz[0])
+    # Initialize the ESE object and computing the initial populations (equilibrium = True)
+    atoms = ESE(cdt.v_dop, cdt.a_voigt, B, cdt.temp, cdt.JS, True, 0)
+    # Retrieve the different components of the line profile
+    components = list(atoms.atom.lines[0].jqq.keys())
 
-    # Set Stokes
-    # point_O.setradiationas(st.sun_rad[0])
-    # point_O.sumStokes(ray, cdt.nus_weights, cdt.JS)
-    point_O.radiation.jqq[0][0] = np.ones_like(point_O.radiation.jqq[0][0])
+    # Initialize the jqq and construct the dictionary
+    atoms.atom.lines[0].initialize_profiles_first(cdt.nus_N)
+
+    # Compute the red and blue profiles and add them to the atoms object
+    # red = 0.5*(atoms.atom.terms[1].LE[0] + atoms.atom.terms[1].LE[1]) - atoms.atom.terms[0].LE[0]
+    # red *= cts.c    
+    # voigt_red = cdt.voigt_profile(line=atoms.atom.lines[0], dE=red-atoms.atom.lines[0].nu).real
+    # atoms.atom.lines[0].add_contribution_profiles(voigt_red, red)
+
+    # blue = atoms.atom.terms[1].LE[2] - atoms.atom.terms[0].LE[0]
+    # blue *= cts.c
+    # voigt_blue = cdt.voigt_profile(line=atoms.atom.lines[0], dE=blue-atoms.atom.lines[0].nu).real
+    # atoms.atom.lines[0].add_contribution_profiles(voigt_blue, blue)
+
+    '''
+    plt.plot(cdt.nus, voigt_blue, label='blue')
+    plt.plot(cdt.nus, voigt_red, label='red')
+    plt.legend()
+    plt.show()
+    '''
+
+    # reset the jqq to zero to construct from there the radiation field with the JKQ
+    atoms.reset_jqq(cdt.nus_N)
+
+    """ 
+    # Set the JKQ individually for each component
+    JKQ = Jqq_to_JKQ(atoms.atom.lines[0].jqq[components[0]], cdt.JS)
+    JKQ[0][0] = JKQ[0][0]*0 + 1e-9
+    atoms.atom.lines[0].jqq[components[0]] = JKQ_to_Jqq(JKQ, cdt.JS)
+
+    JKQ = Jqq_to_JKQ(atoms.atom.lines[0].jqq[components[1]], cdt.JS)
+    JKQ[0][0] = JKQ[0][0]*0 + 1e-8
+    atoms.atom.lines[0].jqq[components[1]] = JKQ_to_Jqq(JKQ, cdt.JS)
+    """
+    
+    # Set the JKQ for the whole line
+    for comp in components:
+        # retrieve the JKQ from the Jqq of the atoms object
+        JKQ = Jqq_to_JKQ(atoms.atom.lines[0].jqq[comp], cdt.JS)
+
+        # Setting it to the desired radiation field
+        for K in range(3):
+            for Q in range(0, K+1):
+                # print(K,Q)
+                JKQ[K][Q] = JKQ[K][Q]*0
+        JKQ[0][0] = JKQ[0][0]*0 + 1e-7
+        JKQ[1][0] = JKQ[0][0]*0 + 1e-8
+
+        # Add the JKQ to the atoms object
+        atoms.atom.lines[0].jqq[comp] = JKQ_to_Jqq(JKQ, cdt.JS)
 
     # Solve the ESE
-    point_O.atomic.solveESE(point_O.radiation, cdt)
+    atoms.solveESE(None, cdt)
 
-    sf, kk = RT_coeficients.getRTcoefs(point_O.atomic, ray, cdt)
+    # select the ray direction as the otuput ray
+    ray = cdt.orays[1]
+
+    # Compute the RT coeficients for a given ray
+    sf, kk = RT_coeficients.getRTcoefs(atoms, ray, cdt)
+
+    # Compute the emision coefficients from the Source functions
+    profiles = {}
+    profiles['eps_I'] = sf[0]*kk[0][0]
+    profiles['eps_Q'] = sf[1]*kk[0][0]
+    profiles['eps_U'] = sf[2]*kk[0][0]
+    profiles['eps_V'] = sf[3]*kk[0][0]
+
+    # retrieve the absorption coefficients from the K matrix
+    profiles['eta_I'] = kk[0][0]
+    profiles['eta_Q'] = kk[0][1]*kk[0][0]
+    profiles['eta_U'] = kk[0][2]*kk[0][0]
+    profiles['eta_V'] = kk[0][3]*kk[0][0]
+    profiles['rho_Q'] = kk[1][0]*kk[0][0]
+    profiles['rho_U'] = kk[1][1]*kk[0][0]
+    profiles['rho_V'] = kk[1][2]*kk[0][0]
+
+    return cdt.nus, profiles
+
+
+if __name__ == '__main__':
+    
+    # keeping the loop in just 1 itteration for testing purposes
+    # for i in tqdm(range(1,10)):
+    for i in range(1,2):
+        B=np.array([i,10/i,i*2])
+        pm.zn = pm.zn+1
+        nus, profiles = compute_profile(B=B, pm=pm)
+
+        # Plot the emision coefficients
+        plt.plot(nus, profiles['eps_I'], label='eps_I')
+        plt.plot(nus, profiles['eps_Q'], label='eps_Q')
+        plt.plot(nus, profiles['eps_U'], label='eps_U')
+        plt.plot(nus, profiles['eps_V'], label='eps_V')
+        plt.xlabel(r'$\nu$ [cm$^{-1}$]')
+        plt.ylabel(r'$\epsilon$')
+        plt.title(r'$\epsilon$ vs $\nu$')
+        plt.legend()
+        plt.show()
+
+        # Plot the absorption coefficients
+        plt.plot(nus, profiles['eta_I'], label='eta_I')
+        plt.plot(nus, profiles['eta_Q'], label='eta_Q')
+        plt.plot(nus, profiles['eta_U'], label='eta_U')
+        plt.plot(nus, profiles['eta_V'], label='eta_V')
+        plt.xlabel(r'$\nu$ [cm$^{-1}$]')
+        plt.ylabel(r'$\rho$')
+        plt.title(r'$\rho$ vs $\nu$')
+        plt.legend()
+        plt.show()
+
+        # Plot the absorption coefficients
+        plt.plot(nus, profiles['rho_Q'], label='rho_Q')
+        plt.plot(nus, profiles['rho_U'], label='rho_U')
+        plt.plot(nus, profiles['rho_V'], label='rho_V')
+        plt.xlabel(r'$\nu$ [cm$^{-1}$]')
+        plt.ylabel(r'$\rho$')
+        plt.title(r'$\rho$ vs $\nu$')
+        plt.legend()
+        plt.show()
