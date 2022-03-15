@@ -1,14 +1,16 @@
-from RTcoefs import RTcoefs
-from conditions import conditions #, state, point
+# Especific modules
 import parameters_rtcoefs as pm
-# import constants as cts
+from conditions import conditions
+from RTcoefs import RTcoefs
 from atom import ESE
-from tqdm import tqdm
-import numpy as np
 from tensors import JKQ_to_Jqq, Jqq_to_JKQ
+# General modules
+import numpy as np
 import matplotlib.pyplot as plt
+# from tqdm import tqdm
 
 
+# Function to check the conditions that will be used in the Rtcoefs module
 def print_params(cdts=conditions(pm), B=np.zeros(3)):
     ray = cdts.orays[1]
     # print the parameters of the conditions instance
@@ -24,13 +26,12 @@ def print_params(cdts=conditions(pm), B=np.zeros(3)):
     print('------------------------------------------------------\n')
 
 
+# Wraper to compute the Rtcoefs module with a given parameters
 def compute_profile(pm=pm, B=np.zeros(3)):
-    # Initialize the conditions, state and rtcoefs objects
+    # Initialize the conditions and rtcoefs objects
     # given a set of parameters via the parameters_rtcoefs module
     cdt = conditions(pm)
-    # print_params(cdt, B)
-
-    # st = state(cdt)
+    print_params(cdt, B)
     RT_coeficients = RTcoefs(cdt.nus,cdt.nus_weights,cdt.mode)
 
     # Initialize the ESE object and computing the initial populations (equilibrium = True)
@@ -41,53 +42,19 @@ def compute_profile(pm=pm, B=np.zeros(3)):
     # Initialize the jqq and construct the dictionary
     atoms.atom.lines[0].initialize_profiles_first(cdt.nus_N)
 
-    # Compute the red and blue profiles and add them to the atoms object
-    # red = 0.5*(atoms.atom.terms[1].LE[0] + atoms.atom.terms[1].LE[1]) - atoms.atom.terms[0].LE[0]
-    # red *= cts.c    
-    # voigt_red = cdt.voigt_profile(line=atoms.atom.lines[0], dE=red-atoms.atom.lines[0].nu).real
-    # atoms.atom.lines[0].add_contribution_profiles(voigt_red, red)
-
-    # blue = atoms.atom.terms[1].LE[2] - atoms.atom.terms[0].LE[0]
-    # blue *= cts.c
-    # voigt_blue = cdt.voigt_profile(line=atoms.atom.lines[0], dE=blue-atoms.atom.lines[0].nu).real
-    # atoms.atom.lines[0].add_contribution_profiles(voigt_blue, blue)
-
-    '''
-    plt.plot(cdt.nus, voigt_blue, label='blue')
-    plt.plot(cdt.nus, voigt_red, label='red')
-    plt.legend()
-    plt.show()
-    '''
-
     # reset the jqq to zero to construct from there the radiation field with the JKQ
     atoms.reset_jqq(cdt.nus_N)
 
-    """ 
     # Set the JKQ individually for each component
     JKQ = Jqq_to_JKQ(atoms.atom.lines[0].jqq[components[0]], cdt.JS)
     JKQ[0][0] = JKQ[0][0]*0 + 1e-9
+    JKQ[1][0] = JKQ[0][0]*0 + 1e-8
     atoms.atom.lines[0].jqq[components[0]] = JKQ_to_Jqq(JKQ, cdt.JS)
 
     JKQ = Jqq_to_JKQ(atoms.atom.lines[0].jqq[components[1]], cdt.JS)
-    JKQ[0][0] = JKQ[0][0]*0 + 1e-8
+    JKQ[0][0] = JKQ[0][0]*0 + 1e-9
+    JKQ[1][0] = JKQ[0][0]*0 + 1e-8
     atoms.atom.lines[0].jqq[components[1]] = JKQ_to_Jqq(JKQ, cdt.JS)
-    """
-    
-    # Set the JKQ for the whole line
-    for comp in components:
-        # retrieve the JKQ from the Jqq of the atoms object
-        JKQ = Jqq_to_JKQ(atoms.atom.lines[0].jqq[comp], cdt.JS)
-
-        # Setting it to the desired radiation field
-        for K in range(3):
-            for Q in range(0, K+1):
-                # print(K,Q)
-                JKQ[K][Q] = JKQ[K][Q]*0
-        JKQ[0][0] = JKQ[0][0]*0 + 1e-7
-        JKQ[1][0] = JKQ[0][0]*0 + 1e-8
-
-        # Add the JKQ to the atoms object
-        atoms.atom.lines[0].jqq[comp] = JKQ_to_Jqq(JKQ, cdt.JS)
 
     # Solve the ESE
     atoms.solveESE(None, cdt)
