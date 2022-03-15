@@ -3,7 +3,7 @@ import parameters_rtcoefs as pm
 from conditions import conditions
 from RTcoefs import RTcoefs
 from atom import ESE
-from tensors import JKQ_to_Jqq, Jqq_to_JKQ
+from tensors import JKQ_to_Jqq, Jqq_to_JKQ, construct_JKQ_0
 # General modules
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 # Function to check the conditions that will be used in the Rtcoefs module
 def print_params(cdts=conditions(pm), B=np.zeros(3)):
-    ray = cdts.orays[1]
+    ray = cdts.orays[0]
     # print the parameters of the conditions instance
     print('------------------------------------------------------')
     print(f'computed ray:\ninclination={ray.inc}\nazimut={ray.az}\n')
@@ -27,7 +27,7 @@ def print_params(cdts=conditions(pm), B=np.zeros(3)):
 
 
 # Wraper to compute the Rtcoefs module with a given parameters
-def compute_profile(pm=pm, B=np.zeros(3)):
+def compute_profile(JKQ_1, JKQ_2, pm=pm, B=np.zeros(3)):
     # Initialize the conditions and rtcoefs objects
     # given a set of parameters via the parameters_rtcoefs module
     cdt = conditions(pm)
@@ -46,21 +46,24 @@ def compute_profile(pm=pm, B=np.zeros(3)):
     atoms.reset_jqq(cdt.nus_N)
 
     # Set the JKQ individually for each component
-    JKQ = Jqq_to_JKQ(atoms.atom.lines[0].jqq[components[0]], cdt.JS)
-    JKQ[0][0] = JKQ[0][0]*0 + 1e-9
-    JKQ[1][0] = JKQ[0][0]*0 + 1e-8
-    atoms.atom.lines[0].jqq[components[0]] = JKQ_to_Jqq(JKQ, cdt.JS)
+    # JKQ = Jqq_to_JKQ(atoms.atom.lines[0].jqq[components[0]], cdt.JS)
+    # JKQ[0][0] = JKQ[0][0]*0 + 1e-8
+    # JKQ[1][0] = JKQ[0][0]*0 + 1e-9
+    # atoms.atom.lines[0].jqq[components[0]] = JKQ_to_Jqq(JKQ, cdt.JS)
 
-    JKQ = Jqq_to_JKQ(atoms.atom.lines[0].jqq[components[1]], cdt.JS)
-    JKQ[0][0] = JKQ[0][0]*0 + 1e-9
-    JKQ[1][0] = JKQ[0][0]*0 + 1e-8
-    atoms.atom.lines[0].jqq[components[1]] = JKQ_to_Jqq(JKQ, cdt.JS)
+    # JKQ = Jqq_to_JKQ(atoms.atom.lines[0].jqq[components[1]], cdt.JS)
+    # JKQ[0][0] = JKQ[0][0]*0 + 1e-8
+    # JKQ[1][0] = JKQ[0][0]*0 + 1e-9
+    # atoms.atom.lines[0].jqq[components[1]] = JKQ_to_Jqq(JKQ, cdt.JS)
+
+    atoms.atom.lines[0].jqq[components[0]] = JKQ_to_Jqq(JKQ_1, cdt.JS)
+    atoms.atom.lines[0].jqq[components[1]] = JKQ_to_Jqq(JKQ_2, cdt.JS)
 
     # Solve the ESE
     atoms.solveESE(None, cdt)
 
     # select the ray direction as the otuput ray
-    ray = cdt.orays[1]
+    ray = cdt.orays[0]
 
     # Compute the RT coeficients for a given ray
     sf, kk = RT_coeficients.getRTcoefs(atoms, ray, cdt)
@@ -89,9 +92,18 @@ if __name__ == '__main__':
     # keeping the loop in just 1 itteration for testing purposes
     # for i in tqdm(range(1,10)):
     for i in range(1,2):
-        B=np.array([i,10/i,i*2])
-        pm.zn = pm.zn+1
-        nus, profiles = compute_profile(B=B, pm=pm)
+        # B field will change with each itteration to cover all the possible cases
+        B=np.array([0,0,0])
+        # ray direction (will change with each itteration to cover all the possible cases)
+        pm.ray_out = [[0.5,1.0]]
+
+        # construct the JKQ dictionary
+        JKQ = construct_JKQ_0()
+        JKQ[0][0] = 1e-8
+        JKQ[1][0] = 1e-9
+
+        # compute the profile
+        nus, profiles = compute_profile(JKQ, JKQ, B=B, pm=pm)
 
         # Plot the emision coefficients
         plt.plot(nus, profiles['eps_I'], label='eps_I')

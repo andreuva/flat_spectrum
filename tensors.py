@@ -1,6 +1,21 @@
 import numpy as np
 
 
+def construct_JKQ_0():
+    JKQ = {}
+    for K in range(3):
+        JKQ[K] = {}
+        for Q in range(0,K+1):
+            JKQ[K][Q] = 0.
+        # Compute negative Q
+        if K > 0:
+            JKQ[K][-1] = 0.
+        if K > 1:
+            JKQ[K][-2] = 0.
+
+    return JKQ
+
+
 def Jqq_to_JKQ(Jqq,JS):
 
     # Create JKQ dictionary
