@@ -43,10 +43,10 @@ def print_params(cdts=conditions(pm), B=0):
 
 # Function to dump the data to files
 def dump_data(profiles, parameters, filename, task_index=None):
-    with open(f'{filename}_profiles.pkl', 'wb') as f:
+    with open(f'{filename}profiles.pkl', 'wb') as f:
         pkl.dump(profiles[0:task_index], f)
     
-    with open(f'{filename}_parameters.pkl', 'wb') as f:
+    with open(f'{filename}parameters.pkl', 'wb') as f:
         pkl.dump(parameters[0:task_index], f)
 
 
@@ -190,8 +190,12 @@ def master_work(nsamples, filename, write_frequency=100):
                 dump_data(profiles, parameters, filename, pbar.n)
         
     # Once all the workers are done, dump the data
+    print('\n'+'#'*100)
+    print('All the workers are done')
+    print('#'*100)
     print("Master finishing")
     print("Dumping data")
+    print('#'*100)
     dump_data(profiles, parameters, filename)
     
 
@@ -305,26 +309,26 @@ if __name__ == '__main__':
     rank = comm.rank  # get current process id
     size = comm.size  # total number of processes
     status = MPI.Status()   # get MPI status object
+    print(f"\nNode {rank+1}/{size} active", flush=False, end='')
 
     # Initialize the random number generator
     # seed = int(time.time())
-    seed = 777 # Jackpot because we are going to be lucky :)
+    seed = 777*rank # Jackpot because we are going to be lucky :)
     np.random.seed(seed)
 
     if size > 1:
-        print(f"Node {rank}/{size} active", flush=True)
         if rank == 0:
             parser = argparse.ArgumentParser(description='Generate synthetic models and solve NLTE problem')
             parser.add_argument('--n', '--nmodels', default=1000, type=int, metavar='NMODELS', help='Number of models')
             parser.add_argument('--f', '--freq', default=100, type=int, metavar='FREQ', help='Frequency of model write')
-            parser.add_argument('--sav', '--savedir', default=f'data/{time.strftime("%Y%m%d-%H%M%S")}', metavar='SAVEDIR', help='directory for output files')
+            parser.add_argument('--sav', '--savedir', default=f'data_{time.strftime("%Y%m%d_%H%M%S")}/', metavar='SAVEDIR', help='directory for output files')
 
             parsed = vars(parser.parse_args())
 
             if not os.path.exists(parsed['sav']):
                 os.makedirs(parsed['sav'])
-            else:
-                os.system(f'rm -rf {parsed["sav"]}')
+            # else:
+            #     os.system(f'rm -rf {parsed["sav"]}')
 
             master_work(parsed['n'], parsed['sav'], parsed['f'])
         else:
