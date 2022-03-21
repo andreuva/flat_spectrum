@@ -55,6 +55,9 @@ def new_parameters(pm):
     B = np.random.normal(10, 100)
     while B < 0:
         B = np.random.normal(10, 100)
+    # 10e-4 to 10e3
+    # change to jefryes prior to the next iteration
+    # paper of A.Ramos et al (HAZEL)
 
     mu = np.random.uniform(0,1)
     chi = np.random.uniform(0,180)
@@ -280,18 +283,18 @@ def test_results(pm):
         plt.plot(nus, profiles['eps_I'], label='eps_I', figure=plt.figure(1), color = 'orange')
         plt.plot(nus, profiles['eps_Q'], label='eps_Q', figure=plt.figure(2), color='green')
         plt.plot(nus, profiles['eps_U'], label='eps_U', figure=plt.figure(2), color='blue')
-        plt.plot(nus, profiles['eps_V'], label='eps_V', figure=plt.figure(2), color = 'orange')
+        plt.plot(nus, profiles['eps_V'], label='eps_V', figure=plt.figure(2), color = 'red')
 
         # Plot the absorption coefficients
         plt.plot(nus, profiles['eta_I'], label='eta_I', figure=plt.figure(3), color = 'orange')
         plt.plot(nus, profiles['eta_Q'], label='eta_Q', figure=plt.figure(4), color='green')
         plt.plot(nus, profiles['eta_U'], label='eta_U', figure=plt.figure(4), color='blue')
-        plt.plot(nus, profiles['eta_V'], label='eta_V', figure=plt.figure(4), color = 'orange')
+        plt.plot(nus, profiles['eta_V'], label='eta_V', figure=plt.figure(4), color = 'red')
 
         # Plot the absorption coefficients
         plt.plot(nus, profiles['rho_Q'], label='rho_Q', figure=plt.figure(5), color='green')
         plt.plot(nus, profiles['rho_U'], label='rho_U', figure=plt.figure(5), color='blue')
-        plt.plot(nus, profiles['rho_V'], label='rho_V', figure=plt.figure(5), color = 'orange')
+        plt.plot(nus, profiles['rho_V'], label='rho_V', figure=plt.figure(5), color = 'red')
     plt.show()
 
 
@@ -312,8 +315,8 @@ if __name__ == '__main__':
         print(f"Node {rank}/{size} active", flush=True)
         if rank == 0:
             parser = argparse.ArgumentParser(description='Generate synthetic models and solve NLTE problem')
-            parser.add_argument('--n', '--nmodels', default=10000, type=int, metavar='NMODELS', help='Number of models')
-            parser.add_argument('--f', '--freq', default=10, type=int, metavar='FREQ', help='Frequency of model write')
+            parser.add_argument('--n', '--nmodels', default=1000, type=int, metavar='NMODELS', help='Number of models')
+            parser.add_argument('--f', '--freq', default=100, type=int, metavar='FREQ', help='Frequency of model write')
             parser.add_argument('--sav', '--savedir', default=f'data/{time.strftime("%Y%m%d-%H%M%S")}', metavar='SAVEDIR', help='directory for output files')
 
             parsed = vars(parser.parse_args())
