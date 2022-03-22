@@ -21,3 +21,4 @@ tolerance_c = 5e-4   # tolerated relative change in coherences
 initial_equilibrium = True   # Start from equilibrium
 
 dir = f'output_{time.strftime("%Y%m%d-%H%M%S")}/'
+del time

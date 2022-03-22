@@ -54,30 +54,29 @@ def new_parameters(pm):
     # B field will change with each itteration to cover all the possible cases
     B = np.random.normal(10, 100)
     while B < 0:
-        B = np.random.normal(10, 100)
-    # 10e-4 to 10e3
-    # change to jefryes prior to the next iteration
-    # paper of A.Ramos et al (HAZEL)
+        B = np.random.normal(1, 400)
 
-    mu = np.random.uniform(0,1)
+    mu = np.random.uniform(-1,1)
     chi = np.random.uniform(0,180)
     # ray direction (will change with each itteration to cover all the possible cases)
     pm.ray_out = [[mu, chi]]
-    pm.a_voigt = 0.
-    pm.v_dop = 5.0*1e5
-    pm.temp = 8.665251563142749e3
+    # amplitude of the profile
+    pm.a_voigt = np.random.choice(np.logspace(0,1e-6,10000),1) #  1e-6 to 0.
+    pm.temp = np.random.lognormal(3.5, 2) # 1e1 to 10e5
 
     # construct the JKQ dictionary
     JKQ = construct_JKQ_0()
     JKQ[0][0] = np.random.lognormal(-8, 4)
-    JKQ[1][-1] = np.random.uniform(0, 0.2)*JKQ[0][0]
     JKQ[1][0] = np.random.uniform(0, 0.2)*JKQ[0][0]
-    JKQ[1][1] = np.random.uniform(0, 0.2)*JKQ[0][0]
-    JKQ[2][2] = np.random.uniform(0, 0.2)*JKQ[0][0]
-    JKQ[2][1] = np.random.uniform(0, 0.2)*JKQ[0][0]
     JKQ[2][0] = np.random.uniform(0, 0.2)*JKQ[0][0]
-    JKQ[2][1] = np.random.uniform(0, 0.2)*JKQ[0][0]
-    JKQ[2][2] = np.random.uniform(0, 0.2)*JKQ[0][0]
+
+    JKQ[1][1] = np.random.uniform(0, 0.2)*JKQ[0][0] + np.random.uniform(0, 0.2)*JKQ[0][0]*1j
+    JKQ[2][1] = np.random.uniform(0, 0.2)*JKQ[0][0] + np.random.uniform(0, 0.2)*JKQ[0][0]*1j
+    JKQ[2][2] = np.random.uniform(0, 0.2)*JKQ[0][0] + np.random.uniform(0, 0.2)*JKQ[0][0]*1j
+
+    JKQ[2][-2] =      np.conjugate(JKQ[2][2])
+    JKQ[2][-1] = -1.0*np.conjugate(JKQ[2][1])
+    JKQ[1][-1] = -1.0*np.conjugate(JKQ[1][1])
 
     return JKQ, JKQ, B, pm
 
@@ -202,6 +201,8 @@ def master_work(nsamples, filename, write_frequency=100):
 
 def slave_work(pm):
 
+    module_to_dict = lambda module: {k: getattr(module, k) for k in dir(module) if not k.startswith('_')}
+
     while True:
         # send the ready signal to the master
         comm.send(None, dest=0, tag=tags.READY)
@@ -237,9 +238,11 @@ def slave_work(pm):
                 print('-'*50)
                 profiles = None
 
+            parameters = module_to_dict(pm)
+
             # Send the results to the master
             dataToSend = {'index': task_index, 'success': success, 'profiles': profiles, 
-                          'parameters': [pm.JKQ_1, pm.JKQ_2, pm.B, pm.ray_out]}
+                          'parameters': parameters}
             comm.send(dataToSend, dest=0, tag=tags.DONE)
         
         # If the master is sending the kill signal exit
@@ -247,7 +250,7 @@ def slave_work(pm):
             return
 
 def test_results(pm):
-    print("Only one node active", flush=True)
+    print("\nOnly one node active", flush=True)
 
     plt.figure(1, (10, 10), 150)
     plt.xlabel(r'$\nu$ [cm$^{-1}$]')

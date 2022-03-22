@@ -13,3 +13,8 @@ with open(f'{data_folders[0]}/parameters.pkl', 'rb') as f:
 
 with open(f'{data_folders[0]}/profiles.pkl', 'rb') as f:
     profiles_data = pkl.load(f)
+
+# plot the profiles
+for i in range(len(profiles_data)):
+    plt.plot(profiles_data[i]['nus'], profiles_data[i]['eta_I'], alpha=0.03, linewidth=0.3)
+plt.show()
