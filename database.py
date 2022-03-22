@@ -61,18 +61,18 @@ def new_parameters(pm):
     # ray direction (will change with each itteration to cover all the possible cases)
     pm.ray_out = [[mu, chi]]
     # amplitude of the profile
-    pm.a_voigt = np.random.choice(np.logspace(0,1e-6,10000),1) #  1e-6 to 0.
+    pm.a_voigt = np.random.choice(np.logspace(0,1e-6,10000)) #  1e-6 to 0.
     pm.temp = np.random.lognormal(3.5, 2) # 1e1 to 10e5
 
     # construct the JKQ dictionary
     JKQ = construct_JKQ_0()
     JKQ[0][0] = np.random.lognormal(-8, 4)
-    JKQ[1][0] = np.random.uniform(0, 0.2)*JKQ[0][0]
-    JKQ[2][0] = np.random.uniform(0, 0.2)*JKQ[0][0]
+    JKQ[1][0] = np.random.uniform(-0.2, 0.2)*JKQ[0][0]
+    JKQ[2][0] = np.random.uniform(-0.2, 0.2)*JKQ[0][0]
 
-    JKQ[1][1] = np.random.uniform(0, 0.2)*JKQ[0][0] + np.random.uniform(0, 0.2)*JKQ[0][0]*1j
-    JKQ[2][1] = np.random.uniform(0, 0.2)*JKQ[0][0] + np.random.uniform(0, 0.2)*JKQ[0][0]*1j
-    JKQ[2][2] = np.random.uniform(0, 0.2)*JKQ[0][0] + np.random.uniform(0, 0.2)*JKQ[0][0]*1j
+    JKQ[1][1] = np.random.uniform(-0.2, 0.2)*JKQ[0][0] + np.random.uniform(-0.2, 0.2)*JKQ[0][0]*1j
+    JKQ[2][1] = np.random.uniform(-0.2, 0.2)*JKQ[0][0] + np.random.uniform(-0.2, 0.2)*JKQ[0][0]*1j
+    JKQ[2][2] = np.random.uniform(-0.2, 0.2)*JKQ[0][0] + np.random.uniform(-0.2, 0.2)*JKQ[0][0]*1j
 
     JKQ[2][-2] =      np.conjugate(JKQ[2][2])
     JKQ[2][-1] = -1.0*np.conjugate(JKQ[2][1])
