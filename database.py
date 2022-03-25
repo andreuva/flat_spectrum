@@ -50,33 +50,42 @@ def dump_data(profiles, parameters, filename, task_index=None):
         pkl.dump(parameters[0:task_index], f)
 
 
-def new_parameters(pm):
-    # B field will change with each itteration to cover all the possible cases
-    B = np.random.normal(10, 100)
-    while B < 0:
-        B = np.random.normal(1, 400)
+def new_parameters(pm, test=False):
 
-    mu = np.random.uniform(-1,1)
-    chi = np.random.uniform(0,180)
-    # ray direction (will change with each itteration to cover all the possible cases)
-    pm.ray_out = [[mu, chi]]
-    # amplitude of the profile
-    pm.a_voigt = np.random.choice(np.logspace(0,1e-6,10000)) #  1e-6 to 0.
-    pm.temp = np.random.lognormal(3.5, 2) # 1e1 to 10e5
+    if test:
+        pm.a_voigt = 1e-10
+        JKQ = construct_JKQ_0()
+        JKQ[0][0] = 1e-8
+        JKQ[1][0] = 1e-10
+        JKQ[2][0] = 1e-12
+        B = 100
+    else:
+        # B field will change with each itteration to cover all the possible cases
+        B = np.random.normal(10, 100)
+        while B < 0:
+            B = np.random.normal(1, 400)
 
-    # construct the JKQ dictionary
-    JKQ = construct_JKQ_0()
-    JKQ[0][0] = np.random.lognormal(-8, 4)
-    JKQ[1][0] = np.random.uniform(-0.2, 0.2)*JKQ[0][0]
-    JKQ[2][0] = np.random.uniform(-0.2, 0.2)*JKQ[0][0]
+        mu = np.random.uniform(-1,1)
+        chi = np.random.uniform(0,180)
+        # ray direction (will change with each itteration to cover all the possible cases)
+        pm.ray_out = [[mu, chi]]
+        # amplitude of the profile
+        pm.a_voigt = np.random.choice(np.logspace(0,1e-6,10000)) #  1e-6 to 0.
+        pm.temp = np.random.lognormal(3.5, 2) # 1e1 to 10e5
 
-    JKQ[1][1] = np.random.uniform(-0.2, 0.2)*JKQ[0][0] + np.random.uniform(-0.2, 0.2)*JKQ[0][0]*1j
-    JKQ[2][1] = np.random.uniform(-0.2, 0.2)*JKQ[0][0] + np.random.uniform(-0.2, 0.2)*JKQ[0][0]*1j
-    JKQ[2][2] = np.random.uniform(-0.2, 0.2)*JKQ[0][0] + np.random.uniform(-0.2, 0.2)*JKQ[0][0]*1j
+        # construct the JKQ dictionary
+        JKQ = construct_JKQ_0()
+        JKQ[0][0] = np.random.lognormal(-8, 4)
+        JKQ[1][0] = np.random.uniform(-0.2, 0.2)*JKQ[0][0]
+        JKQ[2][0] = np.random.uniform(-0.2, 0.2)*JKQ[0][0]
 
-    JKQ[2][-2] =      np.conjugate(JKQ[2][2])
-    JKQ[2][-1] = -1.0*np.conjugate(JKQ[2][1])
-    JKQ[1][-1] = -1.0*np.conjugate(JKQ[1][1])
+        JKQ[1][1] = np.random.uniform(-0.2, 0.2)*JKQ[0][0] + np.random.uniform(-0.2, 0.2)*JKQ[0][0]*1j
+        JKQ[2][1] = np.random.uniform(-0.2, 0.2)*JKQ[0][0] + np.random.uniform(-0.2, 0.2)*JKQ[0][0]*1j
+        JKQ[2][2] = np.random.uniform(-0.2, 0.2)*JKQ[0][0] + np.random.uniform(-0.2, 0.2)*JKQ[0][0]*1j
+
+        JKQ[2][-2] =      np.conjugate(JKQ[2][2])
+        JKQ[2][-1] = -1.0*np.conjugate(JKQ[2][1])
+        JKQ[1][-1] = -1.0*np.conjugate(JKQ[1][1])
 
     return JKQ, JKQ, B, pm
 
@@ -249,6 +258,43 @@ def slave_work(pm):
         elif tag == tags.EXIT:
             return
 
+
+def create_test_amplitudes(pm):
+    plt.figure(1, (10,10), 150)
+    plt.xlabel(r'$\nu$ [cm$^{-1}$]')
+    plt.ylabel(r'$\epsilon_I$')
+    plt.title(r'$\epsilon_I$ vs $\nu$')
+
+    module_to_dict = lambda module: {k: getattr(module, k) for k in dir(module) if not k.startswith('_')}
+
+    JKQ_1, JKQ_2, B, pm = new_parameters(pm)
+    pm_min = module_to_dict(pm)
+    profiles_min = compute_profile(JKQ_1, JKQ_2, B=B, pm=pm)
+
+    pm.a_voigt = pm.a_voigt*2
+    pm_mean = module_to_dict(pm)
+    profiles = compute_profile(JKQ_1, JKQ_2, B=B, pm=pm)
+
+    pm.a_voigt = pm.a_voigt*2
+    pm_max = module_to_dict(pm)
+    profiles_max = compute_profile(JKQ_1, JKQ_2, B=B, pm=pm)
+
+    nus = profiles['nus']
+
+    plt.plot(nus, profiles_min['eta_I'], 'b-', label='min')
+    plt.plot(nus, profiles_max['eta_I'], 'r-', label='max')
+    plt.plot(nus, profiles['eta_I'], 'k-', label='mean')
+    plt.legend()
+
+    # if the folder tests does not exist create it
+    if not os.path.exists('tests/'):
+        os.makedirs('tests/')
+    dump_data([profiles_min, profiles, profiles_max], [pm_min, pm_mean, pm_max], 'tests/test_amplitudes_')
+
+    plt.savefig('tests/eta_amplitudes_test.png')
+    plt.show()
+
+
 def test_results(pm):
     print("\nOnly one node active", flush=True)
 
@@ -337,4 +383,5 @@ if __name__ == '__main__':
         else:
             slave_work(pm)
     else:
+        create_test_amplitudes(pm)
         test_results(pm)
