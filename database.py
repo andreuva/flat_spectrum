@@ -1,5 +1,4 @@
 # Especific modules
-from asyncio import tasks
 import parameters_rtcoefs as pm
 from conditions import conditions
 from RTcoefs import RTcoefs
@@ -268,6 +267,9 @@ def create_test_amplitudes(pm):
     module_to_dict = lambda module: {k: getattr(module, k) for k in dir(module) if not k.startswith('_')}
 
     JKQ_1, JKQ_2, B, pm = new_parameters(pm)
+    pm.B = B
+    pm.JKQ_1 = JKQ_1
+    pm.JKQ_2 = JKQ_2
     pm_min = module_to_dict(pm)
     profiles_min = compute_profile(JKQ_1, JKQ_2, B=B, pm=pm)
 
