@@ -166,3 +166,29 @@ def plot_quantity(cdt, xx, quantity, names=['x', 'quantity'], mode='save', direc
     plt.ylabel(names[1])
     plt.title(names[1] + ' vs ' + names[0])
     save_or_show(mode, names[1], directory)
+
+
+def plot_4_profiles(wave, eta_I, eta_Q, eta_U, eta_V, n=0, show=True):
+    
+    # plot the profiles of emission
+    if n==0:
+        plt.figure(figsize=(12,8))
+    plt.subplot(2,2,1)
+    plt.plot(wave, eta_I, f'C{n}')
+    plt.title(r'$\epsilon_I$')
+    plt.xlabel(r'$\nu$')
+    plt.subplot(2,2,2)
+    plt.plot(wave, eta_Q, f'C{n}')
+    plt.title(r'$\epsilon_Q$')
+    plt.xlabel(r'$\nu$')
+    plt.subplot(2,2,3)
+    plt.plot(wave, eta_U, f'C{n}')
+    plt.title(r'$\epsilon_U$')
+    plt.xlabel(r'$\nu$')
+    plt.subplot(2,2,4)
+    plt.plot(wave, eta_V, f'C{n}')
+    plt.title(r'$\epsilon_V$')
+    plt.xlabel(r'$\nu$')
+    plt.tight_layout()
+    if show:
+        plt.show()
