@@ -158,7 +158,7 @@ def plot_stokes_im(cdt, st, norm=True, name='stokes_image', mode='save', directo
     save_or_show(mode, name, directory)
 
 
-def plot_quantity(cdt, xx, quantity, names=['x', 'quantity'], mode='save', directory='plots'):
+def plot_quantity(xx, quantity, names=['x', 'quantity'], mode='save', directory='plots'):
 
     plt.plot(xx, quantity)
     plt.ticklabel_format(useOffset=False)
