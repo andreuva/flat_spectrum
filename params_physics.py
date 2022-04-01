@@ -6,9 +6,9 @@ zn = 3            # Points in z in the slab
 alpha = 0.        # angle between the vertical of the slav and the radial line [deg]
 
 ray_quad = "gaussian_quadrature_16x4.dat"# file where the angular quadrature is saved
-ray_out = [[1.0,0.]]             # List of mu,phi for emergent radiation directions
+ray_out = [[0., 0.]]             # List of mu,phi for emergent radiation directions
 
-v_dop = 1.5*1e5            # Dopler velocity (not the actual one) [cm/s]
+v_dop = 3*1e5              # Dopler velocity (not the actual one) [cm/s]
 a_voigt = 1e-99            # voigt damping parameter of the line profile
 n_dens = 5.8e4             # Density wich defines the optical thickness [cm^-3]
 temp = 8.665251563142749e3 # Temperature of the slab [K] (6 km/s)
