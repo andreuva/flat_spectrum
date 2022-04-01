@@ -95,3 +95,42 @@ def JKQ_to_Jqq(JKQ, JS):
                 jqq[qq][qp] += f2*JS.j3(1,1,K,qq,-qp,-Q)*JKQ[K][Q]
     
     return jqq
+
+
+def TKQ(i, K, Q, theta, chi, gamma=0.):
+    conj = False
+    t = 0.+0j
+    if Q<0:
+        conj = True
+        Q = -Q
+    if i==0:
+        if K==0:
+            t = 1.+0j
+        elif K==2 and Q==0:
+            t = 1./(2.*np.sqrt(2.)) * (3.*np.cos(theta)*np.cos(theta) - 1.) + 0j
+        elif K==2 and Q==1:
+            t = -np.sqrt(3.)/2. * np.sin(theta) * np.cos(theta) * np.exp(chi*1j)
+        elif K==2 and Q==2:
+            t = np.sqrt(3.)/4. * np.sin(theta) * np.sin(theta) * np.exp(chi*2j)
+    elif i==1:
+        if K==2 and Q==0:
+            t = -3./(2.*np.sqrt(2.)) * np.cos(2.*gamma) * np.sin(theta) * np.sin(theta) + 0j
+        elif K==2 and Q==1:
+            t = -np.sqrt(3.)/2.*(np.cos(2.*gamma)*np.cos(theta) + np.sin(2.*gamma)*1j) * np.sin(theta) * np.exp(chi*1j)
+        elif K==2 and Q==2:
+            t = -np.sqrt(3.)/4.*(np.cos(2.*gamma)*(1. + np.cos(theta)*np.cos(theta)) + np.sin(2.*gamma)*np.cos(theta)*2j) * np.exp(chi*2j)
+    elif i==2:
+        if K==2 and Q==0:
+            t = 3./(2.*np.sqrt(2.)) * np.sin(2.*gamma) * np.sin(theta) * np.sin(theta)
+        elif K==2 and Q==1:
+            t = np.sqrt(3.)/2. * (np.sin(2.*gamma)*np.cos(theta) - np.cos(2.*gamma) * 1j) * np.sin(theta) * np.exp(chi*1j)
+        elif K==2 and Q==2:
+            t = np.sqrt(3.)/4. * (np.sin(2.*gamma)*(1. + np.cos(theta)*np.cos(theta)) - np.cos(2.*gamma)*np.cos(theta)*2j) * np.exp(chi*2j)
+    elif i==3:
+        if K==1 and Q==0:
+            t = np.sqrt(3./2.) * np.cos(theta)
+        elif K==1 and Q==1:
+            t = -np.sqrt(3.)/2. * np.sin(theta) * np.exp(chi*1j)
+    if conj:
+        t = t.conjugate() * (-1)**Q
+    return t
