@@ -1,4 +1,3 @@
-from copy import deepcopy
 import params_physics as pm
 from conditions import conditions
 from RTcoefs import RTcoefs
@@ -8,6 +7,7 @@ from plot_utils import plot_4_profiles, plot_quantity
 
 import numpy as np
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 
 # Function that computes the unit 3D vector from the inclination and the azimuth
@@ -111,11 +111,10 @@ def phi_m_calc(tau):
 if __name__ == '__main__':
 
     # create the conditions to compute the JKQ and profiles
-    # B = random_three_vector()
-    # velocity = random_three_vector()*1e4
     velocity = np.array([0, 2e4, 0])
     B_xyz = np.array([0, 0, 0])
     B_spherical = cart_to_ang(B_xyz[0], B_xyz[1], B_xyz[2])
+    n_samples = 1000
 
     # define the parameters that will construct the background radiation field
     # to later compute the JKQ en both components
@@ -127,7 +126,7 @@ if __name__ == '__main__':
     gaussian_2_height = 1e-3
 
     tau_max = 1
-    tau_continium = 1e-4
+    tau_continium = 0
     sun_ilum = True
     background_type = 'absorption'
 
@@ -151,6 +150,7 @@ if __name__ == '__main__':
     nu_peak_1_indx = np.abs(nus - nu_1).argmin()
     nu_peak_2_indx = np.abs(nus - nu_2).argmin()
 
+    """ 
     # print the results of the tests
     print('-'*100)
     print('Ratios between the two peaks with different JKQs:')
@@ -171,6 +171,7 @@ if __name__ == '__main__':
     plot_4_profiles(nus, profiles_2['eta_I'], profiles_2['eta_Q'], profiles_2['eta_U'], profiles_2['eta_V'], n=1, show=False)
     plot_4_profiles(nus, profiles_3['eta_I'], profiles_3['eta_Q'], profiles_3['eta_U'], profiles_3['eta_V'], n=2)
 
+    """
     ###############################################################################################
 
     # compute the gaussian profiles for each component
@@ -188,94 +189,138 @@ if __name__ == '__main__':
         background = background_emision
 
     # plot the background ilumination
-    print('plot the background ilumination')
-    plot_quantity(nus, background, [r'$\nu$', r'$I_b$'], mode='show')
+    # print('plot the background ilumination')
+    # plot_quantity(nus, background, [r'$\nu$', r'$I_b$'], mode='show')
+    profiles_samples = []
+    intensities_samples = []
+    parameters = []
 
-    # compute the JKQ taking into account the background and velocity
-    JKQ_1 = construct_JKQ_0()
-    JKQ_2 = construct_JKQ_0()
-    for K in range(3):
-        for Q in range(0,K+1):
-            for ray in rays:
-                vlos = np.dot(ang_to_cart(ray.inc, ray.az), velocity)
-                nus_p = nus*(1+vlos/299792458)
-                background_dop = np.interp(nus, nus_p, background)
+    for samp in tqdm(range(n_samples)):
+        B_xyz = random_three_vector()*100
+        velocity = random_three_vector()*2.5e4
+        B_spherical = cart_to_ang(B_xyz[0], B_xyz[1], B_xyz[2])
 
-                JKQ_1[K][Q] += background_dop*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
-                JKQ_2[K][Q] += background_dop*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
+        # compute the JKQ taking into account the background and velocity
+        JKQ_1 = construct_JKQ_0()
+        JKQ_2 = construct_JKQ_0()
+        for K in range(3):
+            for Q in range(0,K+1):
+                for ray in rays:
+                    vlos = np.dot(ang_to_cart(ray.inc, ray.az), velocity)
+                    nus_p = nus*(1+vlos/299792458)
+                    background_dop = np.interp(nus, nus_p, background)
+                    background_dop = np.ones_like(background_dop)*background_dop.mean()
 
-                # print('plot the dopler shifts')
-                # plot_quantity(nus, background, [r'$\nu$', 'background'], mode='show')
-                # plot_quantity(nus, background_dop, [r'$\nu$', 'background dopler'], mode='show')
+                    if np.cos(ray.inc) > -0.5:
+                        JKQ_1[K][Q] += background_dop*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
+                        JKQ_2[K][Q] += background_dop*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
 
-            # print(f'plot the JKQ profiles for K={K}, Q={Q}')
-            # plot_quantity(nus, JKQ_1[K][Q].real, [r'$\nu$', fr'$Jred^{K}_{Q}$'], mode='show')
-            # plot_quantity(nus, JKQ_1[K][Q].real*background_1_norm, [r'$\nu$', fr'$Jred^{K}_{Q}*\phi(\nu)$'], mode='show')
+                    # print('plot the dopler shifts')
+                    # plot_quantity(nus, background, [r'$\nu$', 'background'], mode='show')
+                    # plot_quantity(nus, background_dop, [r'$\nu$', 'background dopler'], mode='show')
 
-            # plot_quantity(nus, JKQ_2[K][Q].real, [r'$\nu$', fr'$Jblue^{K}_{Q}$'], mode='show')
-            # plot_quantity(nus, JKQ_2[K][Q].real*background_2_norm, [r'$\nu$', fr'$Jblue^{K}_{Q}*\phi(\nu)$'], mode='show')
+                # print(f'plot the JKQ profiles for K={K}, Q={Q}')
+                # plot_quantity(nus, JKQ_1[K][Q].real, [r'$\nu$', fr'$Jred^{K}_{Q}$'], mode='show')
+                # plot_quantity(nus, JKQ_1[K][Q].real*background_1_norm, [r'$\nu$', fr'$Jred^{K}_{Q}*\phi(\nu)$'], mode='show')
 
-            # integrate over nus
-            JKQ_1[K][Q] = np.trapz(JKQ_1[K][Q]*background_1_norm, nus)
-            JKQ_2[K][Q] = np.trapz(JKQ_2[K][Q]*background_2_norm, nus)
+                # plot_quantity(nus, JKQ_2[K][Q].real, [r'$\nu$', fr'$Jblue^{K}_{Q}$'], mode='show')
+                # plot_quantity(nus, JKQ_2[K][Q].real*background_2_norm, [r'$\nu$', fr'$Jblue^{K}_{Q}*\phi(\nu)$'], mode='show')
 
-    JKQ_1[2][-2] =      np.conjugate(JKQ_1[2][2])
-    JKQ_1[2][-1] = -1.0*np.conjugate(JKQ_1[2][1])
-    JKQ_1[1][-1] = -1.0*np.conjugate(JKQ_1[1][1])
+                # integrate over nus
+                JKQ_1[K][Q] = np.trapz(JKQ_1[K][Q]*background_1_norm, nus)
+                JKQ_2[K][Q] = np.trapz(JKQ_2[K][Q]*background_2_norm, nus)
 
-    JKQ_2[2][-2] =      np.conjugate(JKQ_2[2][2])
-    JKQ_2[2][-1] = -1.0*np.conjugate(JKQ_2[2][1])
-    JKQ_2[1][-1] = -1.0*np.conjugate(JKQ_2[1][1])
+        JKQ_1[2][-2] =      np.conjugate(JKQ_1[2][2])
+        JKQ_1[2][-1] = -1.0*np.conjugate(JKQ_1[2][1])
+        JKQ_1[1][-1] = -1.0*np.conjugate(JKQ_1[1][1])
 
-    # compute the profiles with the new JKQs
-    profiles, nus, rays = compute_profile(JKQ_1, JKQ_2, pm, B_spherical)
+        JKQ_2[2][-2] =      np.conjugate(JKQ_2[2][2])
+        JKQ_2[2][-1] = -1.0*np.conjugate(JKQ_2[2][1])
+        JKQ_2[1][-1] = -1.0*np.conjugate(JKQ_2[1][1])
 
-    # compute the wavelength from the frequencies
-    wave = 299792458/nus
+        # compute the profiles with the new JKQs
+        profiles, nus, rays = compute_profile(JKQ_1, JKQ_2, pm, B_spherical)
 
-    ################   SEMI-ANALYTICAL RADIATIVE TRANSFER  #################
+        # compute the wavelength from the frequencies
+        wave = 299792458/nus
 
-    # identity matrix
-    Ident = np.identity(4)
+        ################   SEMI-ANALYTICAL RADIATIVE TRANSFER  #################
 
-    # optical depth profile (background with peak at 1.0)
-    tau_prof = (background_1/gaussian_1_height + background_2/gaussian_1_height)*tau_max + tau_continium
+        # identity matrix
+        Ident = np.identity(4)
 
-    # plot the optical depth profile
-    print('plot the optical depth profile')
-    plot_quantity(nus, background, [r'$\nu$', r'$I_b$'], mode='show')
+        # optical depth profile (background with peak at 1.0)
+        tau_prof = (background_1/gaussian_1_height + background_2/gaussian_1_height)*tau_max + tau_continium
 
-    Kp = [[profiles['eta_I']*0                , profiles['eta_Q']/profiles['eta_I'], profiles['eta_U']/profiles['eta_I'], profiles['eta_V']/profiles['eta_I']],
-          [profiles['eta_Q']/profiles['eta_I'], profiles['eta_I']*0                , profiles['rho_V']/profiles['eta_I'],-profiles['rho_U']/profiles['eta_I']],
-          [profiles['eta_U']/profiles['eta_I'],-profiles['rho_V']/profiles['eta_I'], profiles['eta_I']*0                , profiles['rho_Q']/profiles['eta_I']],
-          [profiles['eta_V']/profiles['eta_I'], profiles['rho_U']/profiles['eta_I'],-profiles['rho_Q']/profiles['eta_I'], profiles['eta_I']*0]]
-    Kp = np.array(Kp)
+        # plot the optical depth profile
+        # print('plot the optical depth profile')
+        # plot_quantity(nus, tau_prof, [r'$\nu$', r'$\tau$'], mode='show')
 
-    # Radiation coming from the underlying medium entering the slab
-    Isun = np.array([background, 0*background, 0*background, 0*background])
-    if not sun_ilum:
-        Isun = Isun*0
-    # Source function computed with the new JKQs
-    SS = np.array([profiles['eps_I']/profiles['eta_I'], profiles['eps_Q']/profiles['eta_I'], profiles['eps_U']/profiles['eta_I'], profiles['eps_V']/profiles['eta_I']])
+        Kp = [[profiles['eta_I']*0                , profiles['eta_Q']/profiles['eta_I'], profiles['eta_U']/profiles['eta_I'], profiles['eta_V']/profiles['eta_I']],
+            [profiles['eta_Q']/profiles['eta_I'], profiles['eta_I']*0                , profiles['rho_V']/profiles['eta_I'],-profiles['rho_U']/profiles['eta_I']],
+            [profiles['eta_U']/profiles['eta_I'],-profiles['rho_V']/profiles['eta_I'], profiles['eta_I']*0                , profiles['rho_Q']/profiles['eta_I']],
+            [profiles['eta_V']/profiles['eta_I'], profiles['rho_U']/profiles['eta_I'],-profiles['rho_Q']/profiles['eta_I'], profiles['eta_I']*0]]
+        Kp = np.array(Kp)
 
-    # Initialize the intensities and an auxiliary matrix to invert
-    M_inv = np.zeros((4,4,profiles['nus'].size))
-    II = np.zeros((4,profiles['nus'].size))
-    # go through the different frequencies
-    for i in range(len(nus)):
-        # retrieve the optical depth at the current frequency
-        tau = tau_prof[i]
-        # compute the phi coefficients at the current frequency
-        phi_m = phi_m_calc(tau)
-        phi_0 = phi_o_calc(tau)
+        # Radiation coming from the underlying medium entering the slab
+        Isun = np.array([background, 0*background, 0*background, 0*background])
+        if not sun_ilum:
+            Isun = Isun*0
+        # Source function computed with the new JKQs
+        SS = np.array([profiles['eps_I']/profiles['eta_I'], profiles['eps_Q']/profiles['eta_I'], profiles['eps_U']/profiles['eta_I'], profiles['eps_V']/profiles['eta_I']])
 
-        # compute the matrix M and invert it
-        M_inv[:,:,i] = np.linalg.inv(phi_m*Kp[:,:,i] + Ident)
-        # Do the matrix multiplications to obtain the stokes parameters
-        AA = np.einsum('ij,j->i', (np.exp(-tau)*Ident - phi_m*Kp[:,:,i]), Isun[:,i])
-        DD = (phi_m + phi_0)*SS[:,i]
-        II[:,i] = np.einsum('ij,j->i',M_inv[:,:,i],(AA + DD))
+        # Initialize the intensities and an auxiliary matrix to invert
+        M_inv = np.zeros((4,4,profiles['nus'].size))
+        II = np.zeros((4,profiles['nus'].size))
+        # go through the different frequencies
+        for i in range(len(nus)):
+            # retrieve the optical depth at the current frequency
+            tau = tau_prof[i]
+            # compute the phi coefficients at the current frequency
+            phi_m = phi_m_calc(tau)
+            phi_0 = phi_o_calc(tau)
 
-    print('plot the final profiles and emission')
-    # plot_4_profiles(nus, SS[0], SS[1], SS[2], SS[3], show=False)
-    plot_4_profiles(nus, II[0], II[1], II[2], II[3])
+            # compute the matrix M and invert it
+            M_inv[:,:,i] = np.linalg.inv(phi_m*Kp[:,:,i] + Ident)
+            # Do the matrix multiplications to obtain the stokes parameters
+            AA = np.einsum('ij,j->i', (np.exp(-tau)*Ident - phi_m*Kp[:,:,i]), Isun[:,i])
+            DD = (phi_m + phi_0)*SS[:,i]
+            II[:,i] = np.einsum('ij,j->i',M_inv[:,:,i],(AA + DD))
+
+        '''
+        # print('plot the final profiles and emission')
+        # plot_4_profiles(nus, SS[0], SS[1], SS[2], SS[3], show=False)
+        title = f'v = [{velocity[0]/1e3:1.2f}, {velocity[1]/1e3:1.2f}, {velocity[2]/1e3:1.2f}] km/s \n B = {B_spherical[0]:1.2f} G \t '+\
+        fr'$\theta$={B_spherical[1]*180/np.pi:1.2f},'+'\t'+fr' $\phi$={B_spherical[2]*180/np.pi:1.2f}'+\
+        '\n'+ fr' LOS:  $\mu$ = {pm.ray_out[0][0]:1.2f} $\phi$ = {pm.ray_out[0][1]:1.2f}'+\
+        '\n'+ r' $I_{sun}$'+f'= {sun_ilum} \t {background_type}'
+        plot_4_profiles(nus, II[0], II[1], II[2], II[3],title=title,
+                        save=True, show=False, directory='plots_prom_fs', name=f'S_{samp}')
+        plot_4_profiles(nus, profiles['eps_I'], profiles['eps_Q'], profiles['eps_U'], profiles['eps_V'], title=title,
+                        save=True, show=False, directory='plots_prom_fs', name=f'eps_{samp}', eps=True)
+        '''
+
+        profiles_samples.append(profiles)
+        intensities_samples.append(II)
+        parameters.append([velocity, B_spherical])
+
+    ################   PLOT THE FINAL RESULTS  #################
+    # plot the ratio of the peaks
+    print('plot the ratio of the peaks')
+    ratio_Q = [intensity[1][nu_peak_2_indx]/intensity[1][nu_peak_1_indx] for intensity in intensities_samples]
+    ratio_U = [intensity[2][nu_peak_2_indx]/intensity[2][nu_peak_1_indx] for intensity in intensities_samples]
+    ratio_V = [intensity[3][nu_peak_2_indx]/intensity[3][nu_peak_1_indx] for intensity in intensities_samples]
+
+    bins = np.linspace(-1,1,200)
+    plt.hist(ratio_Q, bins=bins, label='Q', alpha=0.3)
+    plt.hist(ratio_U, bins=bins, label='U', alpha=0.3)
+    plt.hist(ratio_V, bins=bins, label='V', alpha=0.3)
+    plt.legend()
+    plt.show()
+
+    # mask the intensities with positives values
+    intensities_positive = [intensities_samples[ratio>0] for ratio in ratio_Q]
+
+    for num, intensity in enumerate(intensities_positive):
+        plot_4_profiles(nus, intensity[0], intensity[1], intensity[2], intensity[3], #title=title,
+                        save=False, show=True, directory='sample_intens', name=f'S_{num}')

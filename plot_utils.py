@@ -168,27 +168,43 @@ def plot_quantity(xx, quantity, names=['x', 'quantity'], mode='save', directory=
     save_or_show(mode, names[1], directory)
 
 
-def plot_4_profiles(wave, eta_I, eta_Q, eta_U, eta_V, n=0, show=True):
+def plot_4_profiles(wave, eta_I, eta_Q, eta_U, eta_V, title=False, n=0, eps=False,
+                    show=True, save=False, directory='plots', name='4_profiles'):
     
+    # if there is no directory, create one
+    if not os.path.exists(directory) and save:
+        os.makedirs(directory)
+    
+    if eps:
+        pre = r'$\epsilon $'
+    else:
+        pre = ''
+
     # plot the profiles of emission
     if n==0:
         plt.figure(figsize=(12,8))
     plt.subplot(2,2,1)
     plt.plot(wave, eta_I, f'C{n}')
-    plt.title(r'$\epsilon_I$')
+    plt.title(fr'{pre}$I$')
     plt.xlabel(r'$\nu$')
     plt.subplot(2,2,2)
     plt.plot(wave, eta_Q, f'C{n}')
-    plt.title(r'$\epsilon_Q$')
+    plt.title(fr'{pre}$Q$')
     plt.xlabel(r'$\nu$')
     plt.subplot(2,2,3)
     plt.plot(wave, eta_U, f'C{n}')
-    plt.title(r'$\epsilon_U$')
+    plt.title(fr'{pre}$U$')
     plt.xlabel(r'$\nu$')
     plt.subplot(2,2,4)
     plt.plot(wave, eta_V, f'C{n}')
-    plt.title(r'$\epsilon_V$')
+    plt.title(fr'{pre}$V$')
     plt.xlabel(r'$\nu$')
+    if title:
+        plt.suptitle(title)
     plt.tight_layout()
+    if save:
+        plt.savefig(f'{directory}/{name}.png')
     if show:
         plt.show()
+    else:
+        plt.close()
