@@ -8,6 +8,8 @@ from plot_utils import plot_4_profiles, plot_quantity
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import pickle as pkl
+import time
 
 
 # Function that computes the unit 3D vector from the inclination and the azimuth
@@ -114,7 +116,9 @@ if __name__ == '__main__':
     velocity = np.array([0, 2e4, 0])
     B_xyz = np.array([0, 0, 0])
     B_spherical = cart_to_ang(B_xyz[0], B_xyz[1], B_xyz[2])
-    n_samples = 1000
+    B_strength = 100  # Gauss
+    velocity_magnitude = 2e4  # m/s
+    n_samples = 10000
 
     # define the parameters that will construct the background radiation field
     # to later compute the JKQ en both components
@@ -128,6 +132,7 @@ if __name__ == '__main__':
     tau_max = 1
     tau_continium = 0
     sun_ilum = True
+    flat_spectrum = True
     background_type = 'absorption'
 
     ###############################################################################################
@@ -196,9 +201,10 @@ if __name__ == '__main__':
     parameters = []
 
     for samp in tqdm(range(n_samples)):
-        B_xyz = random_three_vector()*100
-        velocity = random_three_vector()*2.5e4
+        velocity = random_three_vector()*velocity_magnitude
+        B_xyz = random_three_vector()*B_strength
         B_spherical = cart_to_ang(B_xyz[0], B_xyz[1], B_xyz[2])
+        # B_spherical = np.array([np.random.uniform(0,100), np.pi/2, np.pi/2])
 
         # compute the JKQ taking into account the background and velocity
         JKQ_1 = construct_JKQ_0()
@@ -209,7 +215,8 @@ if __name__ == '__main__':
                     vlos = np.dot(ang_to_cart(ray.inc, ray.az), velocity)
                     nus_p = nus*(1+vlos/299792458)
                     background_dop = np.interp(nus, nus_p, background)
-                    background_dop = np.ones_like(background_dop)*background_dop.mean()
+                    if flat_spectrum:
+                        background_dop = np.ones_like(background_dop)*background_dop.mean()
 
                     if np.cos(ray.inc) > -0.5:
                         JKQ_1[K][Q] += background_dop*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
@@ -305,22 +312,72 @@ if __name__ == '__main__':
         parameters.append([velocity, B_spherical])
 
     ################   PLOT THE FINAL RESULTS  #################
-    # plot the ratio of the peaks
-    print('plot the ratio of the peaks')
-    ratio_Q = [intensity[1][nu_peak_2_indx]/intensity[1][nu_peak_1_indx] for intensity in intensities_samples]
-    ratio_U = [intensity[2][nu_peak_2_indx]/intensity[2][nu_peak_1_indx] for intensity in intensities_samples]
-    ratio_V = [intensity[3][nu_peak_2_indx]/intensity[3][nu_peak_1_indx] for intensity in intensities_samples]
+    # compute the ratio of the peaks
+    print('compute the ratio of the peaks')
+    ratio_Q = np.array([intensity[1][nu_peak_1_indx]/intensity[1][nu_peak_2_indx] for intensity in intensities_samples])
+    ratio_U = np.array([intensity[2][nu_peak_1_indx]/intensity[2][nu_peak_2_indx] for intensity in intensities_samples])
+    ratio_V = np.array([intensity[3][nu_peak_1_indx]/intensity[3][nu_peak_2_indx] for intensity in intensities_samples])
 
-    bins = np.linspace(-1,1,200)
+    intensities_samples = np.array(intensities_samples)
+    parameters = np.array(parameters)
+
+    # save the computed profiles in a pickle file
+    print('save the computed profiles')
+    module_to_dict = lambda module: {k: getattr(module, k) for k in dir(module) if not k.startswith('_')}
+    save_dict = {'profiles':profiles_samples, 'intensities':intensities_samples,
+                 'parameters':parameters, 'pm':module_to_dict(pm), 'ratio_Q':ratio_Q, 'ratio_U':ratio_U, 'ratio_V':ratio_V}
+    with open(f'fs_{flat_spectrum}_sunilum_{sun_ilum}_{time.strftime("%Y%m%d_%H%M%S")}.pkl', 'wb') as f:
+        pkl.dump(save_dict, f)
+
+    print('plot the ratio histogram')
+    bins = np.linspace(-10,10,200)
     plt.hist(ratio_Q, bins=bins, label='Q', alpha=0.3)
     plt.hist(ratio_U, bins=bins, label='U', alpha=0.3)
-    plt.hist(ratio_V, bins=bins, label='V', alpha=0.3)
     plt.legend()
-    plt.show()
+    plt.savefig('ratio_Q_U'+f'fs_{flat_spectrum}_sunilum_{sun_ilum}_{time.strftime("%Y%m%d_%H%M%S")}'+'.png')
+    plt.close()
 
     # mask the intensities with positives values
-    intensities_positive = [intensities_samples[ratio>0] for ratio in ratio_Q]
+    if sun_ilum:
+        indx_selected = np.where(ratio_U>0)[0]
+    else:
+        indx_selected = np.where(ratio_U<0)[0]
 
-    for num, intensity in enumerate(intensities_positive):
-        plot_4_profiles(nus, intensity[0], intensity[1], intensity[2], intensity[3], #title=title,
-                        save=False, show=True, directory='sample_intens', name=f'S_{num}')
+    intensities_selected = intensities_samples[indx_selected]
+    params_selected = parameters[indx_selected]
+
+    print(f'{len(intensities_selected)} selected ratio U (blue/red)')
+    if sun_ilum:
+        print('The selection is from the U(R)/U(B) > 0')
+    else:
+        print('The selection is from the U(R)/U(B) < 0')
+    print(f'mean intensity signal U (blue/red > 0) = {np.mean(intensities_selected[:,1,:]):1.2e}')
+    # plot a sample of the final profiles
+    # if the total number is more than 100 then take a random sample
+    if len(intensities_selected)>100:
+        plot_selected = np.random.choice(len(intensities_selected), 100, replace=False)
+    else:
+        plot_selected = np.arange(len(intensities_selected))
+    # for num, intensity in enumerate(choices(intensities_selected, k=5)):
+    for num, intensity in enumerate(intensities_selected[plot_selected]):
+        velocity, B_spherical = params_selected[num]
+        title = f'v = [{velocity[0]/1e3:1.2f}, {velocity[1]/1e3:1.2f}, {velocity[2]/1e3:1.2f}] km/s \n B = {B_spherical[0]:1.2f} G \t '+\
+                fr'$\theta$={B_spherical[1]*180/np.pi:1.2f},'+'\t'+fr' $\phi$={B_spherical[2]*180/np.pi:1.2f}'+\
+                '\n'+ fr' LOS:  $\mu$ = {pm.ray_out[0][0]:1.2f} $\phi$ = {pm.ray_out[0][1]:1.2f}'+\
+                '\n'+ r' $I_{sun}$'+f'= {sun_ilum} \t {background_type}'
+        plot_4_profiles(nus, intensity[0], intensity[1], intensity[2], intensity[3], title=title,
+                        save=True, show=False, directory=f'plots_ratio_fs_{flat_spectrum}_sunilum_{sun_ilum}_{time.strftime("%Y%m%d_%H%M%S")}', name=f'S_{num}')
+
+    # plot the distribution of magnetic fields and velocities
+    velocities = np.array([cart_to_ang(*param[0]) for param in params_selected])
+    B_spherical = np.array([param[1] for param in params_selected])
+    print('plot the distribution of magnetic fields and velocities')
+    plt.figure(figsize=(10,5))
+    plt.plot(np.cos(B_spherical[:,1]), B_spherical[:,2]*180/np.pi, 'o', label='B')
+    plt.plot(np.cos(velocities[:,1]), velocities[:,2]*180/np.pi, 'o', label='v')
+    plt.ylabel(r'$\phi$ (deg)')
+    plt.xlabel(r'$\mu$')
+    plt.title(f'B and v distribution')
+    plt.legend()
+    plt.savefig('B_V_'+f'fs_{flat_spectrum}_sunilum_{sun_ilum}_{time.strftime("%Y%m%d_%H%M%S")}'+'.png')
+    plt.close()
