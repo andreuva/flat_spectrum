@@ -127,7 +127,7 @@ class conditions:
         self.JS = jsymbols(memoization=True)
 
         # Parameters of the rotation of the slab and the global ref frame
-        self.alpha = parameters.alpha
+        self.alpha = parameters.alpha*np.pi/180
 
         self.theta_crit = 180. - \
                           np.arcsin(constants.R_sun/(constants.R_sun + self.z0))
@@ -171,8 +171,8 @@ class conditions:
         # Constant field
         # print('Ad-hoc constant field in conditions.__init__()')
         for iz in range(self.z_N):
-            self.B[iz,0] = 1.
-            self.B[iz,1] = 30.*np.pi/180.
+            self.B[iz,0] = 10.
+            self.B[iz,1] = 90.*np.pi/180.
             self.B[iz,2] = 120.*np.pi/180.
         # print(f'Bx {self.B[0,0]*np.sin(self.B[0,1])*np.cos(self.B[0,2])} ' + \
         #       f'By {self.B[0,0]*np.sin(self.B[0,1])*np.sin(self.B[0,2])} ' + \

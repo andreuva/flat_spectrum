@@ -1248,7 +1248,7 @@ class ESE:
             self.rotate = False
 
         # Initialize atom
-       #self.atom = HeI_1083(jsim,B=self.B,especial=False)
+        # self.atom = HeI_1083(jsim,B=self.B,especial=False)
         self.atom = HeI_1083(jsim,B=self.B,especial=True)
 
         # If multi-term atom

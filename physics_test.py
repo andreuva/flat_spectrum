@@ -131,8 +131,8 @@ if __name__ == '__main__':
 
     tau_max = 1
     tau_continium = 0
-    sun_ilum = True
-    flat_spectrum = True
+    sun_ilum = False
+    flat_spectrum = False
     background_type = 'absorption'
 
     ###############################################################################################
@@ -147,7 +147,7 @@ if __name__ == '__main__':
     JKQ_2[0][0] = 1e-4
 
     # compute the profiles for the test
-    profiles_1, nus, rays = compute_profile(JKQ_2, JKQ_2, B=B_spherical, pm=pm)
+    profiles_1, nus, rays = compute_profile(JKQ_1, JKQ_1, B=B_spherical, pm=pm)
     profiles_2, nus, rays = compute_profile(JKQ_2, JKQ_1, B=B_spherical, pm=pm)
     profiles_3, nus, rays = compute_profile(JKQ_1, JKQ_2, B=B_spherical, pm=pm)
 
@@ -161,21 +161,20 @@ if __name__ == '__main__':
     print('Ratios between the two peaks with different JKQs:')
     print(f'J00_1:\t{JKQ_1[0][0]}, J00_2:\t{JKQ_2[0][0]},\t' +
           f'ratio:\t{JKQ_1[0][0]/JKQ_2[0][0]}\t' +
-          f'peak ratio:\t{profiles_3["eta_I"][nu_peak_1_indx]/profiles_3["eta_I"][nu_peak_2_indx]}')
+          f'peak ratio:\t{profiles_3["eps_I"][nu_peak_1_indx]/profiles_3["eps_I"][nu_peak_2_indx]}')
     print(f'J00_1:\t{JKQ_1[0][0]}, J00_2:\t{JKQ_1[0][0]},\t' +
           f'ratio:\t{JKQ_1[0][0]/JKQ_1[0][0]}\t' +
-          f'peak ratio:\t{profiles_1["eta_I"][nu_peak_1_indx]/profiles_1["eta_I"][nu_peak_2_indx]}')
+          f'peak ratio:\t{profiles_1["eps_I"][nu_peak_1_indx]/profiles_1["eps_I"][nu_peak_2_indx]}')
     print(f'J00_1:\t{JKQ_2[0][0]}, J00_2:\t{JKQ_1[0][0]},\t' +
           f'ratio:\t{JKQ_2[0][0]/JKQ_1[0][0]}\t' +
-          f'peak ratio:\t{profiles_2["eta_I"][nu_peak_1_indx]/profiles_2["eta_I"][nu_peak_2_indx]}')
+          f'peak ratio:\t{profiles_2["eps_I"][nu_peak_1_indx]/profiles_2["eps_I"][nu_peak_2_indx]}')
     print('-'*100 + '\n')
 
     # plot the resulting profiles
     print('plot the tests')
-    plot_4_profiles(nus, profiles_1['eta_I'], profiles_1['eta_Q'], profiles_1['eta_U'], profiles_1['eta_V'], show=False)
-    plot_4_profiles(nus, profiles_2['eta_I'], profiles_2['eta_Q'], profiles_2['eta_U'], profiles_2['eta_V'], n=1, show=False)
-    plot_4_profiles(nus, profiles_3['eta_I'], profiles_3['eta_Q'], profiles_3['eta_U'], profiles_3['eta_V'], n=2)
-
+    plot_4_profiles(nus, profiles_1['eps_I'], profiles_1['eps_Q'], profiles_1['eps_U'], profiles_1['eps_V'], save=False, show=False, name='1')
+    plot_4_profiles(nus, profiles_2['eps_I'], profiles_2['eps_Q'], profiles_2['eps_U'], profiles_2['eps_V'], save=False, show=False, name='3')
+    plot_4_profiles(nus, profiles_3['eps_I'], profiles_3['eps_Q'], profiles_3['eps_U'], profiles_3['eps_V'], save=False, show=False, name='2')
     """
     ###############################################################################################
 
@@ -218,7 +217,7 @@ if __name__ == '__main__':
                     if flat_spectrum:
                         background_dop = np.ones_like(background_dop)*background_dop.mean()
 
-                    if np.cos(ray.inc) > -0.5:
+                    if np.cos(ray.inc) < -0.8:
                         JKQ_1[K][Q] += background_dop*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
                         JKQ_2[K][Q] += background_dop*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
 
@@ -301,7 +300,7 @@ if __name__ == '__main__':
         fr'$\theta$={B_spherical[1]*180/np.pi:1.2f},'+'\t'+fr' $\phi$={B_spherical[2]*180/np.pi:1.2f}'+\
         '\n'+ fr' LOS:  $\mu$ = {pm.ray_out[0][0]:1.2f} $\phi$ = {pm.ray_out[0][1]:1.2f}'+\
         '\n'+ r' $I_{sun}$'+f'= {sun_ilum} \t {background_type}'
-        plot_4_profiles(nus, II[0], II[1], II[2], II[3],title=title,
+        plot_4_profiles(nus, II[0], II[1]/II[0][-1], II[2]/II[0][-1], II[3]/II[0][-1],title=title,
                         save=True, show=False, directory='plots_prom_fs', name=f'S_{samp}')
         plot_4_profiles(nus, profiles['eps_I'], profiles['eps_Q'], profiles['eps_U'], profiles['eps_V'], title=title,
                         save=True, show=False, directory='plots_prom_fs', name=f'eps_{samp}', eps=True)
@@ -311,7 +310,7 @@ if __name__ == '__main__':
         intensities_samples.append(II)
         parameters.append([velocity, B_spherical])
 
-    ################   PLOT THE FINAL RESULTS  #################
+    ################   SAVE THE FINAL RESULTS  #################
     # compute the ratio of the peaks
     print('compute the ratio of the peaks')
     ratio_Q = np.array([intensity[1][nu_peak_1_indx]/intensity[1][nu_peak_2_indx] for intensity in intensities_samples])
@@ -323,61 +322,9 @@ if __name__ == '__main__':
 
     # save the computed profiles in a pickle file
     print('save the computed profiles')
+    timestr = time.strftime("%Y%m%d_%H%M%S")
     module_to_dict = lambda module: {k: getattr(module, k) for k in dir(module) if not k.startswith('_')}
     save_dict = {'profiles':profiles_samples, 'intensities':intensities_samples,
                  'parameters':parameters, 'pm':module_to_dict(pm), 'ratio_Q':ratio_Q, 'ratio_U':ratio_U, 'ratio_V':ratio_V}
-    with open(f'fs_{flat_spectrum}_sunilum_{sun_ilum}_{time.strftime("%Y%m%d_%H%M%S")}.pkl', 'wb') as f:
+    with open(f'fs_{flat_spectrum}_sunilum_{sun_ilum}_{timestr}.pkl', 'wb') as f:
         pkl.dump(save_dict, f)
-
-    print('plot the ratio histogram')
-    bins = np.linspace(-10,10,200)
-    plt.hist(ratio_Q, bins=bins, label='Q', alpha=0.3)
-    plt.hist(ratio_U, bins=bins, label='U', alpha=0.3)
-    plt.legend()
-    plt.savefig('ratio_Q_U'+f'fs_{flat_spectrum}_sunilum_{sun_ilum}_{time.strftime("%Y%m%d_%H%M%S")}'+'.png')
-    plt.close()
-
-    # mask the intensities with positives values
-    if sun_ilum:
-        indx_selected = np.where(ratio_U>0)[0]
-    else:
-        indx_selected = np.where(ratio_U<0)[0]
-
-    intensities_selected = intensities_samples[indx_selected]
-    params_selected = parameters[indx_selected]
-
-    print(f'{len(intensities_selected)} selected ratio U (blue/red)')
-    if sun_ilum:
-        print('The selection is from the U(R)/U(B) > 0')
-    else:
-        print('The selection is from the U(R)/U(B) < 0')
-    print(f'mean intensity signal U (blue/red > 0) = {np.mean(intensities_selected[:,1,:]):1.2e}')
-    # plot a sample of the final profiles
-    # if the total number is more than 100 then take a random sample
-    if len(intensities_selected)>100:
-        plot_selected = np.random.choice(len(intensities_selected), 100, replace=False)
-    else:
-        plot_selected = np.arange(len(intensities_selected))
-    # for num, intensity in enumerate(choices(intensities_selected, k=5)):
-    for num, intensity in enumerate(intensities_selected[plot_selected]):
-        velocity, B_spherical = params_selected[num]
-        title = f'v = [{velocity[0]/1e3:1.2f}, {velocity[1]/1e3:1.2f}, {velocity[2]/1e3:1.2f}] km/s \n B = {B_spherical[0]:1.2f} G \t '+\
-                fr'$\theta$={B_spherical[1]*180/np.pi:1.2f},'+'\t'+fr' $\phi$={B_spherical[2]*180/np.pi:1.2f}'+\
-                '\n'+ fr' LOS:  $\mu$ = {pm.ray_out[0][0]:1.2f} $\phi$ = {pm.ray_out[0][1]:1.2f}'+\
-                '\n'+ r' $I_{sun}$'+f'= {sun_ilum} \t {background_type}'
-        plot_4_profiles(nus, intensity[0], intensity[1], intensity[2], intensity[3], title=title,
-                        save=True, show=False, directory=f'plots_ratio_fs_{flat_spectrum}_sunilum_{sun_ilum}_{time.strftime("%Y%m%d_%H%M%S")}', name=f'S_{num}')
-
-    # plot the distribution of magnetic fields and velocities
-    velocities = np.array([cart_to_ang(*param[0]) for param in params_selected])
-    B_spherical = np.array([param[1] for param in params_selected])
-    print('plot the distribution of magnetic fields and velocities')
-    plt.figure(figsize=(10,5))
-    plt.plot(np.cos(B_spherical[:,1]), B_spherical[:,2]*180/np.pi, 'o', label='B')
-    plt.plot(np.cos(velocities[:,1]), velocities[:,2]*180/np.pi, 'o', label='v')
-    plt.ylabel(r'$\phi$ (deg)')
-    plt.xlabel(r'$\mu$')
-    plt.title(f'B and v distribution')
-    plt.legend()
-    plt.savefig('B_V_'+f'fs_{flat_spectrum}_sunilum_{sun_ilum}_{time.strftime("%Y%m%d_%H%M%S")}'+'.png')
-    plt.close()

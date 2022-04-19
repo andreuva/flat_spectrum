@@ -172,7 +172,7 @@ def plot_4_profiles(wave, eta_I, eta_Q, eta_U, eta_V, title=False, n=0, eps=Fals
                     show=True, save=False, directory='plots', name='4_profiles'):
     
     # if there is no directory, create one
-    if not os.path.exists(directory) and save:
+    if (not os.path.exists(directory)) and save:
         os.makedirs(directory)
     
     if eps:
@@ -206,5 +206,3 @@ def plot_4_profiles(wave, eta_I, eta_Q, eta_U, eta_V, title=False, n=0, eps=Fals
         plt.savefig(f'{directory}/{name}.png')
     if show:
         plt.show()
-    else:
-        plt.close()

@@ -70,7 +70,7 @@ def new_parameters(pm, test=False):
         pm.ray_out = [[mu, chi]]
         # amplitude of the profile
         pm.a_voigt = np.random.choice(np.logspace(0,1e-6,10000)) #  1e-6 to 0.
-        pm.temp = np.random.lognormal(3.5, 2) # 1e1 to 10e5
+        pm.temp = 10**np.random.uniform(3., 5.)
 
         # construct the JKQ dictionary
         JKQ = construct_JKQ_0()
