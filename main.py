@@ -1,7 +1,7 @@
 # Import classes and parameters
 from RTcoefs import RTcoefs
 from conditions import conditions, state, point
-import parameters as pm
+import parameters_JKQ as pm
 from solver import BESSER, LinSC_old, BESSER_old
 from plot_utils import *
 import constants as c
@@ -10,6 +10,7 @@ from iopy import io_saverho,io_saverad
 # Import needed libraries
 import numpy as np
 import pickle, struct, sys
+from tensors import Jqq_to_JKQ
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
@@ -51,13 +52,42 @@ def main(cdt=conditions(pm)):
     # TODO TODO TODO TODO TODO
 
     # Not loading
-    # f = open(datadir+'MRC', 'w')
-    # f.close()
+    f = open(datadir+'MRC', 'w')
+    f.write(f'Itteration  ||  Max. Rel. change\n')
+    f.write('-'*50 + '\n')
+    f.close()
 
     # Start the main loop for the Lambda iteration
     #for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
     for itteration in range(cdt.max_iter):
 
+        for KK in range(3):
+            for QQ in range(KK+1):
+                # Write the JKQ of each height into a file
+                prof_real = np.zeros((1 + cdt.z_N,len(st.radiation[0].nus)))
+                prof_real[0,:] = 1e7*c.c/st.radiation[0].nus
+                prof_imag = np.zeros((1 + cdt.z_N,len(st.radiation[0].nus)))
+                prof_imag[0,:] = 1e7*c.c/st.radiation[0].nus
+                fig, (ax1, ax2) = plt.subplots(2, 1, sharex='col', figsize=(15,20), dpi=150)
+                for lay, heigt in enumerate(st.radiation):
+                    real = Jqq_to_JKQ(heigt.jqq, cdt.JS)[KK][QQ].real
+                    imag = Jqq_to_JKQ(heigt.jqq, cdt.JS)[KK][QQ].imag
+                    prof_real[1+lay, :] = real
+                    prof_imag[1+lay, :] = imag
+                    ax1.plot(1e7*c.c/st.radiation[0].nus, real, label=f'{lay:02d}', color=f'C{lay}')
+                    ax2.plot(1e7*c.c/st.radiation[0].nus, imag, color=f'C{lay}')
+                # remove white space between x-axis of the two plots
+                plt.subplots_adjust(hspace=0)
+                ax1.set_title(fr'$J^{KK}_{QQ}$ real and imaginary part')
+                ax1.set_ylabel(fr'$J^{KK}_{QQ}$ real part')
+                ax1.legend()
+                ax2.set_ylabel(fr'$J^{KK}_{QQ}$ imag part')
+                ax2.set_xlabel(r'$\lambda$ (nm)')
+                plt.tight_layout()
+                plt.savefig(datadir+f'JK{KK}{QQ}_{itteration}.pdf')
+                plt.close()
+                np.savetxt(datadir+f'real_JK{KK}{QQ}_{itteration}.out', prof_real)
+                np.savetxt(datadir+f'imag_JK{KK}{QQ}_{itteration}.out', prof_imag)
 
         # print(f'Starting iteration {itteration+1}')
 
@@ -156,7 +186,11 @@ def main(cdt=conditions(pm)):
                     print(f'New current point {z}')
 
                 # If we are in the boundaries, compute the CL for the IC (z=0)
-                cent_limb_coef = 1
+                if z == iz0:
+                    cent_limb_coef = ray.clv
+                else:
+                    cent_limb_coef = 1
+
                 if z == iz1 - step:
 
                     point_P = False
@@ -304,7 +338,11 @@ def main(cdt=conditions(pm)):
             sf_p = None
 
             # If we are in the boundaries, compute the CL for the IC (z=0)
-            cent_limb_coef = 1
+            if z == iz0:
+                cent_limb_coef = ray.clv
+            else:
+                cent_limb_coef = 1
+
             if z == iz1 - step:
                 point_P = False
                 lineal = True
@@ -351,6 +389,35 @@ def main(cdt=conditions(pm)):
 
         # add the ray, wavelegnths, taus, and stokes to a variable and output it
         outputs.append([ray, point_O.radiation.nus, tau, point_O.radiation.stokes])
+
+        for KK in range(3):
+            for QQ in range(KK+1):
+                # Write the JKQ of each height into a file
+                prof_real = np.zeros((1 + cdt.z_N,len(st.radiation[0].nus)))
+                prof_real[0,:] = 1e7*c.c/st.radiation[0].nus
+                prof_imag = np.zeros((1 + cdt.z_N,len(st.radiation[0].nus)))
+                prof_imag[0,:] = 1e7*c.c/st.radiation[0].nus
+                fig, (ax1, ax2) = plt.subplots(2, 1, sharex='col', figsize=(15,20), dpi=150)
+                for lay, heigt in enumerate(st.radiation):
+                    real = Jqq_to_JKQ(heigt.jqq, cdt.JS)[KK][QQ].real
+                    imag = Jqq_to_JKQ(heigt.jqq, cdt.JS)[KK][QQ].imag
+                    prof_real[1+lay, :] = real
+                    prof_imag[1+lay, :] = imag
+                    ax1.plot(1e7*c.c/st.radiation[0].nus, real, label=f'{lay:02d}', color=f'C{lay}')
+                    ax2.plot(1e7*c.c/st.radiation[0].nus, imag, color=f'C{lay}')
+                # remove white space between x-axis of the two plots
+                plt.subplots_adjust(hspace=0)
+                ax1.set_title(fr'$J^{KK}_{QQ}$ real and imaginary part')
+                ax1.set_ylabel(fr'$J^{KK}_{QQ}$ real part')
+                ax1.legend()
+                ax2.set_ylabel(fr'$J^{KK}_{QQ}$ imag part')
+                ax2.set_xlabel(r'$\lambda$ (nm)')
+                plt.tight_layout()
+                plt.savefig(datadir+f'JK{KK}{QQ}_finished.pdf')
+                plt.close()
+                np.savetxt(datadir+f'real_JK{KK}{QQ}_finished.out', prof_real)
+                np.savetxt(datadir+f'imag_JK{KK}{QQ}_finished.out', prof_imag)
+
     return outputs
 
 if __name__ == '__main__':
