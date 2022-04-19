@@ -206,3 +206,5 @@ def plot_4_profiles(wave, eta_I, eta_Q, eta_U, eta_V, title=False, n=0, eps=Fals
         plt.savefig(f'{directory}/{name}.png')
     if show:
         plt.show()
+    if save or show:
+        plt.close()

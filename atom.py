@@ -1212,7 +1212,7 @@ class ESE:
         This class needs to be instantiated at every grid point.
     """
 
-    def __init__(self, v_dop, a_voigt, B, T, jsim, equilibrium=False, iz=0):
+    def __init__(self, v_dop, a_voigt, B, T, jsim, equilibrium=False, iz=0, especial=True):
         """ Initialize ESE class instance
             v_dop: Atom's Doppler width
             a_voigt: Damping parameter
@@ -1248,8 +1248,7 @@ class ESE:
             self.rotate = False
 
         # Initialize atom
-        # self.atom = HeI_1083(jsim,B=self.B,especial=False)
-        self.atom = HeI_1083(jsim,B=self.B,especial=True)
+        self.atom = HeI_1083(jsim, B=self.B, especial=especial)
 
         # If multi-term atom
         if self.atom.multiterm:
