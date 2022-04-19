@@ -1,5 +1,6 @@
 # Custom folders
-*plot*
+*plots*
+plot_*/
 *_matrix.txt
 *_array.txt
 checks/
