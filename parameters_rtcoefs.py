@@ -14,6 +14,10 @@ n_dens = 5.8e4             # Density wich defines the optical thickness [cm^-3]
 temp = 8.665251563142749e3 # Temperature of the slab [K] (6 km/s)
 Trad = 6e3                 # Black body star temperature for radiation [K]
 
+B = 1.0e1                  # Magnetic field strength [T]
+B_inc = 90.                # Magnetic field inclination [deg]
+B_az = 0.0                 # Magnetic field azimuth [deg]
+
 max_iter = 200       # Maximum itterations for the forward method
 tolerance_p = 5e-6   # tolerated relative change in populations
 tolerance_c = 5e-4   # tolerated relative change in coherences
