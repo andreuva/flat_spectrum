@@ -5,7 +5,7 @@ zf = 30010.0*1e5   # geometrical height of the slab [cm] (around 3 arcsec)
 zn = 10            # Points in z in the slab
 alpha = 0.        # angle between the vertical of the slav and the radial line [deg]
 
-ray_quad = "gaussian_quadrature_8x32.dat" # file where the angular quadrature is saved
+ray_quad = "gaussian_quadrature_32x8.dat" # file where the angular quadrature is saved
 ray_out = [[0.05, 0.],[1.0, 0.]]             # List of mu,phi for emergent radiation directions
 
 v_dop = 5.0*1e5            # Dopler velocity (not the actual one) [cm/s]

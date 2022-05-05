@@ -171,12 +171,9 @@ class conditions:
         # Constant field
         # print('Ad-hoc constant field in conditions.__init__()')
         for iz in range(self.z_N):
-            self.B[iz,0] = 10.
-            self.B[iz,1] = 90.*np.pi/180.
-            self.B[iz,2] = 120.*np.pi/180.
-        # print(f'Bx {self.B[0,0]*np.sin(self.B[0,1])*np.cos(self.B[0,2])} ' + \
-        #       f'By {self.B[0,0]*np.sin(self.B[0,1])*np.sin(self.B[0,2])} ' + \
-        #       f'Bz {self.B[0,0]*np.cos(self.B[0,1])}')
+            self.B[iz,0] = parameters.B
+            self.B[iz,1] = parameters.B_inc*np.pi/180.
+            self.B[iz,2] = parameters.B_az*np.pi/180.
 
         # If starting from equilibrium
         self.equi = parameters.initial_equilibrium
@@ -269,14 +266,15 @@ class state:
         # Define the IC for the downward and upward rays as a radiation class
         self.space_rad = RTE(cdts.nus, cdts.v_dop)
         self.sun_rad = []
+        self.osun_rad = []
         for ray in cdts.rays:
             self.sun_rad.append(RTE(cdts.nus, cdts.v_dop))
             if ray.rinc < 0.5*np.pi:
                 self.sun_rad[-1].make_IC(cdts.nus, ray, cdts.Trad, Allen)
         for ray in cdts.orays:
-            self.sun_rad.append(RTE(cdts.nus, cdts.v_dop))
+            self.osun_rad.append(RTE(cdts.nus, cdts.v_dop))
             if ray.rinc < 0.5*np.pi:
-                self.sun_rad[-1].make_IC(cdts.nus, ray, cdts.Trad, Allen)
+                self.osun_rad[-1].make_IC(cdts.nus, ray, cdts.Trad, Allen)
 
     def update_mrc(self, cdts, itter):
         """Update the mrc of the current state by finding the
