@@ -8,7 +8,7 @@ def BESSER(point_M, point_O, point_P, \
            sf_m, sf_o, sf_p, \
            kk_m, kk_o, kk_p, \
            ray, cdt, tau_tot, quad, \
-           tau, clv=1):
+           tau):
     """ Solve SC step with BESSER
     """
 

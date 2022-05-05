@@ -1,5 +1,5 @@
-from tokenize import Special
-import plot_1_params as pm
+from allen import Allen_class
+import params_plot_3_1 as pm
 from conditions import conditions
 from RTcoefs import RTcoefs
 from atom import ESE
@@ -56,19 +56,21 @@ def compute_profile(JKQ_1, JKQ_2, pm=pm, B=np.array([0, 0, 0]), especial=True):
 
     # Initialize the ESE object and computing the initial populations (equilibrium = True)
     atoms = ESE(cdt.v_dop, cdt.a_voigt, B, cdt.temp, cdt.JS, True, 0, especial=especial)
-    # Retrieve the different components of the line profile
-    components = list(atoms.atom.lines[0].jqq.keys())
-
-    # Initialize the jqq and construct the dictionary
-    atoms.atom.lines[0].initialize_profiles_first(cdt.nus_N)
-
-    # reset the jqq to zero to construct from there the radiation field with the JKQ
-    atoms.reset_jqq(cdt.nus_N)
 
     if especial:
+        # Retrieve the different components of the line profile
+        components = list(atoms.atom.lines[0].jqq.keys())
+
+        # Initialize the jqq and construct the dictionary
+        atoms.atom.lines[0].initialize_profiles_first(cdt.nus_N)
+
+        # reset the jqq to zero to construct from there the radiation field with the JKQ
+        atoms.reset_jqq(cdt.nus_N)
         atoms.atom.lines[0].jqq[components[0]] = JKQ_to_Jqq(JKQ_1, cdt.JS)
         atoms.atom.lines[0].jqq[components[1]] = JKQ_to_Jqq(JKQ_2, cdt.JS)
     else:
+        # Initialize the jqq and construct the dictionary
+        atoms.atom.lines[0].initialize_profiles_first(cdt.nus_N)
         atoms.atom.lines[0].jqq = JKQ_to_Jqq(JKQ_1, cdt.JS)
 
     # Solve the ESE
@@ -120,18 +122,20 @@ if __name__ == '__main__':
     B_spherical = cart_to_ang(B_xyz[0], B_xyz[1], B_xyz[2])
     velocity_magnitude = 0e4  # m/s
     n_samples = 1000
-    especial = True
+    especial = False
 
     # define the parameters that will construct the background radiation field
     # to later compute the JKQ en both components
 
-    # TO DO: compute the real solar J00
-    continium = 14e-3
-    gaussian_width = 7e9
+    # Get Allen class instance and gamma angles
+    Allen = Allen_class()
+    Allen.get_gamma(pm.z0)
+
     nu_1 = 2.76733e14
     nu_2 = 2.76764e14
-    gaussian_1_height = 7e-3
-    gaussian_2_height = 1e-3
+    gaussian_width = 7e9
+    gaussian_1_height = 1e-1
+    gaussian_2_height = gaussian_1_height/7
 
     tau_max = 1
     tau_continium = 0
@@ -163,22 +167,10 @@ if __name__ == '__main__':
     ###############################################################################################
 
     # compute the gaussian profiles for each component
-    background_1 = gaussian(nus, nu_1, gaussian_width)*gaussian_1_height
-    background_2 = gaussian(nus, nu_2, gaussian_width)*gaussian_2_height
-    background_1_norm = background_1/np.trapz(background_1, nus)
-    background_2_norm = background_2/np.trapz(background_2, nus)
-
-    # compute the total background (absorption + emission)
-    background_absorption = -background_1 -background_2 + continium
-    background_emision = background_1 + background_2 + continium
-    if background_type == 'absorption':
-        background = background_absorption*0 + continium
-    else:
-        background = background_emision*0 + continium
-
-    # plot the background ilumination
-    # print('plot the background ilumination')
-    # plot_quantity(wave, background, [r'$\nu$', r'$I_b$'], mode='show')
+    gauss_1 = gaussian(nus, nu_1, gaussian_width)*gaussian_1_height
+    gauss_2 = gaussian(nus, nu_2, gaussian_width)*gaussian_2_height
+    gauss_1_norm = gauss_1/np.trapz(gauss_1, nus)
+    gauss_2_norm = gauss_2/np.trapz(gauss_2, nus)
 
     profiles_samples = []
     intensities_samples = []
@@ -196,17 +188,22 @@ if __name__ == '__main__':
                 for ray in rays:
                     vlos = np.dot(ang_to_cart(ray.inc, ray.az), velocity)
                     nus_p = nus*(1+vlos/299792458)
-                    background_dop = np.interp(nus, nus_p, background)
-                    if flat_spectrum:
-                        background_dop = np.ones_like(background_dop)*background_dop.mean()
+                    background = Allen.get_radiation(nus)*Allen.get_clv(ray,nus)
+                    
+                    if not flat_spectrum:
+                        if background_type == 'absorption':
+                            background = background -(gauss_1 + gauss_2)*background
+                        else:
+                            background = background + (gauss_1 + gauss_2)*background
 
-                    if np.cos(ray.inc) < -0.8:
-                        JKQ_1[K][Q] += background_dop*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
-                        JKQ_2[K][Q] += background_dop*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
+                    background_dop = np.interp(nus, nus_p, background)
+
+                    JKQ_1[K][Q] += background_dop*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
+                    JKQ_2[K][Q] += background_dop*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
 
                 # integrate over nus
-                JKQ_1[K][Q] = np.trapz(JKQ_1[K][Q]*background_1_norm, nus)
-                JKQ_2[K][Q] = np.trapz(JKQ_2[K][Q]*background_2_norm, nus)
+                JKQ_1[K][Q] = np.trapz(JKQ_1[K][Q]*gauss_1_norm, nus)
+                JKQ_2[K][Q] = np.trapz(JKQ_2[K][Q]*gauss_2_norm, nus)
 
         JKQ_1[2][-2] =      np.conjugate(JKQ_1[2][2])
         JKQ_1[2][-1] = -1.0*np.conjugate(JKQ_1[2][1])
@@ -220,12 +217,11 @@ if __name__ == '__main__':
         profiles, nus, rays = compute_profile(JKQ_1, JKQ_2, pm, B_spherical, especial=especial)
 
         ################   SEMI-ANALYTICAL RADIATIVE TRANSFER  #################
-
         # identity matrix
         Ident = np.identity(4)
 
         # optical depth profile (background with peak at 1.0)
-        tau_prof = (background_1/gaussian_1_height + background_2/gaussian_1_height)*tau_max + tau_continium
+        tau_prof = (gauss_1/gaussian_1_height + gauss_2/gaussian_1_height)*tau_max + tau_continium
 
         # plot the optical depth profile
         # print('plot the optical depth profile')

@@ -42,7 +42,7 @@ def main(cdt=conditions(pm)):
             os.remove(datadir+fil)
 
     # Plot quadrature
-    # plot_quadrature(cdt, directory=cdt.datadir)
+    plot_quadrature(cdt, directory=datadir)
 
     # verbose
     verbose = False
@@ -57,38 +57,37 @@ def main(cdt=conditions(pm)):
     f.write('-'*50 + '\n')
     f.close()
 
+    for KK in range(3):
+        for QQ in range(KK+1):
+            # Write the JKQ of each height into a file
+            prof_real = np.zeros((1 + cdt.z_N,len(st.radiation[0].nus)))
+            prof_real[0,:] = 1e7*c.c/st.radiation[0].nus
+            prof_imag = np.zeros((1 + cdt.z_N,len(st.radiation[0].nus)))
+            prof_imag[0,:] = 1e7*c.c/st.radiation[0].nus
+            np.savetxt(datadir+f'real_JK{KK}{QQ}_start.out', prof_real)
+            np.savetxt(datadir+f'imag_JK{KK}{QQ}_start.out', prof_imag)
+            # fig, (ax1, ax2) = plt.subplots(2, 1, sharex='col', figsize=(15,20), dpi=150)
+            # for lay, heigt in enumerate(st.radiation):
+            #     real = Jqq_to_JKQ(heigt.jqq, cdt.JS)[KK][QQ].real
+            #     imag = Jqq_to_JKQ(heigt.jqq, cdt.JS)[KK][QQ].imag
+            #     prof_real[1+lay, :] = real
+            #     prof_imag[1+lay, :] = imag
+            #     ax1.plot(1e7*c.c/st.radiation[0].nus, real, label=f'{lay:02d}', color=f'C{lay}')
+            #     ax2.plot(1e7*c.c/st.radiation[0].nus, imag, color=f'C{lay}')
+            # # remove white space between x-axis of the two plots
+            # plt.subplots_adjust(hspace=0)
+            # ax1.set_title(fr'$J^{KK}_{QQ}$ real and imaginary part')
+            # ax1.set_ylabel(fr'$J^{KK}_{QQ}$ real part')
+            # ax1.legend()
+            # ax2.set_ylabel(fr'$J^{KK}_{QQ}$ imag part')
+            # ax2.set_xlabel(r'$\lambda$ (nm)')
+            # plt.tight_layout()
+            # plt.savefig(datadir+f'JK{KK}{QQ}_start.pdf')
+            # plt.close()
+
     # Start the main loop for the Lambda iteration
     #for itteration in tqdm(range(cdt.max_iter), desc='Lambda itteration progress'):
     for itteration in range(cdt.max_iter):
-
-        for KK in range(3):
-            for QQ in range(KK+1):
-                # Write the JKQ of each height into a file
-                prof_real = np.zeros((1 + cdt.z_N,len(st.radiation[0].nus)))
-                prof_real[0,:] = 1e7*c.c/st.radiation[0].nus
-                prof_imag = np.zeros((1 + cdt.z_N,len(st.radiation[0].nus)))
-                prof_imag[0,:] = 1e7*c.c/st.radiation[0].nus
-                fig, (ax1, ax2) = plt.subplots(2, 1, sharex='col', figsize=(15,20), dpi=150)
-                for lay, heigt in enumerate(st.radiation):
-                    real = Jqq_to_JKQ(heigt.jqq, cdt.JS)[KK][QQ].real
-                    imag = Jqq_to_JKQ(heigt.jqq, cdt.JS)[KK][QQ].imag
-                    prof_real[1+lay, :] = real
-                    prof_imag[1+lay, :] = imag
-                    ax1.plot(1e7*c.c/st.radiation[0].nus, real, label=f'{lay:02d}', color=f'C{lay}')
-                    ax2.plot(1e7*c.c/st.radiation[0].nus, imag, color=f'C{lay}')
-                # remove white space between x-axis of the two plots
-                plt.subplots_adjust(hspace=0)
-                ax1.set_title(fr'$J^{KK}_{QQ}$ real and imaginary part')
-                ax1.set_ylabel(fr'$J^{KK}_{QQ}$ real part')
-                ax1.legend()
-                ax2.set_ylabel(fr'$J^{KK}_{QQ}$ imag part')
-                ax2.set_xlabel(r'$\lambda$ (nm)')
-                plt.tight_layout()
-                plt.savefig(datadir+f'JK{KK}{QQ}_{itteration}.pdf')
-                plt.close()
-                np.savetxt(datadir+f'real_JK{KK}{QQ}_{itteration}.out', prof_real)
-                np.savetxt(datadir+f'imag_JK{KK}{QQ}_{itteration}.out', prof_imag)
-
         # print(f'Starting iteration {itteration+1}')
 
         # Reset the internal state for a new itteration
@@ -101,8 +100,7 @@ def main(cdt=conditions(pm)):
             # Initialize optical depth
             tau = np.zeros((cdt.nus_N))
 
-            # Reset lineal and set cent_limb_coef
-            cent_limb_coef = 1
+            # Reset lineal
             lineal = False
             tau_tot = [0.]
 
@@ -185,12 +183,6 @@ def main(cdt=conditions(pm)):
                 if verbose:
                     print(f'New current point {z}')
 
-                # If we are in the boundaries, compute the CL for the IC (z=0)
-                if z == iz0:
-                    cent_limb_coef = ray.clv
-                else:
-                    cent_limb_coef = 1
-
                 if z == iz1 - step:
 
                     point_P = False
@@ -221,7 +213,7 @@ def main(cdt=conditions(pm)):
                                  sf_m, sf_o, sf_p, \
                                  kk_m, kk_o, kk_p, \
                                  ray, cdt, tau_tot, not lineal, \
-                                 tau, cent_limb_coef)
+                                 tau)
 
                 # verbose
                 if verbose:
@@ -293,8 +285,7 @@ def main(cdt=conditions(pm)):
         # Initialize optical depth
         tau = np.zeros((cdt.nus_N))
 
-        # Reset lineal and set cent_limb_coef
-        cent_limb_coef = 1
+        # Reset lineal
         lineal = False
 
         # Define limits in height index and direction
@@ -337,12 +328,6 @@ def main(cdt=conditions(pm)):
             kk_p = None
             sf_p = None
 
-            # If we are in the boundaries, compute the CL for the IC (z=0)
-            if z == iz0:
-                cent_limb_coef = ray.clv
-            else:
-                cent_limb_coef = 1
-
             if z == iz1 - step:
                 point_P = False
                 lineal = True
@@ -357,7 +342,7 @@ def main(cdt=conditions(pm)):
                              sf_m, sf_o, sf_p, \
                              kk_m, kk_o, kk_p, \
                              ray, cdt, tau_tot, not lineal, \
-                             tau, cent_limb_coef)
+                             tau)
 
         # Store last Stokes parameters
         # f = open(datadir + f'stokes_{j:02d}', 'wb')

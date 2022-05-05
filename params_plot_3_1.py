@@ -6,7 +6,7 @@ zn = 10           # Points in z in the slab
 alpha = 0.        # angle between the vertical of the slav and the radial line [deg]
 
 ray_quad = "gaussian_quadrature_32x8.dat"# file where the angular quadrature is saved
-ray_out = [[0.7, 0.]]             # List of mu,phi for emergent radiation directions
+ray_out = [[1.0, 0.]]             # List of mu,phi for emergent radiation directions
 
 v_dop = 5*1e5              # Dopler velocity (not the actual one) [cm/s]
 a_voigt = 1e-1             # voigt damping parameter of the line profile
