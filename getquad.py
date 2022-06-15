@@ -116,8 +116,8 @@ def main():
     '''
 
     # Params
-    ng = 4
-    nt = 1
+    ng = 32
+    nt = 4
     filename = f'gaussian_quadrature_{ng*2}x{nt*4}.dat'
 
     # Get each quadrature

@@ -1,3 +1,5 @@
+import pickle
+import time
 import numpy as np
 import os,sys,copy
 import scipy.linalg as linalg
@@ -2539,6 +2541,11 @@ class ESE:
             Eqs. 7.29 in LL04
             return value: maximum relative change of the level population
         """
+
+        # if self.iz == 0:
+        #     print("saving_jqq")
+        #     with open(f'{cdt.dir}jqq_solve_MT_{time.strftime("%Y%m%d_%H%M%S")}.pkl', 'wb') as f:
+        #         pickle.dump(self.atom.lines[0].jqq, f)
 
         # Shortcut to J symbols
         JS = cdt.JS

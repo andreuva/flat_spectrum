@@ -1,7 +1,7 @@
 # Import classes and parameters
 from RTcoefs import RTcoefs
 from conditions import conditions, state, point
-import parameters_JKQ as pm
+import parameters_comparison as pm
 from solver import BESSER, LinSC_old, BESSER_old
 from plot_utils import *
 import constants as c
@@ -9,17 +9,19 @@ from iopy import io_saverho,io_saverad
 
 # Import needed libraries
 import numpy as np
-import pickle, struct, sys
+import struct, sys
 from tensors import Jqq_to_JKQ
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from glob import glob
+import pickle as pkl
 
 # Measure time
 # import time,sys
 
 # np.seterr(all='raise')
 
-def main(cdt=conditions(pm)):
+def main(pm=pm, disable_display=False):
     """ Main code
     """
 
@@ -42,7 +44,7 @@ def main(cdt=conditions(pm)):
             os.remove(datadir+fil)
 
     # Plot quadrature
-    plot_quadrature(cdt, directory=datadir)
+    # plot_quadrature(cdt, directory=datadir)
 
     # verbose
     verbose = False
@@ -95,7 +97,7 @@ def main(cdt=conditions(pm)):
 
         # Go through all the rays in the cuadrature
         # for j, ray in enumerate(cdt.rays):
-        for j, ray in enumerate(tqdm(cdt.rays, desc=f'propagating rays itteration {itteration}')):
+        for j, ray in enumerate(tqdm(cdt.rays, desc=f'propagating rays itteration {itteration}', disable=disable_display)):
 
             # Initialize optical depth
             tau = np.zeros((cdt.nus_N))
@@ -272,6 +274,45 @@ def main(cdt=conditions(pm)):
     # Save the rho quantities
     # io_saverho(datadir,st.atomic)
     # io_saverad(datadir,st.atomic)
+    # jqq_list = glob(f'{cdt.dir}jqq_*.pkl')
+    # jqq_list.sort()
+    # with open(jqq_list[-1], 'rb') as file:
+        # jqq = pkl.load(file)
+        # components = list(jqq.keys())
+        # JKQ_1_bc = Jqq_to_JKQ(jqq[components[0]], cdt.JS)
+        # JKQ_2_bc = Jqq_to_JKQ(jqq[components[1]], cdt.JS)
+  
+    for KK in range(3):
+        for QQ in range(KK+1):
+            # Write the JKQ of each height into a file
+            prof_real = np.zeros((1 + cdt.z_N,len(st.radiation[0].nus)))
+            prof_real[0,:] = 1e7*c.c/st.radiation[0].nus
+            prof_imag = np.zeros((1 + cdt.z_N,len(st.radiation[0].nus)))
+            prof_imag[0,:] = 1e7*c.c/st.radiation[0].nus
+            # fig, (ax1, ax2) = plt.subplots(2, 1, sharex='col', figsize=(15,20), dpi=150)
+            for lay, heigt in enumerate(st.radiation):
+                real = Jqq_to_JKQ(heigt.jqq, cdt.JS)[KK][QQ].real
+                imag = Jqq_to_JKQ(heigt.jqq, cdt.JS)[KK][QQ].imag
+                prof_real[1+lay, :] = real
+                prof_imag[1+lay, :] = imag
+                # ax1.plot(1e7*c.c/st.radiation[0].nus, real, label=f'{lay:02d}', color=f'C{lay}')
+                # ax2.plot(1e7*c.c/st.radiation[0].nus, imag, color=f'C{lay}')
+            # ax1.axhline(JKQ_1_bc[KK][QQ].real, label='JKQ_1')
+            # ax1.axhline(JKQ_2_bc[KK][QQ].real, label='JKQ_2')
+            # ax2.axhline(JKQ_1_bc[KK][QQ].imag, label='JKQ_1')
+            # ax2.axhline(JKQ_2_bc[KK][QQ].imag, label='JKQ_2')
+            # remove white space between x-axis of the two plots
+            # plt.subplots_adjust(hspace=0)
+            # ax1.set_title(fr'$J^{KK}_{QQ}$ real and imaginary part')
+            # ax1.set_ylabel(fr'$J^{KK}_{QQ}$ real part')
+            # ax1.legend()
+            # ax2.set_ylabel(fr'$J^{KK}_{QQ}$ imag part')
+            # ax2.set_xlabel(r'$\lambda$ (nm)')
+            # plt.tight_layout()
+            # plt.savefig(datadir+f'JK{KK}{QQ}_finished.pdf')
+            # plt.close()
+            np.savetxt(datadir+f'real_JK{KK}{QQ}_finished.out', prof_real)
+            np.savetxt(datadir+f'imag_JK{KK}{QQ}_finished.out', prof_imag)
 
     # Remove unused boundaries
     for j in cdt.rays:
@@ -305,7 +346,7 @@ def main(cdt=conditions(pm)):
         if iz0 == -1:
             point_O.setradiationas(st.space_rad)
         elif iz0 == 0:
-            point_O.setradiationas(st.sun_rad[j])
+            point_O.setradiationas(st.osun_rad[j])
 
         # Get RT coefficients at initial point
         sf_o, kk_o = RT_coeficients.getRTcoefs(point_O.atomic, ray, cdt)
@@ -373,35 +414,7 @@ def main(cdt=conditions(pm)):
         f.close()
 
         # add the ray, wavelegnths, taus, and stokes to a variable and output it
-        outputs.append([ray, point_O.radiation.nus, tau, point_O.radiation.stokes])
-
-        for KK in range(3):
-            for QQ in range(KK+1):
-                # Write the JKQ of each height into a file
-                prof_real = np.zeros((1 + cdt.z_N,len(st.radiation[0].nus)))
-                prof_real[0,:] = 1e7*c.c/st.radiation[0].nus
-                prof_imag = np.zeros((1 + cdt.z_N,len(st.radiation[0].nus)))
-                prof_imag[0,:] = 1e7*c.c/st.radiation[0].nus
-                fig, (ax1, ax2) = plt.subplots(2, 1, sharex='col', figsize=(15,20), dpi=150)
-                for lay, heigt in enumerate(st.radiation):
-                    real = Jqq_to_JKQ(heigt.jqq, cdt.JS)[KK][QQ].real
-                    imag = Jqq_to_JKQ(heigt.jqq, cdt.JS)[KK][QQ].imag
-                    prof_real[1+lay, :] = real
-                    prof_imag[1+lay, :] = imag
-                    ax1.plot(1e7*c.c/st.radiation[0].nus, real, label=f'{lay:02d}', color=f'C{lay}')
-                    ax2.plot(1e7*c.c/st.radiation[0].nus, imag, color=f'C{lay}')
-                # remove white space between x-axis of the two plots
-                plt.subplots_adjust(hspace=0)
-                ax1.set_title(fr'$J^{KK}_{QQ}$ real and imaginary part')
-                ax1.set_ylabel(fr'$J^{KK}_{QQ}$ real part')
-                ax1.legend()
-                ax2.set_ylabel(fr'$J^{KK}_{QQ}$ imag part')
-                ax2.set_xlabel(r'$\lambda$ (nm)')
-                plt.tight_layout()
-                plt.savefig(datadir+f'JK{KK}{QQ}_finished.pdf')
-                plt.close()
-                np.savetxt(datadir+f'real_JK{KK}{QQ}_finished.out', prof_real)
-                np.savetxt(datadir+f'imag_JK{KK}{QQ}_finished.out', prof_imag)
+        outputs.append([ray, point_O.radiation.nus, cdt.zz, tau, point_O.radiation.stokes])
 
     return outputs
 

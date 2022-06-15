@@ -161,6 +161,8 @@ class conditions:
         self.v_dop = np.sqrt(2.*constants.k_B*self.temp/atom.mass)/constants.c
         self.Trad = parameters.Trad
 
+        self.velocity = np.array(parameters.velocity)
+
         # Get frequency vectors and size
         self.nus, self.nus_weights = get_nus(atom,self.v_dop_0)
         self.nus_N = self.nus.size
@@ -182,6 +184,8 @@ class conditions:
         self.max_iter = int(parameters.max_iter)
         self.tolerance_p = parameters.tolerance_p
         self.tolerance_c = parameters.tolerance_c
+
+        self.dir = parameters.dir
 
         # Auxiliar Identity tensor and matrix to not reallocate them later computations
         self.Id_tens = np.repeat(np.identity(4)[:, :, np.newaxis], self.nus_N, axis=2)
@@ -270,11 +274,17 @@ class state:
         for ray in cdts.rays:
             self.sun_rad.append(RTE(cdts.nus, cdts.v_dop))
             if ray.rinc < 0.5*np.pi:
-                self.sun_rad[-1].make_IC(cdts.nus, ray, cdts.Trad, Allen)
+                if cdts.velocity.sum() == 0:
+                    self.sun_rad[-1].make_IC(cdts.nus, ray, cdts.Trad, Allen)
+                else:
+                    self.sun_rad[-1].make_IC_velocity(cdts.nus, ray, cdts.Trad, Allen, cdts.velocity)
         for ray in cdts.orays:
             self.osun_rad.append(RTE(cdts.nus, cdts.v_dop))
             if ray.rinc < 0.5*np.pi:
-                self.osun_rad[-1].make_IC(cdts.nus, ray, cdts.Trad, Allen)
+                if cdts.velocity.sum() == 0:
+                    self.osun_rad[-1].make_IC(cdts.nus, ray, cdts.Trad, Allen)
+                else:
+                    self.osun_rad[-1].make_IC_velocity(cdts.nus, ray, cdts.Trad, Allen, cdts.velocity)
 
     def update_mrc(self, cdts, itter):
         """Update the mrc of the current state by finding the

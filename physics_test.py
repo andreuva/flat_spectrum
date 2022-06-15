@@ -1,3 +1,4 @@
+from allen import Allen_class
 import params_physics as pm
 from conditions import conditions
 from RTcoefs import RTcoefs
@@ -113,7 +114,7 @@ def phi_m_calc(tau):
 if __name__ == '__main__':
 
     # create the conditions to compute the JKQ and profiles
-    velocity = np.array([0, 2e4, 0])
+    velocity = np.array([0, 0, 0])
     B_xyz = np.array([0, 0, 0])
     B_spherical = cart_to_ang(B_xyz[0], B_xyz[1], B_xyz[2])
     B_strength = 100  # Gauss
@@ -122,15 +123,18 @@ if __name__ == '__main__':
 
     # define the parameters that will construct the background radiation field
     # to later compute the JKQ en both components
-    continium = 14e-3
-    gaussian_width = 7e9
+    
+    # Get Allen class instance and gamma angles
+    Allen = Allen_class()
+    Allen.get_gamma(pm.z0)
+
     nu_1 = 2.76733e14
     nu_2 = 2.76764e14
-    gaussian_1_height = 7e-3
-    gaussian_2_height = 1e-3
+    tau_max = 2
+    gaussian_width = 7e9
+    gaussian_1_height = 1e-1
+    gaussian_2_height = gaussian_1_height/7
 
-    tau_max = 1
-    tau_continium = 0
     sun_ilum = False
     flat_spectrum = False
     background_type = 'absorption'
@@ -155,42 +159,18 @@ if __name__ == '__main__':
     nu_peak_1_indx = np.abs(nus - nu_1).argmin()
     nu_peak_2_indx = np.abs(nus - nu_2).argmin()
 
-    """ 
-    # print the results of the tests
-    print('-'*100)
-    print('Ratios between the two peaks with different JKQs:')
-    print(f'J00_1:\t{JKQ_1[0][0]}, J00_2:\t{JKQ_2[0][0]},\t' +
-          f'ratio:\t{JKQ_1[0][0]/JKQ_2[0][0]}\t' +
-          f'peak ratio:\t{profiles_3["eps_I"][nu_peak_1_indx]/profiles_3["eps_I"][nu_peak_2_indx]}')
-    print(f'J00_1:\t{JKQ_1[0][0]}, J00_2:\t{JKQ_1[0][0]},\t' +
-          f'ratio:\t{JKQ_1[0][0]/JKQ_1[0][0]}\t' +
-          f'peak ratio:\t{profiles_1["eps_I"][nu_peak_1_indx]/profiles_1["eps_I"][nu_peak_2_indx]}')
-    print(f'J00_1:\t{JKQ_2[0][0]}, J00_2:\t{JKQ_1[0][0]},\t' +
-          f'ratio:\t{JKQ_2[0][0]/JKQ_1[0][0]}\t' +
-          f'peak ratio:\t{profiles_2["eps_I"][nu_peak_1_indx]/profiles_2["eps_I"][nu_peak_2_indx]}')
-    print('-'*100 + '\n')
-
-    # plot the resulting profiles
-    print('plot the tests')
-    plot_4_profiles(nus, profiles_1['eps_I'], profiles_1['eps_Q'], profiles_1['eps_U'], profiles_1['eps_V'], save=False, show=False, name='1')
-    plot_4_profiles(nus, profiles_2['eps_I'], profiles_2['eps_Q'], profiles_2['eps_U'], profiles_2['eps_V'], save=False, show=False, name='3')
-    plot_4_profiles(nus, profiles_3['eps_I'], profiles_3['eps_Q'], profiles_3['eps_U'], profiles_3['eps_V'], save=False, show=False, name='2')
-    """
+    # compute the wavelength from the frequencies
+    wave = 299792458/nus
     ###############################################################################################
 
     # compute the gaussian profiles for each component
-    background_1 = gaussian(nus, nu_1, gaussian_width)*gaussian_1_height
-    background_2 = gaussian(nus, nu_2, gaussian_width)*gaussian_2_height
-    background_1_norm = background_1/np.trapz(background_1, nus)
-    background_2_norm = background_2/np.trapz(background_2, nus)
+    gauss_1 = gaussian(nus, nu_1, gaussian_width)*gaussian_1_height
+    gauss_2 = gaussian(nus, nu_2, gaussian_width)*gaussian_2_height
+    gauss_1_norm = gauss_1/np.trapz(gauss_1, nus)
+    gauss_2_norm = gauss_2/np.trapz(gauss_2, nus)
 
-    # compute the total background (absorption + emission)
-    background_absorption = -background_1 -background_2 + continium
-    background_emision = background_1 + background_2 + continium
-    if background_type == 'absorption':
-        background = background_absorption
-    else:
-        background = background_emision
+    background = Allen.get_radiation(nus)*Allen.get_clv(rays[-1],nus)
+    background = background - (gauss_1 + gauss_2)*background.max()*6.5
 
     # plot the background ilumination
     # print('plot the background ilumination')
@@ -213,28 +193,18 @@ if __name__ == '__main__':
                 for ray in rays:
                     vlos = np.dot(ang_to_cart(ray.inc, ray.az), velocity)
                     nus_p = nus*(1+vlos/299792458)
-                    background_dop = np.interp(nus, nus_p, background)
-                    if flat_spectrum:
-                        background_dop = np.ones_like(background_dop)*background_dop.mean()
 
-                    if np.cos(ray.inc) < -0.8:
-                        JKQ_1[K][Q] += background_dop*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
-                        JKQ_2[K][Q] += background_dop*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
+                    if ray.inc > np.arctan2(10,5)*180/np.pi:
+                        background_dop = 0*background
+                    else:
+                        background_dop = np.interp(nus, nus_p, background)
 
-                    # print('plot the dopler shifts')
-                    # plot_quantity(nus, background, [r'$\nu$', 'background'], mode='show')
-                    # plot_quantity(nus, background_dop, [r'$\nu$', 'background dopler'], mode='show')
-
-                # print(f'plot the JKQ profiles for K={K}, Q={Q}')
-                # plot_quantity(nus, JKQ_1[K][Q].real, [r'$\nu$', fr'$Jred^{K}_{Q}$'], mode='show')
-                # plot_quantity(nus, JKQ_1[K][Q].real*background_1_norm, [r'$\nu$', fr'$Jred^{K}_{Q}*\phi(\nu)$'], mode='show')
-
-                # plot_quantity(nus, JKQ_2[K][Q].real, [r'$\nu$', fr'$Jblue^{K}_{Q}$'], mode='show')
-                # plot_quantity(nus, JKQ_2[K][Q].real*background_2_norm, [r'$\nu$', fr'$Jblue^{K}_{Q}*\phi(\nu)$'], mode='show')
+                    JKQ_1[K][Q] += background_dop*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
+                    JKQ_2[K][Q] += background_dop*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
 
                 # integrate over nus
-                JKQ_1[K][Q] = np.trapz(JKQ_1[K][Q]*background_1_norm, nus)
-                JKQ_2[K][Q] = np.trapz(JKQ_2[K][Q]*background_2_norm, nus)
+                JKQ_1[K][Q] = np.trapz(JKQ_1[K][Q]*gauss_1_norm, nus)
+                JKQ_2[K][Q] = np.trapz(JKQ_2[K][Q]*gauss_2_norm, nus)
 
         JKQ_1[2][-2] =      np.conjugate(JKQ_1[2][2])
         JKQ_1[2][-1] = -1.0*np.conjugate(JKQ_1[2][1])
@@ -247,16 +217,13 @@ if __name__ == '__main__':
         # compute the profiles with the new JKQs
         profiles, nus, rays = compute_profile(JKQ_1, JKQ_2, pm, B_spherical)
 
-        # compute the wavelength from the frequencies
-        wave = 299792458/nus
-
         ################   SEMI-ANALYTICAL RADIATIVE TRANSFER  #################
 
         # identity matrix
         Ident = np.identity(4)
 
         # optical depth profile (background with peak at 1.0)
-        tau_prof = (background_1/gaussian_1_height + background_2/gaussian_1_height)*tau_max + tau_continium
+        tau_prof = tau_max*profiles['eta_I']/np.abs(profiles['eta_I']).max()
 
         # plot the optical depth profile
         # print('plot the optical depth profile')
@@ -287,7 +254,7 @@ if __name__ == '__main__':
             phi_0 = phi_o_calc(tau)
 
             # compute the matrix M and invert it
-            M_inv[:,:,i] = np.linalg.inv(phi_m*Kp[:,:,i] + Ident)
+            M_inv[:,:,i] = np.linalg.inv(phi_0*Kp[:,:,i] + Ident)
             # Do the matrix multiplications to obtain the stokes parameters
             AA = np.einsum('ij,j->i', (np.exp(-tau)*Ident - phi_m*Kp[:,:,i]), Isun[:,i])
             DD = (phi_m + phi_0)*SS[:,i]
@@ -326,5 +293,5 @@ if __name__ == '__main__':
     module_to_dict = lambda module: {k: getattr(module, k) for k in dir(module) if not k.startswith('_')}
     save_dict = {'profiles':profiles_samples, 'intensities':intensities_samples,
                  'parameters':parameters, 'pm':module_to_dict(pm), 'ratio_Q':ratio_Q, 'ratio_U':ratio_U, 'ratio_V':ratio_V}
-    with open(f'fs_{flat_spectrum}_sunilum_{sun_ilum}_{timestr}.pkl', 'wb') as f:
+    with open(f'output_ratio_plot_{timestr}.pkl', 'wb') as f:
         pkl.dump(save_dict, f)

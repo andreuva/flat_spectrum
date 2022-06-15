@@ -1,5 +1,6 @@
 from allen import Allen_class
 import params_plot_3_1 as pm
+import constants as cts
 from conditions import conditions
 from RTcoefs import RTcoefs
 from atom import ESE
@@ -48,7 +49,7 @@ def gaussian(x, mu, std):
 
 
 # Wraper to compute the Rtcoefs module with a given parameters
-def compute_profile(JKQ_1, JKQ_2, pm=pm, B=np.array([0, 0, 0]), especial=True):
+def compute_profile(JKQ_1, JKQ_2, pm=pm, B=np.array([0, 0, 0]), especial=True, jqq=None):
     # Initialize the conditions and rtcoefs objects
     # given a set of parameters via the parameters_rtcoefs module
     cdt = conditions(pm)
@@ -73,6 +74,12 @@ def compute_profile(JKQ_1, JKQ_2, pm=pm, B=np.array([0, 0, 0]), especial=True):
         atoms.atom.lines[0].initialize_profiles_first(cdt.nus_N)
         atoms.atom.lines[0].jqq = JKQ_to_Jqq(JKQ_1, cdt.JS)
 
+    # print(atoms.atom.lines[0].jqq)
+    if jqq is not None:
+        atoms.atom.lines[0].jqq = jqq
+    #     atoms.atom.lines[0].jqq = atoms.atom.lines[0].jqq = {276733332165635.5: {-1: {-1: (8.375176071590015e-06+0j), 0: (1.1855266276444219e-19+5.2353657675870114e-18j), 1: (6.347751887308007e-07-2.8554737086374053e-13j)},0: {-1: 0j, 0: (9.00950985634052e-06+0j),1: (-1.1855266276444219e-19-5.235372385031912e-18j)}, 1: {-1: 0j, 0: 0j, 1: (8.374099225151616e-06+0j)}}, 
+    #                                                          276764094706172.62:{-1: {-1: (6.094236834279895e-06+0j), 0: (-3.805888397243992e-18-1.685474405888409e-16j), 1: (4.4084743129272864e-07+3.580508415744089e-12j)}, 0: {-1: 0j, 0: (6.5419934862266725e-06+0j), 1: (3.805888397243992e-18+1.6854745051500825e-16j)}, 1: {-1: 0j, 0: 0j, 1: (6.105864267347921e-06+0j)}}}
+
     # Solve the ESE
     atoms.solveESE(None, cdt)
 
@@ -85,21 +92,21 @@ def compute_profile(JKQ_1, JKQ_2, pm=pm, B=np.array([0, 0, 0]), especial=True):
     # Compute the emision coefficients from the Source functions
     profiles = {}
     profiles['nus'] = cdt.nus
-    profiles['eps_I'] = sf[0]*kk[0][0]
-    profiles['eps_Q'] = sf[1]*kk[0][0]
-    profiles['eps_U'] = sf[2]*kk[0][0]
-    profiles['eps_V'] = sf[3]*kk[0][0]
+    profiles['eps_I'] = sf[0]*(kk[0][0] + cts.vacuum)
+    profiles['eps_Q'] = sf[1]*(kk[0][0] + cts.vacuum)
+    profiles['eps_U'] = sf[2]*(kk[0][0] + cts.vacuum)
+    profiles['eps_V'] = sf[3]*(kk[0][0] + cts.vacuum)
 
     # retrieve the absorption coefficients from the K matrix
     profiles['eta_I'] = kk[0][0]
-    profiles['eta_Q'] = kk[0][1]*kk[0][0]
-    profiles['eta_U'] = kk[0][2]*kk[0][0]
-    profiles['eta_V'] = kk[0][3]*kk[0][0]
-    profiles['rho_Q'] = kk[1][0]*kk[0][0]
-    profiles['rho_U'] = kk[1][1]*kk[0][0]
-    profiles['rho_V'] = kk[1][2]*kk[0][0]
+    profiles['eta_Q'] = kk[0][1]*(kk[0][0] + cts.vacuum)
+    profiles['eta_U'] = kk[0][2]*(kk[0][0] + cts.vacuum)
+    profiles['eta_V'] = kk[0][3]*(kk[0][0] + cts.vacuum)
+    profiles['rho_Q'] = kk[1][0]*(kk[0][0] + cts.vacuum)
+    profiles['rho_U'] = kk[1][1]*(kk[0][0] + cts.vacuum)
+    profiles['rho_V'] = kk[1][2]*(kk[0][0] + cts.vacuum)
 
-    return profiles, profiles['nus'], cdt.rays
+    return profiles, profiles['nus'], cdt.rays, cdt.orays
 
 
 def phi_o_calc(tau):
@@ -137,9 +144,9 @@ if __name__ == '__main__':
     gaussian_1_height = 1e-1
     gaussian_2_height = gaussian_1_height/7
 
-    tau_max = 1
+    tau_max = 2
     tau_continium = 0
-    sun_ilum = False
+    sun_ilum = True
     flat_spectrum = True
     background_type = 'absorption'
 
@@ -155,7 +162,7 @@ if __name__ == '__main__':
     JKQ_2[0][0] = 1e-4
 
     # compute the profiles for the test
-    _, nus, rays = compute_profile(JKQ_1, JKQ_1, B=B_spherical, pm=pm, especial=especial)
+    _, nus, rays, _ = compute_profile(JKQ_1, JKQ_1, B=B_spherical, pm=pm, especial=especial)
 
     # compute the wavelength from the frequencies
     wave = 299792458/nus
@@ -178,7 +185,7 @@ if __name__ == '__main__':
 
     for samp in tqdm(range(n_samples)):
         velocity = random_three_vector()*velocity_magnitude
-        B_spherical = np.array([np.logspace(-1, 4, n_samples, True)[samp], np.pi/4, np.pi/4])
+        B_spherical = np.array([np.linspace(8100, 8500, n_samples, True)[samp], np.pi/4, np.pi/4])
 
         # compute the JKQ taking into account the background and velocity
         JKQ_1 = construct_JKQ_0()
@@ -214,31 +221,33 @@ if __name__ == '__main__':
         JKQ_2[1][-1] = -1.0*np.conjugate(JKQ_2[1][1])
 
         # compute the profiles with the new JKQs
-        profiles, nus, rays = compute_profile(JKQ_1, JKQ_2, pm, B_spherical, especial=especial)
+        profiles, nus, rays, orays = compute_profile(JKQ_1, JKQ_2, pm, B_spherical, especial=especial)
 
         ################   SEMI-ANALYTICAL RADIATIVE TRANSFER  #################
         # identity matrix
         Ident = np.identity(4)
 
         # optical depth profile (background with peak at 1.0)
-        tau_prof = (gauss_1/gaussian_1_height + gauss_2/gaussian_1_height)*tau_max + tau_continium
+        # tau_prof = (gauss_1/gaussian_1_height + gauss_2/gaussian_1_height)*tau_max + tau_continium
+        tau_prof = tau_max*profiles['eta_I']/np.abs(profiles['eta_I']).max() + tau_continium
 
         # plot the optical depth profile
         # print('plot the optical depth profile')
         # plot_quantity(wave, tau_prof, [r'$\nu$', r'$\tau$'], mode='show')
 
-        Kp = [[profiles['eta_I']*0                , profiles['eta_Q']/profiles['eta_I'], profiles['eta_U']/profiles['eta_I'], profiles['eta_V']/profiles['eta_I']],
-            [profiles['eta_Q']/profiles['eta_I'], profiles['eta_I']*0                , profiles['rho_V']/profiles['eta_I'],-profiles['rho_U']/profiles['eta_I']],
-            [profiles['eta_U']/profiles['eta_I'],-profiles['rho_V']/profiles['eta_I'], profiles['eta_I']*0                , profiles['rho_Q']/profiles['eta_I']],
-            [profiles['eta_V']/profiles['eta_I'], profiles['rho_U']/profiles['eta_I'],-profiles['rho_Q']/profiles['eta_I'], profiles['eta_I']*0]]
+        Kp = [[profiles['eta_I']*0                               , profiles['eta_Q']/(profiles['eta_I'] + cts.vacuum), profiles['eta_U']/(profiles['eta_I'] + cts.vacuum), profiles['eta_V']/(profiles['eta_I'] + cts.vacuum)],
+          [profiles['eta_Q']/(profiles['eta_I'] + cts.vacuum), profiles['eta_I']*0                               , profiles['rho_V']/(profiles['eta_I'] + cts.vacuum),-profiles['rho_U']/(profiles['eta_I'] + cts.vacuum)],
+          [profiles['eta_U']/(profiles['eta_I'] + cts.vacuum),-profiles['rho_V']/(profiles['eta_I'] + cts.vacuum), profiles['eta_I']*0                               , profiles['rho_Q']/(profiles['eta_I'] + cts.vacuum)],
+          [profiles['eta_V']/(profiles['eta_I'] + cts.vacuum), profiles['rho_U']/(profiles['eta_I'] + cts.vacuum),-profiles['rho_Q']/(profiles['eta_I'] + cts.vacuum), profiles['eta_I']*0]]
         Kp = np.array(Kp)
 
         # Radiation coming from the underlying medium entering the slab
+        background = Allen.get_radiation(nus)*Allen.get_clv(orays[0],nus)
         Isun = np.array([background, 0*background, 0*background, 0*background])
         if not sun_ilum:
             Isun = Isun*0
         # Source function computed with the new JKQs
-        SS = np.array([profiles['eps_I']/profiles['eta_I'], profiles['eps_Q']/profiles['eta_I'], profiles['eps_U']/profiles['eta_I'], profiles['eps_V']/profiles['eta_I']])
+        SS = np.array([profiles['eps_I']/(profiles['eta_I'] + cts.vacuum), profiles['eps_Q']/(profiles['eta_I'] + cts.vacuum), profiles['eps_U']/(profiles['eta_I'] + cts.vacuum), profiles['eps_V']/(profiles['eta_I'] + cts.vacuum)])
 
         # Initialize the intensities and an auxiliary matrix to invert
         M_inv = np.zeros((4,4,profiles['nus'].size))
@@ -252,7 +261,7 @@ if __name__ == '__main__':
             phi_0 = phi_o_calc(tau)
 
             # compute the matrix M and invert it
-            M_inv[:,:,i] = np.linalg.inv(phi_m*Kp[:,:,i] + Ident)
+            M_inv[:,:,i] = np.linalg.inv(phi_0*Kp[:,:,i] + Ident)
             # Do the matrix multiplications to obtain the stokes parameters
             AA = np.einsum('ij,j->i', (np.exp(-tau)*Ident - phi_m*Kp[:,:,i]), Isun[:,i])
             DD = (phi_m + phi_0)*SS[:,i]

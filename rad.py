@@ -3,6 +3,10 @@ import constants as c
 import numpy as np
 
 
+def gaussian(x, mu, std):
+    return np.exp(-np.power(x - mu, 2.) / (2 * np.power(std, 2.)))
+
+
 class RTE:
     """RTE class containing the stokes parameters and the Jqq as well as other
        Radiation information
@@ -46,6 +50,36 @@ class RTE:
        #self.stokes[0] = self.bb(T,nus)
        #self.stokes[0] = self.bb(T,nus) * Allen.get_clv(ray,nus)
         self.stokes[0] = Allen.get_radiation(nus) * Allen.get_clv(ray,nus)
+
+    def make_IC_velocity(self, nus, ray, T, Allen, velocity):
+        """ Get continuum radiation
+        """
+
+        # If a point is defined as IC put Q=U=V=0 and I to BB
+        self.stokes = self.stokes*0
+        self.stokes[0] = Allen.get_radiation(nus) * Allen.get_clv(ray,nus)
+
+        nu_1 = 2.76733e14
+        nu_2 = 2.76764e14
+
+        gaussian_width = 7e9
+        gaussian_1_height = self.stokes[0].max()*0.5 #(0.6 + np.sin(ray.raz)*0.3)
+        gaussian_2_height = gaussian_1_height/7
+        gauss_1 = gaussian(nus, nu_1, gaussian_width)*gaussian_1_height
+        gauss_2 = gaussian(nus, nu_2, gaussian_width)*gaussian_2_height
+        self.stokes[0] = self.stokes[0] - (gauss_1 + gauss_2)
+
+        ray_cart = np.array([np.sin(ray.inc)*np.cos(ray.az),
+                             np.sin(ray.inc)*np.sin(ray.az),
+                             np.cos(ray.inc)])
+        vlos = np.dot(ray_cart, velocity)
+        nus_p = nus*(1+vlos/299792458)
+
+        if ray.inc > np.arctan2(10,5)*180/np.pi:
+            self.stokes[0] = 0*self.stokes[0]
+        else:
+            self.stokes[0] = np.interp(nus, nus_p, self.stokes[0])
+
 
     def check_I(self):
         """ Check physical intensity

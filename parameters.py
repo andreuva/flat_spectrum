@@ -18,6 +18,8 @@ B = 1.0e1                  # Magnetic field strength [T]
 B_inc = 90.                # Magnetic field inclination [deg]
 B_az = 0.0                 # Magnetic field azimuth [deg]
 
+velocity = [0., 0., 0.]   # Velocity of the slab [cm/s]
+
 max_iter = 200       # Maximum itterations for the forward method
 tolerance_p = 5e-6   # tolerated relative change in populations
 tolerance_c = 5e-4   # tolerated relative change in coherences

@@ -1,17 +1,19 @@
 from allen import Allen_class
-import params_plot_3_2 as pm
-from conditions import conditions
+import parameters_comparison as pm
 import constants as cts
+from conditions import conditions
 from RTcoefs import RTcoefs
 from atom import ESE
-from tensors import JKQ_to_Jqq, construct_JKQ_0, TKQ
+from tensors import JKQ_to_Jqq, construct_JKQ_0, TKQ, Jqq_to_JKQ
 from plot_utils import plot_4_profiles, plot_quantity
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 from tqdm import tqdm
 import pickle as pkl
 import time
+from glob import glob
 
 
 # Function that computes the unit 3D vector from the inclination and the azimuth
@@ -127,18 +129,21 @@ if __name__ == '__main__':
     # create the conditions to compute the JKQ and profiles
     B_xyz = np.array([0, 0, 0])
     B_spherical = cart_to_ang(B_xyz[0], B_xyz[1], B_xyz[2])
-    velocity_magnitude = 2.5e4  # m/s
-    velocity = random_three_vector()*velocity_magnitude
-    velocity = 2.5e4*ang_to_cart(np.arccos(pm.ray_out[0][0]) + np.pi/4, pm.ray_out[0][1]*np.pi/180)
+    B_spherical = np.array([pm.B, pm.B_inc*np.pi/180, pm.B_az*np.pi/180])
     velocity = np.array(pm.velocity)
     especial = True
-    datadir ='output_B_0.0_0.0_0.0_20220606-095914'
+    datadir ='output_compar_B_10.0_90.0_0.0_20220613-094529'
     pm.dir = datadir + '/'
 
     wave_imp, tau_imp = np.loadtxt(f'{datadir}/out/tau_00.out', skiprows=3, unpack=True)
-
+    tau_max = tau_imp.max()
+    freq_imp, I_nlte, Q_nlte, U_nlte, V_nlte = np.loadtxt(f'{datadir}/out/stokes_00.out', skiprows=3, unpack=True)
     # define the parameters that will construct the background radiation field
     # to later compute the JKQ en both components
+    jqq_list = glob(f'{datadir}/jqq_*.pkl')
+    jqq_list.sort()
+    with open(jqq_list[0], 'rb') as file:
+        jqq = pkl.load(file)
 
     # Get Allen class instance and gamma angles
     Allen = Allen_class()
@@ -146,14 +151,9 @@ if __name__ == '__main__':
 
     nu_1 = 2.76733e14
     nu_2 = 2.76764e14
-    tau_max = tau_imp.max()
     gaussian_width = 7e9
     gaussian_1_height = 1e-1
     gaussian_2_height = gaussian_1_height/7
-
-    sun_ilum = True
-    flat_spectrum = False
-    background_type = 'absorption'
 
     ###############################################################################################
     #                   Test the computation of the JKQ and the profiles                          #
@@ -187,33 +187,16 @@ if __name__ == '__main__':
     # compute the JKQ taking into account the background and velocity
     JKQ_1 = construct_JKQ_0()
     JKQ_2 = construct_JKQ_0()
-
-    background = Allen.get_radiation(nus)*Allen.get_clv(rays[-1],nus)
-    background = background - (gauss_1 + gauss_2)*background.max()*6.5
-
     for K in range(3):
         for Q in range(0,K+1):
             for ray in rays:
-                vlos = np.dot(ang_to_cart(ray.inc, ray.az), velocity)
-                nus_p = nus*(1+vlos/299792458)
+                background = Allen.get_radiation(nus)*Allen.get_clv(ray,nus)
 
-                if ray.inc > np.arctan2(10,5)*180/np.pi:
-                    background_dop = 0*background
-                else:
-                    background_dop = np.interp(nus, nus_p, background)
+                if ray.rinc < np.pi/2:
+                    continue
 
-                    # print(ray.inc, ray.az)
-                    # fig, (ax1,ax2,ax3) = plt.subplots(3,1, sharex='col')
-                    # ax1.plot(wave, background_dop)
-                    # ax1.plot(wave, background)
-                    # ax2.plot(wave, gauss_1_norm)
-                    # ax2.plot(wave, gauss_2_norm)
-                    # ax3.plot(wave, background_dop*gauss_1_norm)
-                    # ax3.plot(wave, background_dop*gauss_2_norm)
-                    # plt.show()
-
-                JKQ_1[K][Q] += background_dop*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
-                JKQ_2[K][Q] += background_dop*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
+                JKQ_1[K][Q] += background*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
+                JKQ_2[K][Q] += background*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
 
             # integrate over nus
             JKQ_1[K][Q] = np.trapz(JKQ_1[K][Q]*gauss_1_norm, nus)
@@ -235,14 +218,11 @@ if __name__ == '__main__':
     Ident = np.identity(4)
 
     # optical depth profile (background with peak at 1.0)
-    # FULL NLTE TRANSFER
-    # Q and U comparable
     tau_prof = tau_max*profiles['eta_I']/np.abs(profiles['eta_I']).max()
 
     # plot the optical depth profile
-    print('plot the optical depth profile')
-    plot_quantity(wave, tau_prof, [r'$\nu$', r'$\tau$'], mode='show')
-    plot_quantity(wave, tau_prof-tau_imp, [r'$\nu$', r'$\tau - \tau_{NLTE}$'], mode='show')
+    # print('plot the optical depth profile')
+    # plot_quantity(wave, tau_prof, [r'$\nu$', r'$\tau$'], mode='show')
 
     Kp = [[profiles['eta_I']*0                               , profiles['eta_Q']/(profiles['eta_I'] + cts.vacuum), profiles['eta_U']/(profiles['eta_I'] + cts.vacuum), profiles['eta_V']/(profiles['eta_I'] + cts.vacuum)],
           [profiles['eta_Q']/(profiles['eta_I'] + cts.vacuum), profiles['eta_I']*0                               , profiles['rho_V']/(profiles['eta_I'] + cts.vacuum),-profiles['rho_U']/(profiles['eta_I'] + cts.vacuum)],
@@ -251,10 +231,9 @@ if __name__ == '__main__':
     Kp = np.array(Kp)
 
     # Radiation coming from the underlying medium entering the slab
-    # background = Allen.get_radiation(nus)*Allen.get_clv(orays[0],nus)
+    background = Allen.get_radiation(nus)*Allen.get_clv(orays[0],nus)
     Isun = np.array([background, 0*background, 0*background, 0*background])
-    if not sun_ilum:
-        Isun = Isun*0
+
     # Source function computed with the new JKQs
     SS = np.array([profiles['eps_I']/(profiles['eta_I'] + cts.vacuum), profiles['eps_Q']/(profiles['eta_I'] + cts.vacuum), profiles['eps_U']/(profiles['eta_I'] + cts.vacuum), profiles['eps_V']/(profiles['eta_I'] + cts.vacuum)])
 
@@ -279,31 +258,151 @@ if __name__ == '__main__':
 
     ################   SAVE THE FINAL RESULTS  #################
     intensities_samples = np.array(II)
-    parameters = np.array([velocity, B_spherical])
 
     # save the computed profiles in a pickle file
     print('save the computed profiles')
     timestr = time.strftime("%Y%m%d_%H%M%S")
-    module_to_dict = lambda module: {k: getattr(module, k) for k in dir(module) if not k.startswith('_')}
-    save_dict = {'profiles':profiles, 'intensities':intensities_samples,
-                 'parameters':parameters, 'pm':module_to_dict(pm)}
-
-    # PLOT OF THE STOKES PARAMETERS
-    stokes_fil = np.loadtxt('output_velocity_20220517-103726/out/stokes_00.out', skiprows=3)
-    nus = stokes_fil[:,0]
-    wave = 299792458/nus
-    stokes_fil = stokes_fil[:,1:].transpose()
 
     ################   PLOT THE FINAL RESULTS  #################
     print('plot the final results')
+    # plot the optical depth comparison
+    plt.plot(wave*1e9, tau_prof)
+    plt.plot(wave_imp, tau_imp)
+    plt.show()
+
+    # Plot the emision profiles
     title = f'$v_x$={velocity[0]/1000:1.2f} km/s,\t $v_y$={velocity[1]/1000:1.2f} km/s,\t $v_z$={velocity[2]/1000:1.2f} km/s'+\
             '\n'+ fr' LOS:  $\mu$ = {pm.ray_out[0][0]:1.2f} $\phi$ = {pm.ray_out[0][1]:1.2f}'
-    plot_4_profiles(wave, profiles['eps_I']/profiles['eps_I'].max()*100,
-                          profiles['eps_Q']/profiles['eps_I'].max()*100,
-                          profiles['eps_U']/profiles['eps_I'].max()*100,
-                          profiles['eps_V']/profiles['eps_I'].max()*100,
-                    title=r'$\epsilon$  normaliced  in  % (B=0)'+'\n'+title, save=False, show=True, directory=f'plot_1', name=f'eps_{timestr}')
-    plot_4_profiles(wave, II[0,:]*100/II[0,:].max(), II[1,:]*100/II[0,:].max(), II[2,:]*100/II[0,:].max(), II[3,:]*100/II[0,:].max(),
-                    save=False, show=False)
-    plot_4_profiles(wave, stokes_fil[0]*100/stokes_fil[0].max(), stokes_fil[1]*100/stokes_fil[0].max(), stokes_fil[2]*100/stokes_fil[0].max(), stokes_fil[3]*100/stokes_fil[0].max(),
-                    title=r'$I$  normaliced  in  % (B=0)'+'\n'+title, n=1, save=False, show=True, directory=f'plot_1', name=f'I_{timestr}')
+    # plot_4_profiles(wave, profiles['eps_I']/profiles['eps_I'].max()*100,
+    #                       profiles['eps_Q']/profiles['eps_I'].max()*100,
+    #                       profiles['eps_U']/profiles['eps_I'].max()*100,
+    #                       profiles['eps_V']/profiles['eps_I'].max()*100,
+    #                 title=r'$\epsilon$  normaliced  in  % (B=0)'+'\n'+title, save=False, show=True, directory=f'plot_1', name=f'eps_{timestr}')
+
+    # Comparison between the emision profiles and the analytical solution after radiative transfer
+    # plot_4_profiles(wave, profiles['eps_I']/profiles['eps_I'].max()*100,
+    #                       profiles['eps_Q']/profiles['eps_I'].max()*100,
+    #                       profiles['eps_U']/profiles['eps_I'].max()*100,
+    #                       profiles['eps_V']/profiles['eps_I'].max()*100,
+    #                 title=title, save=False, show=False, directory=f'plot_1', name=f'comp_{timestr}')
+    # plot_4_profiles(wave, II[0,:]/II[0,:].max()*100, II[1,:]/II[0,:].max()*100, II[2,:]/II[0,:].max()*100, II[3,:]/II[0,:].max()*100,
+    #                 save=False, show=True, n=1, directory=f'plot_1', name=f'I_{timestr}')
+
+    # plot the semi-analytical solution against the full NLTE one
+    # plot_4_profiles(wave_imp, I_nlte, Q_nlte, U_nlte, V_nlte, save=False, show=False)
+    # plot_4_profiles(wave*1e9, II[0,:], II[1,:], II[2,:], II[3,:],
+    #                 title=r'$I$  normaliced  % (B=0)'+'\n'+title, save=False, show=True, n=1, directory=f'plot_1', name=f'I_{timestr}')
+
+
+    JK00_fil = np.loadtxt(f'{datadir}/out/real_JK00_finished.out')
+    JK20_fil = np.loadtxt(f'{datadir}/out/real_JK20_finished.out')
+    JK21_fil = np.loadtxt(f'{datadir}/out/real_JK21_finished.out')
+
+    nn = 1.000293
+    wave = wave/1e-9/nn
+    ticks = [wave[nu_peak_1_indx], wave[nu_peak_2_indx]]
+    labels = [f'{wave[nu_peak_1_indx]:.2f}', f'{wave[nu_peak_2_indx]:.2f}']
+    # discrete color gradient list to do the plots (5 colors)
+
+    heights = np.linspace(pm.z0, pm.zf, pm.zn, endpoint=True)
+    JK00_fil = JK00_fil[1:,:]
+    JK20_fil = JK20_fil[1:,:]
+    JK21_fil = JK20_fil[1:,:]
+
+    lay_show = [0, 2, 5, 7, 9]
+    color_codes = ['#d9480f', '#5c940d', '#1864ab', '#ae3ec9', '#e03131']
+    colors = {lay_show[i]: color_codes[i] for i in range(len(lay_show))}
+
+    length = len(JK00_fil[0])
+    p1 = int(length/8)
+    p3 = int(p1*7)
+    tau = (heights-pm.z0)/(pm.zf-pm.z0)*tau_prof.max()
+    tau[0] += 0.01
+
+    plt.figure(figsize=(10,3.5), dpi=120)
+    plt.subplot(1,2,1)
+    for i,jkq in enumerate(JK00_fil/JK00_fil[0,0]):
+        if i not in lay_show:
+            continue
+        plt.plot(wave[p1:p3], jkq[p1:p3], linewidth=2, color=cm.plasma(i/10.0), label=fr'$\tau$={tau_prof.max()-tau[i]:1.2f}')
+    plt.axhline(y=jkq[-1], color='k', linestyle='--')
+    plt.axhline(y=JKQ_1[0][0].real/JK00_fil[0,0], color='b', linestyle='--')
+    plt.axhline(y=JKQ_2[0][0].real/JK00_fil[0,0], color='r', linestyle='--')
+    plt.title(r'$J^0_0$')
+    plt.xlabel('Wavelength [nm]')
+    plt.legend(loc='upper left')
+    plt.xticks(ticks, labels)
+
+
+    plt.subplot(1,2,2)
+    for i,jkq in enumerate(JK20_fil):
+        if i not in lay_show:
+            continue
+        plt.plot(wave[p1:p3], jkq[p1:p3]/JK00_fil[i,p1:p3], linewidth=2, color=cm.plasma(i/10.0), label=fr'$\tau$={tau[i]/1e8:1.4f}')
+    plt.axhline(y=jkq[-1]/JK00_fil[0,0], color='k', linestyle='--')
+    plt.axhline(y=JKQ_1[2][0].real/JK00_fil[0,0], color='b', linestyle='--')
+    plt.axhline(y=JKQ_2[2][0].real/JK00_fil[0,0], color='r', linestyle='--')
+    plt.title(r'$J^2_0/J^0_0$')
+    # plt.ylim(0, jkq[-1]/JK00_fil[0,0]*1.1)
+    plt.xlabel('Wavelength [nm]')
+    plt.xticks(ticks, labels)
+
+    # plt.subplot(2,3,3)
+    # for i,jkq in enumerate(JK21_fil/JK00_fil[0,0]):
+    #     if i//2 == 0:
+    #         continue
+    #     plt.plot(wave, jkq, color=cm.plasma(i/10.0))
+    # plt.axhline(y=jkq[-1], color='k', linestyle='--')
+    # plt.ylabel(r'$J^2_1$')
+    # plt.xlabel('Wavelength [nm]')
+
+    plt.tight_layout()
+    plt.savefig('3_3_1.pdf')
+    plt.show()
+
+
+    # PLOT OF THE STOKES PARAMETERS
+    plt.figure(figsize=(10,3.5), dpi=120)
+    plt.subplot(1,2,1)
+    plt.plot(wave[p1:p3], I_nlte[p1:p3]/I_nlte[0] , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
+    plt.plot(wave[p1:p3], II[0,p1:p3]/I_nlte[0], linewidth=2, color=cm.plasma(8/10.0), label=fr'Constant property slab')
+    plt.ylim(0, (I_nlte/I_nlte[0]).max()*1.1)
+    plt.legend(loc='lower left')
+    plt.title(r'$I$')
+    plt.xlabel('Wavelength [nm]')
+    plt.xticks(ticks, labels)
+
+    plt.subplot(1,2,2)
+    plt.plot(wave[p1:p3], Q_nlte[p1:p3]/I_nlte[0] , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
+    plt.plot(wave[p1:p3], -II[1,p1:p3]/I_nlte[0] , linewidth=2, color=cm.plasma(8/10.0), label=fr'Const. slab')
+    # plt.legend()
+    plt.title(r'$Q$')
+    plt.xlabel('Wavelength [nm]')
+    plt.xticks(ticks, labels)
+
+    plt.tight_layout()
+    plt.savefig('3_3_2.pdf')
+    plt.show()
+
+    # PLOT OF THE STOKES PARAMETERS
+    plt.figure(figsize=(10,3.5), dpi=120)
+    plt.subplot(1,2,1)
+    plt.plot(wave[p1:p3], I_nlte[p1:p3]/I_nlte[0] , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
+    plt.plot(wave[p1:p3], II[0,p1:p3]/I_nlte[0], linewidth=2, color=cm.plasma(8/10.0), label=fr'Constant property slab')
+    plt.ylim(0, (I_nlte/I_nlte[0]).max()*1.1)
+    plt.legend(loc='lower left')
+    plt.title(r'$I$')
+    plt.xlabel('Wavelength [nm]')
+    plt.xticks(ticks, labels)
+
+    plt.subplot(1,2,2)
+    plt.plot(wave[p1:p3], Q_nlte[p1:p3]/I_nlte[p1:p3] , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
+    plt.plot(wave[p1:p3], -II[1,p1:p3]/I_nlte[p1:p3] , linewidth=2, color=cm.plasma(8/10.0), label=fr'Const. slab')
+    # plt.legend()
+    plt.title(r'$Q/I$')
+    plt.xlabel('Wavelength [nm]')
+    plt.xticks(ticks, labels)
+
+    plt.tight_layout()
+    plt.savefig('3_3_2I.pdf')
+    plt.show()
