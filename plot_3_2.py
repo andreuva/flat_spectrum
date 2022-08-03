@@ -1,6 +1,7 @@
 from allen import Allen_class
 import params_plot_3_2 as pm
 from conditions import conditions
+import matplotlib.cm as cm
 import constants as cts
 from RTcoefs import RTcoefs
 from atom import ESE
@@ -127,15 +128,15 @@ if __name__ == '__main__':
     # create the conditions to compute the JKQ and profiles
     B_xyz = np.array([0, 0, 0])
     B_spherical = cart_to_ang(B_xyz[0], B_xyz[1], B_xyz[2])
-    velocity_magnitude = 2.5e4  # m/s
+    velocity_magnitude = 3e4  # m/s
     velocity = random_three_vector()*velocity_magnitude
-    velocity = 2.5e4*ang_to_cart(np.arccos(pm.ray_out[0][0]) + np.pi/4, pm.ray_out[0][1]*np.pi/180)
-    velocity = np.array(pm.velocity)
+    velocity = np.array([0, 3e4, 0])     # np.array(pm.velocity)
     especial = True
-    datadir ='output_B_0.0_0.0_0.0_20220606-095914'
+    datadir ='output_vel_anis_ray_1.0_90.0__B_0.0_v_30100.0'
     pm.dir = datadir + '/'
 
     wave_imp, tau_imp = np.loadtxt(f'{datadir}/out/tau_00.out', skiprows=3, unpack=True)
+    tau_max = 2 # tau_imp.max()
 
     # define the parameters that will construct the background radiation field
     # to later compute the JKQ en both components
@@ -144,9 +145,9 @@ if __name__ == '__main__':
     Allen = Allen_class()
     Allen.get_gamma(pm.z0)
 
+    nn = 1.000293
     nu_1 = 2.76733e14
     nu_2 = 2.76764e14
-    tau_max = tau_imp.max()
     gaussian_width = 7e9
     gaussian_1_height = 1e-1
     gaussian_2_height = gaussian_1_height/7
@@ -187,18 +188,17 @@ if __name__ == '__main__':
     # compute the JKQ taking into account the background and velocity
     JKQ_1 = construct_JKQ_0()
     JKQ_2 = construct_JKQ_0()
-
-    background = Allen.get_radiation(nus)*Allen.get_clv(rays[-1],nus)
-    background = background - (gauss_1 + gauss_2)*background.max()*6.5
-
     for K in range(3):
         for Q in range(0,K+1):
             for ray in rays:
+                background = Allen.get_radiation(nus)*Allen.get_clv(ray,nus)
+                background = background - (gauss_1 + gauss_2)*background.max()*6.5
+
                 vlos = np.dot(ang_to_cart(ray.inc, ray.az), velocity)
                 nus_p = nus*(1+vlos/299792458)
 
-                if ray.inc > np.arctan2(10,5)*180/np.pi:
-                    background_dop = 0*background
+                if ray.rinc < np.pi/2:
+                    continue
                 else:
                     background_dop = np.interp(nus, nus_p, background)
 
@@ -251,7 +251,8 @@ if __name__ == '__main__':
     Kp = np.array(Kp)
 
     # Radiation coming from the underlying medium entering the slab
-    # background = Allen.get_radiation(nus)*Allen.get_clv(orays[0],nus)
+    background = Allen.get_radiation(nus)*Allen.get_clv(rays[0],nus)
+    background = background - (gauss_1 + gauss_2)*background.max()*6.5
     Isun = np.array([background, 0*background, 0*background, 0*background])
     if not sun_ilum:
         Isun = Isun*0
@@ -289,7 +290,7 @@ if __name__ == '__main__':
                  'parameters':parameters, 'pm':module_to_dict(pm)}
 
     # PLOT OF THE STOKES PARAMETERS
-    stokes_fil = np.loadtxt('output_velocity_20220517-103726/out/stokes_00.out', skiprows=3)
+    stokes_fil = np.loadtxt(f'{datadir}/out/stokes_00.out', skiprows=3)
     nus = stokes_fil[:,0]
     wave = 299792458/nus
     stokes_fil = stokes_fil[:,1:].transpose()
@@ -304,6 +305,38 @@ if __name__ == '__main__':
                           profiles['eps_V']/profiles['eps_I'].max()*100,
                     title=r'$\epsilon$  normaliced  in  % (B=0)'+'\n'+title, save=False, show=True, directory=f'plot_1', name=f'eps_{timestr}')
     plot_4_profiles(wave, II[0,:]*100/II[0,:].max(), II[1,:]*100/II[0,:].max(), II[2,:]*100/II[0,:].max(), II[3,:]*100/II[0,:].max(),
-                    save=False, show=False)
+                    save=False, show=True)
     plot_4_profiles(wave, stokes_fil[0]*100/stokes_fil[0].max(), stokes_fil[1]*100/stokes_fil[0].max(), stokes_fil[2]*100/stokes_fil[0].max(), stokes_fil[3]*100/stokes_fil[0].max(),
-                    title=r'$I$  normaliced  in  % (B=0)'+'\n'+title, n=1, save=False, show=True, directory=f'plot_1', name=f'I_{timestr}')
+                    save=False, show=True)
+
+    wave = wave*1e9/nn
+    ticks = [wave[nu_peak_1_indx], wave[nu_peak_2_indx]]
+    labels = [f'{wave[nu_peak_1_indx]:.2f}', f'{wave[nu_peak_2_indx]:.2f}']
+
+    length = len(wave)
+    p1 = int(length/8)
+    p3 = int(p1*7)
+
+    # plot the intensity, Q and U polarization as a function of the wavelength
+    plt.figure(figsize=(10,3.5), dpi=120)
+    plt.subplot(1,3,1)
+    plt.plot(wave[p1:p3], II[0,p1:p3]*100/II[0,:].max(), label='I', color=cm.plasma(0))
+    plt.title(r'$I/I_{c} (\%)$')
+    plt.xlabel('Wavelength [nm]')
+    # plt.ylabel('%')
+    plt.xticks(ticks, labels)
+    plt.subplot(1,3,2)
+    plt.plot(wave[p1:p3], II[1,p1:p3]*100/II[0,:].max(), label='Q', color=cm.plasma(0))
+    plt.title(r'$Q/I_{c} (\%)$')
+    plt.xlabel('Wavelength [nm]')
+    # plt.ylabel('%')
+    plt.xticks(ticks, labels)
+    plt.subplot(1,3,3)
+    plt.plot(wave[p1:p3], II[2,p1:p3]*100/II[0,:].max(), label='U', color=cm.plasma(0))
+    plt.title(r'$U/I_{c} (\%)$')
+    plt.xlabel('Wavelength [nm]')
+    # plt.ylabel('%')
+    plt.xticks(ticks, labels)
+    plt.tight_layout()
+    plt.savefig('3_2.pdf')
+    plt.show()

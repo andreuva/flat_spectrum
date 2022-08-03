@@ -132,7 +132,7 @@ if __name__ == '__main__':
     B_spherical = np.array([pm.B, pm.B_inc*np.pi/180, pm.B_az*np.pi/180])
     velocity = np.array(pm.velocity)
     especial = True
-    datadir ='output_compar_B_10.0_90.0_0.0_20220613-094529'
+    datadir ='output_compar_B_10.0_90.0_0.0_20220613-140317'
     pm.dir = datadir + '/'
 
     wave_imp, tau_imp = np.loadtxt(f'{datadir}/out/tau_00.out', skiprows=3, unpack=True)
@@ -140,10 +140,10 @@ if __name__ == '__main__':
     freq_imp, I_nlte, Q_nlte, U_nlte, V_nlte = np.loadtxt(f'{datadir}/out/stokes_00.out', skiprows=3, unpack=True)
     # define the parameters that will construct the background radiation field
     # to later compute the JKQ en both components
-    jqq_list = glob(f'{datadir}/jqq_*.pkl')
-    jqq_list.sort()
-    with open(jqq_list[0], 'rb') as file:
-        jqq = pkl.load(file)
+    # jqq_list = glob(f'{datadir}/jqq_*.pkl')
+    # jqq_list.sort()
+    # with open(jqq_list[0], 'rb') as file:
+    #     jqq = pkl.load(file)
 
     # Get Allen class instance and gamma angles
     Allen = Allen_class()
