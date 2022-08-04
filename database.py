@@ -46,33 +46,46 @@ def new_parameters(pm):
     pm.B_inc = np.arccos(np.random.uniform(0, 1))*180/np.pi
     pm.B_az = np.random.uniform(0, 360)
 
-    mu = np.random.uniform(-1,1)
-    chi = np.random.uniform(0,np.pi)
+    pm.mu = np.random.uniform(-1,1)
+    pm.chi = np.random.uniform(0,np.pi)
     # ray direction (will change with each itteration to cover all the possible cases)
-    pm.ray_out = [[mu, chi]]
+    pm.ray_out = [[pm.mu, pm.chi]]
     # amplitude of the profile
     pm.a_voigt = np.random.choice(np.logspace(0,1e-6,10000)) #  1e-6 to 0.
     pm.temp = 10**np.random.uniform(3., 5.)
 
     # construct the JKQ dictionary
-    JKQ = construct_JKQ_0()
-    JKQ[0][0] = np.random.lognormal(-5, 1.5)
-    JKQ[1][0] = np.random.uniform(-0.2, 0.2)*JKQ[0][0]
-    JKQ[2][0] = np.random.uniform(-0.2, 0.2)*JKQ[0][0]
+    pm.JKQr = construct_JKQ_0()
+    pm.JKQr[0][0] = np.random.lognormal(-5, 1.5)
+    pm.JKQr[1][0] = np.random.uniform(-0.2, 0.2)*pm.JKQr[0][0]
+    pm.JKQr[2][0] = np.random.uniform(-0.2, 0.2)*pm.JKQr[0][0]
 
-    JKQ[1][1] = np.random.uniform(-0.2, 0.2)*JKQ[0][0] + np.random.uniform(-0.2, 0.2)*JKQ[0][0]*1j
-    JKQ[2][1] = np.random.uniform(-0.2, 0.2)*JKQ[0][0] + np.random.uniform(-0.2, 0.2)*JKQ[0][0]*1j
-    JKQ[2][2] = np.random.uniform(-0.2, 0.2)*JKQ[0][0] + np.random.uniform(-0.2, 0.2)*JKQ[0][0]*1j
+    pm.JKQr[1][1] = np.random.uniform(-0.2, 0.2)*pm.JKQr[0][0] + np.random.uniform(-0.2, 0.2)*pm.JKQr[0][0]*1j
+    pm.JKQr[2][1] = np.random.uniform(-0.2, 0.2)*pm.JKQr[0][0] + np.random.uniform(-0.2, 0.2)*pm.JKQr[0][0]*1j
+    pm.JKQr[2][2] = np.random.uniform(-0.2, 0.2)*pm.JKQr[0][0] + np.random.uniform(-0.2, 0.2)*pm.JKQr[0][0]*1j
 
-    JKQ[2][-2] =      np.conjugate(JKQ[2][2])
-    JKQ[2][-1] = -1.0*np.conjugate(JKQ[2][1])
-    JKQ[1][-1] = -1.0*np.conjugate(JKQ[1][1])
+    pm.JKQr[2][-2] =      np.conjugate(pm.JKQr[2][2])
+    pm.JKQr[2][-1] = -1.0*np.conjugate(pm.JKQr[2][1])
+    pm.JKQr[1][-1] = -1.0*np.conjugate(pm.JKQr[1][1])
 
-    return JKQ, JKQ, pm
+    pm.JKQb = construct_JKQ_0()
+    pm.JKQb[0][0] = np.random.lognormal(-5, 1.5)
+    pm.JKQb[1][0] = np.random.uniform(-0.2, 0.2)*pm.JKQb[0][0]
+    pm.JKQb[2][0] = np.random.uniform(-0.2, 0.2)*pm.JKQb[0][0]
+
+    pm.JKQb[1][1] = np.random.uniform(-0.2, 0.2)*pm.JKQb[0][0] + np.random.uniform(-0.2, 0.2)*pm.JKQb[0][0]*1j
+    pm.JKQb[2][1] = np.random.uniform(-0.2, 0.2)*pm.JKQb[0][0] + np.random.uniform(-0.2, 0.2)*pm.JKQb[0][0]*1j
+    pm.JKQb[2][2] = np.random.uniform(-0.2, 0.2)*pm.JKQb[0][0] + np.random.uniform(-0.2, 0.2)*pm.JKQb[0][0]*1j
+
+    pm.JKQb[2][-2] =      np.conjugate(pm.JKQb[2][2])
+    pm.JKQb[2][-1] = -1.0*np.conjugate(pm.JKQb[2][1])
+    pm.JKQb[1][-1] = -1.0*np.conjugate(pm.JKQb[1][1])
+
+    return pm
 
 
 # Wraper to compute the Rtcoefs module with a given parameters
-def compute_profile(JKQ_1, JKQ_2, pm=pm, especial=True, jqq=None):
+def compute_profile(pm=pm, especial=True, jqq=None):
     # Initialize the conditions and rtcoefs objects
     # given a set of parameters via the parameters_rtcoefs module
     cdt = conditions(pm)
@@ -91,12 +104,12 @@ def compute_profile(JKQ_1, JKQ_2, pm=pm, especial=True, jqq=None):
 
         # reset the jqq to zero to construct from there the radiation field with the JKQ
         atoms.reset_jqq(cdt.nus_N)
-        atoms.atom.lines[0].jqq[components[0]] = JKQ_to_Jqq(JKQ_1, cdt.JS)
-        atoms.atom.lines[0].jqq[components[1]] = JKQ_to_Jqq(JKQ_2, cdt.JS)
+        atoms.atom.lines[0].jqq[components[0]] = JKQ_to_Jqq(pm.JKQr, cdt.JS)
+        atoms.atom.lines[0].jqq[components[1]] = JKQ_to_Jqq(pm.JKQb, cdt.JS)
     else:
         # Initialize the jqq and construct the dictionary
         atoms.atom.lines[0].initialize_profiles_first(cdt.nus_N)
-        atoms.atom.lines[0].jqq = JKQ_to_Jqq(JKQ_1, cdt.JS)
+        atoms.atom.lines[0].jqq = JKQ_to_Jqq(pm.JKQr, cdt.JS)
 
     # print(atoms.atom.lines[0].jqq)
     if jqq is not None:
@@ -113,7 +126,7 @@ def compute_profile(JKQ_1, JKQ_2, pm=pm, especial=True, jqq=None):
 
     # Compute the emision coefficients from the Source functions
     profiles = {}
-    profiles['nus'] = cdt.nus
+    profiles['nus'] = cdt.nus.copy()
     profiles['eps_I'] = sf[0]*(kk[0][0] + cts.vacuum)
     profiles['eps_Q'] = sf[1]*(kk[0][0] + cts.vacuum)
     profiles['eps_U'] = sf[2]*(kk[0][0] + cts.vacuum)
@@ -128,7 +141,7 @@ def compute_profile(JKQ_1, JKQ_2, pm=pm, especial=True, jqq=None):
     profiles['rho_U'] = kk[1][1]*(kk[0][0] + cts.vacuum)
     profiles['rho_V'] = kk[1][2]*(kk[0][0] + cts.vacuum)
 
-    return profiles, profiles['nus'], cdt.orays
+    return profiles
 
 
 def master_work(nsamples, filename, write_frequency=100):
@@ -199,8 +212,6 @@ def master_work(nsamples, filename, write_frequency=100):
 
 def slave_work(pm):
 
-    module_to_dict = lambda module: {k: getattr(module, k) for k in dir(module) if not k.startswith('_')}
-
     while True:
         # send the ready signal to the master
         comm.send(None, dest=0, tag=tags.READY)
@@ -216,18 +227,16 @@ def slave_work(pm):
             success = True
             try:
                 # create a new parameters
-                JKQ_1, JKQ_2, pm = new_parameters(pm)
+                pm = new_parameters(pm)
                 # compute the profile
-                profiles = compute_profile(JKQ_1, JKQ_2, pm=pm)
-                pm.JKQ_1 = JKQ_1
-                pm.JKQ_2 = JKQ_2
+                profiles = compute_profile(pm=pm)
             except:
                 success = False
                 print('-'*50)
                 print("Error in the computation of the profile")
                 print("The parameters are:")
-                print("JKQ_1:", JKQ_1)
-                print("JKQ_2:", JKQ_2)
+                print("JKQ_red:", pm.JKQr)
+                print("JKQ_blue:", pm.JKQb)
                 print("B:", pm.B)
                 print("pm:", pm)
                 print("The error is:")
@@ -235,7 +244,10 @@ def slave_work(pm):
                 print('-'*50)
                 profiles = None
 
-            parameters = module_to_dict(pm)
+            parameters = {'JKQr':pm.JKQr, 'JKQb':pm.JKQb,
+                          'B':pm.B, 'B_inc':pm.B_inc, 'B_az':pm.B_az,
+                          'mu':pm.mu, 'chi':pm.chi,
+                          'a_voigt':pm.a_voigt, 'temp':pm.temp}
 
             # Send the results to the master
             dataToSend = {'index': task_index, 'success': success, 'profiles': profiles, 
@@ -265,14 +277,13 @@ if __name__ == '__main__':
         parser = argparse.ArgumentParser(description='Generate synthetic models and solve NLTE problem')
         parser.add_argument('--n', '--nmodels', default=1000, type=int, metavar='NMODELS', help='Number of models')
         parser.add_argument('--f', '--freq', default=100, type=int, metavar='FREQ', help='Frequency of model write')
-        parser.add_argument('--sav', '--savedir', default=f'data_{time.strftime("%Y%m%d_%H%M%S")}/', metavar='SAVEDIR', help='directory for output files')
+        parser.add_argument('--sav', '--savedir', default=f'database', metavar='SAVEDIR', help='directory for output files')
 
         parsed = vars(parser.parse_args())
+        parsed['sav'] = os.path.join(parsed['sav'], f'data_{time.strftime("%Y%m%d_%H%M%S")}/')
 
         if not os.path.exists(parsed['sav']):
             os.makedirs(parsed['sav'])
-        # else:
-        #     os.system(f'rm -rf {parsed["sav"]}')
 
         master_work(parsed['n'], parsed['sav'], parsed['f'])
     else:
