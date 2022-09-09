@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import parameters_JKQ as params
 
-JK00_fil = np.loadtxt('output_filament_B10hor_20220503-105153/out/real_JK00_finished.out')
-JK20_fil = np.loadtxt('output_filament_B10hor_20220503-105153/out/real_JK20_finished.out')
+JK00_fil = np.loadtxt('output_compar_B_10.0_90.0_0.0_20220512-122617/out/real_JK00_finished.out')
+JK20_fil = np.loadtxt('output_compar_B_10.0_90.0_0.0_20220512-122617/out/real_JK20_finished.out')
 
 heights = np.linspace(params.z0, params.zf, params.zn)
 wave = JK00_fil[0,:]
@@ -24,8 +24,8 @@ plt.xlabel('Wavelength [nm]')
 
 
 # PLOT OF THE STOKES PARAMETERS
-stokes_fil = np.loadtxt('output_filament_B10hor_20220503-105153/out/stokes_00.out', skiprows=3)
-stokes_prom = np.loadtxt('output_prominence_B10vert_20220503-105318/out/stokes_00.out', skiprows=3)
+stokes_fil = np.loadtxt('output_compar_B_10.0_90.0_0.0_20220512-122617/out/stokes_00.out', skiprows=3)
+stokes_prom = np.loadtxt('output_compar_B_10.0_45.0_0.0_20220621-125328/out/stokes_00.out', skiprows=3)
 
 stokes_fil = stokes_fil[:,1:].transpose()
 stokes_prom = stokes_prom[:,1:].transpose()

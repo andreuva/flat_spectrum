@@ -132,7 +132,7 @@ if __name__ == '__main__':
     B_spherical = np.array([pm.B, pm.B_inc*np.pi/180, pm.B_az*np.pi/180])
     velocity = np.array(pm.velocity)
     especial = True
-    datadir ='output_compar_B_10.0_90.0_0.0_20220613-140317'
+    datadir ='output_compar_B_10.0_90.0_0.0_20220613-094529'
     pm.dir = datadir + '/'
 
     wave_imp, tau_imp = np.loadtxt(f'{datadir}/out/tau_00.out', skiprows=3, unpack=True)
@@ -324,7 +324,10 @@ if __name__ == '__main__':
     for i,jkq in enumerate(JK00_fil/JK00_fil[0,0]):
         if i not in lay_show:
             continue
-        plt.plot(wave[p1:p3], jkq[p1:p3], linewidth=2, color=cm.plasma(i/10.0), label=fr'$\tau$={tau_prof.max()-tau[i]:1.2f}')
+        comp_label = fr'$\tau$={tau_prof.max()-tau[i]:1.2f}'
+        if i == 0:
+            comp_label = fr'$\tau$=2.00'
+        plt.plot(wave[p1:p3], jkq[p1:p3], linewidth=2, color=cm.plasma(i/10.0), label=comp_label)
     plt.axhline(y=jkq[-1], color='k', linestyle='--')
     plt.axhline(y=JKQ_1[0][0].real/JK00_fil[0,0], color='b', linestyle='--')
     plt.axhline(y=JKQ_2[0][0].real/JK00_fil[0,0], color='r', linestyle='--')
