@@ -67,7 +67,7 @@ analytical_tau, analytical_intensity = np.loadtxt(f'{pm.basedir}peaks_tau_analyt
 
 plt.subplot(1,2,2)
 plt.plot(tau_max, (intensity_red-continuum)/(intensity_blue-continuum), color=cm.plasma(0/(len(taus)-1)), label='self-consistent NLTE')
-plt.plot(analytical_tau-0.25, analytical_intensity, color=cm.plasma(4/(len(taus))), label='analytical')
+plt.plot(analytical_tau, analytical_intensity, color=cm.plasma(4/(len(taus))), label='analytical')
 plt.ylim(0, 8)
 plt.xlabel(r'$\tau$')
 plt.ylabel('$I_r/I_b$')

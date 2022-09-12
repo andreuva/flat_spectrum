@@ -309,7 +309,7 @@ if __name__ == '__main__':
     JK20_fil = JK20_fil[1:,:]
     JK21_fil = JK20_fil[1:,:]
 
-    lay_show = [0, 2, 5, 7, 9]
+    lay_show = 9 - np.array([0, 2, 5, 7, 9])
     color_codes = ['#d9480f', '#5c940d', '#1864ab', '#ae3ec9', '#e03131']
     colors = {lay_show[i]: color_codes[i] for i in range(len(lay_show))}
 
@@ -321,14 +321,14 @@ if __name__ == '__main__':
 
     plt.figure(figsize=(10,3.5), dpi=120)
     plt.subplot(1,2,1)
-    for i,jkq in enumerate(JK00_fil/JK00_fil[0,0]):
-        if i not in lay_show:
-            continue
+    for i in lay_show:
         comp_label = fr'$\tau$={tau_prof.max()-tau[i]:1.2f}'
         if i == 0:
             comp_label = fr'$\tau$=2.00'
-        plt.plot(wave[p1:p3], jkq[p1:p3], linewidth=2, color=cm.plasma(i/10.0), label=comp_label)
-    plt.axhline(y=jkq[-1], color='k', linestyle='--')
+        plt.plot(wave[p1:p3], JK00_fil[i,p1:p3]/JK00_fil[0,0], linewidth=2, color=cm.plasma((9-i)/10.0), label=comp_label)
+
+    print(9-lay_show)
+    plt.axhline(y=JK00_fil[i,-1]/JK00_fil[0,0], color='k', linestyle='--')
     plt.axhline(y=JKQ_1[0][0].real/JK00_fil[0,0], color='b', linestyle='--')
     plt.axhline(y=JKQ_2[0][0].real/JK00_fil[0,0], color='r', linestyle='--')
     plt.title(r'$J^0_0$')
@@ -338,11 +338,10 @@ if __name__ == '__main__':
 
 
     plt.subplot(1,2,2)
-    for i,jkq in enumerate(JK20_fil):
-        if i not in lay_show:
-            continue
-        plt.plot(wave[p1:p3], jkq[p1:p3]/JK00_fil[i,p1:p3], linewidth=2, color=cm.plasma(i/10.0), label=fr'$\tau$={tau[i]/1e8:1.4f}')
-    plt.axhline(y=jkq[-1]/JK00_fil[0,0], color='k', linestyle='--')
+    JK20_plot = JK20_fil[::-1]
+    for i in lay_show:
+        plt.plot(wave[p1:p3], JK20_fil[i,p1:p3]/JK00_fil[i,p1:p3], linewidth=2, color=cm.plasma((9-i)/10.0), label=fr'$\tau$={tau[i]/1e8:1.4f}')
+    plt.axhline(y=JK20_fil[i,-1]/JK00_fil[0,0], color='k', linestyle='--')
     plt.axhline(y=JKQ_1[2][0].real/JK00_fil[0,0], color='b', linestyle='--')
     plt.axhline(y=JKQ_2[2][0].real/JK00_fil[0,0], color='r', linestyle='--')
     plt.title(r'$J^2_0/J^0_0$')
