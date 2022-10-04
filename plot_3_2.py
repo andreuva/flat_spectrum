@@ -10,6 +10,10 @@ from plot_utils import plot_4_profiles, plot_quantity
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.rcParams['mathtext.fontset'] = 'stix'
+matplotlib.rcParams['font.family'] = 'STIXGeneral'
+matplotlib.rcParams['font.size'] = 16
 from tqdm import tqdm
 import pickle as pkl
 import time
@@ -318,24 +322,23 @@ if __name__ == '__main__':
     p3 = int(p1*7)
 
     # plot the intensity, Q and U polarization as a function of the wavelength
-    plt.figure(figsize=(10,3.5), dpi=120)
+    plt.figure(figsize=(13,4), dpi=200)
     plt.subplot(1,3,1)
-    plt.plot(wave[p1:p3], II[0,p1:p3]*100/II[0,:].max(), label='I', color=cm.plasma(0))
-    plt.title(r'$I/I_{c} (\%)$')
+    plt.plot(wave[p1:p3], II[0,p1:p3]/II[0,:].max(), label='I', color=cm.plasma(0))
+    plt.ylabel(r'$I/I_{c}$')
     plt.xlabel('Wavelength [nm]')
-    # plt.ylabel('%')
     plt.xticks(ticks, labels)
+
     plt.subplot(1,3,2)
     plt.plot(wave[p1:p3], II[1,p1:p3]*100/II[0,:].max(), label='Q', color=cm.plasma(0))
-    plt.title(r'$Q/I_{c} (\%)$')
+    plt.ylabel(r'$Q/I_{c} (\%)$')
     plt.xlabel('Wavelength [nm]')
-    # plt.ylabel('%')
     plt.xticks(ticks, labels)
+
     plt.subplot(1,3,3)
     plt.plot(wave[p1:p3], II[2,p1:p3]*100/II[0,:].max(), label='U', color=cm.plasma(0))
-    plt.title(r'$U/I_{c} (\%)$')
+    plt.ylabel(r'$U/I_{c} (\%)$')
     plt.xlabel('Wavelength [nm]')
-    # plt.ylabel('%')
     plt.xticks(ticks, labels)
     plt.tight_layout()
     plt.savefig('3_2.pdf')

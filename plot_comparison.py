@@ -14,6 +14,10 @@ from tqdm import tqdm
 import pickle as pkl
 import time
 from glob import glob
+import matplotlib
+matplotlib.rcParams['mathtext.fontset'] = 'stix'
+matplotlib.rcParams['font.family'] = 'STIXGeneral'
+matplotlib.rcParams['font.size'] = 16
 
 
 # Function that computes the unit 3D vector from the inclination and the azimuth
@@ -319,7 +323,7 @@ if __name__ == '__main__':
     tau = (heights-pm.z0)/(pm.zf-pm.z0)*tau_prof.max()
     tau[0] += 0.01
 
-    plt.figure(figsize=(10,3.5), dpi=120)
+    plt.figure(figsize=(15,5), dpi=200)
     plt.subplot(1,2,1)
     for i in lay_show:
         comp_label = fr'$\tau$={tau_prof.max()-tau[i]:1.2f}'
@@ -331,7 +335,7 @@ if __name__ == '__main__':
     plt.axhline(y=JK00_fil[i,-1]/JK00_fil[0,0], color='k', linestyle='--')
     plt.axhline(y=JKQ_1[0][0].real/JK00_fil[0,0], color='b', linestyle='--')
     plt.axhline(y=JKQ_2[0][0].real/JK00_fil[0,0], color='r', linestyle='--')
-    plt.title(r'$J^0_0$')
+    plt.ylabel(r'$J^0_0/{J^0_0}_c$')
     plt.xlabel('Wavelength [nm]')
     plt.legend(loc='upper left')
     plt.xticks(ticks, labels)
@@ -344,7 +348,7 @@ if __name__ == '__main__':
     plt.axhline(y=JK20_fil[i,-1]/JK00_fil[0,0], color='k', linestyle='--')
     plt.axhline(y=JKQ_1[2][0].real/JK00_fil[0,0], color='b', linestyle='--')
     plt.axhline(y=JKQ_2[2][0].real/JK00_fil[0,0], color='r', linestyle='--')
-    plt.title(r'$J^2_0/J^0_0$')
+    plt.ylabel(r'$J^2_0/{J^0_0}_c$')
     # plt.ylim(0, jkq[-1]/JK00_fil[0,0]*1.1)
     plt.xlabel('Wavelength [nm]')
     plt.xticks(ticks, labels)
@@ -387,21 +391,21 @@ if __name__ == '__main__':
     plt.show()
 
     # PLOT OF THE STOKES PARAMETERS
-    plt.figure(figsize=(10,3.5), dpi=120)
+    plt.figure(figsize=(15,5), dpi=180)
     plt.subplot(1,2,1)
-    plt.plot(wave[p1:p3], I_nlte[p1:p3]/I_nlte[0] , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
+    plt.plot(wave[p1:p3], I_nlte[p1:p3]/I_nlte[0], linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
     plt.plot(wave[p1:p3], II[0,p1:p3]/I_nlte[0], linewidth=2, color=cm.plasma(8/10.0), label=fr'Constant property slab')
     plt.ylim(0, (I_nlte/I_nlte[0]).max()*1.1)
     plt.legend(loc='lower left')
-    plt.title(r'$I$')
+    plt.ylabel(r'$I/I_c$')
     plt.xlabel('Wavelength [nm]')
     plt.xticks(ticks, labels)
 
     plt.subplot(1,2,2)
-    plt.plot(wave[p1:p3], Q_nlte[p1:p3]/I_nlte[p1:p3] , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
-    plt.plot(wave[p1:p3], -II[1,p1:p3]/I_nlte[p1:p3] , linewidth=2, color=cm.plasma(8/10.0), label=fr'Const. slab')
+    plt.plot(wave[p1:p3], Q_nlte[p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
+    plt.plot(wave[p1:p3], -II[1,p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(8/10.0), label=fr'Const. slab')
     # plt.legend()
-    plt.title(r'$Q/I$')
+    plt.ylabel(r'$Q/I_c$ (%)')
     plt.xlabel('Wavelength [nm]')
     plt.xticks(ticks, labels)
 
