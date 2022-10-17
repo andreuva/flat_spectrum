@@ -10,7 +10,7 @@ ray_out = [[0.05, 0.]]             # List of mu,phi for emergent radiation direc
 
 v_dop = 5.0*1e5            # Dopler velocity (not the actual one) [cm/s]
 a_voigt = 1e-2             # voigt damping parameter of the line profile
-n_dens = 1.16e4 #5.8e4     # Density wich defines the optical thickness [cm^-3]
+n_dens = 5.16e3 #5.8e4     # Density wich defines the optical thickness [cm^-3]
 temp = 1e4                 # Temperature of the slab [K]
 Trad = 6e3                 # Black body star temperature for radiation [K]
 

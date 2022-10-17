@@ -136,7 +136,7 @@ if __name__ == '__main__':
     B_spherical = np.array([pm.B, pm.B_inc*np.pi/180, pm.B_az*np.pi/180])
     velocity = np.array(pm.velocity)
     especial = True
-    datadir = 'output_compar_B_0.0_90.0_0.0_z7.5mM_20221011-174601'
+    datadir = 'output_compar_B_0.0_90.0_0.0_z100.0mM_20221017-084329'
     pm.dir = datadir + '/'
 
     wave_imp, tau_imp = np.loadtxt(f'{datadir}/out/tau_00.out', skiprows=3, unpack=True)
