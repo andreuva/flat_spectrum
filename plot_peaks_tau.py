@@ -72,20 +72,25 @@ ir_ib = (intensity_red-continuum)/(intensity_blue-continuum)
 interp_consistent = np.interp(analytical_tau, tau_max, ir_ib)
 
 ax = plt.subplot(1,2,2)
-ln1 = ax.plot(tau_max, (intensity_red-continuum)/(intensity_blue-continuum), color=cm.plasma(0/(len(taus)-1)), label='self-consistent NLTE')
-ln2 = ax.plot(analytical_tau, analytical_intensity, color=cm.plasma(4/(len(taus))), label='analytical')
+ln1 = ax.plot(ir_ib, tau_max, color=cm.plasma(0/(len(taus)-1)), label='self-consistent NLTE')
+ln2 = ax.plot(analytical_intensity, analytical_tau, color=cm.plasma(4/(len(taus))), label='analytical')
 # ratio betwen peaks (consisten-analytical)/consistent
-ax2 = ax.twinx()
-ln3 = ax2.plot(analytical_tau, (interp_consistent-analytical_intensity)/ interp_consistent, color='k', linestyle='--', label='ratio')
+ax2 = ax.twiny()
+# ln3 = ax2.plot((interp_consistent-analytical_intensity)/ interp_consistent, analytical_tau, color='k', linestyle='--', label='ratio')
+ln3 = ax2.plot(analytical_intensity-interp_consistent, analytical_tau, color='k', linestyle='--', label='ratio')
 
-ax.set_ylim (0, 8)
-ax.set_xlabel(r'$\tau$')
-ax.set_ylabel('$I_r/I_b$')
-ax2.set_ylabel(r'$\frac{I_r^c-I_r^a}{I_r^c}$')
+# ax.set_ylim (0, 8)
+ax.set_ylabel(r'$\tau$')
+ax.set_xlabel('$I_r/I_b$')
+# ax.set_xscale('log')
+ax.set_yscale('log')
+# ax2.set_ylabel(r'$\frac{I_r^c-I_r^a}{I_r^c}$')
+ax2.set_xlabel(r'$\Delta ratio = (I_r/I_b)-(I_r/I_b)_{RT}$')
+
 
 lns = ln1+ln2+ln3
 labs = [l.get_label() for l in lns]
-ax.legend(lns, labs, loc='right')
+ax.legend(lns, labs, loc='best')
 plt.tight_layout()
-plt.savefig('I_peaks_tau.pdf')
+# plt.savefig('I_peaks_tau.pdf')
 plt.show()

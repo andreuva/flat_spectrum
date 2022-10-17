@@ -136,7 +136,7 @@ if __name__ == '__main__':
     B_spherical = np.array([pm.B, pm.B_inc*np.pi/180, pm.B_az*np.pi/180])
     velocity = np.array(pm.velocity)
     especial = True
-    datadir ='output_compar_B_10.0_90.0_0.0_20220613-094529'
+    datadir = 'output_compar_B_0.0_90.0_0.0_z7.5mM_20221011-174601'
     pm.dir = datadir + '/'
 
     wave_imp, tau_imp = np.loadtxt(f'{datadir}/out/tau_00.out', skiprows=3, unpack=True)
@@ -331,7 +331,7 @@ if __name__ == '__main__':
             comp_label = fr'$\tau$=2.00'
         plt.plot(wave[p1:p3], JK00_fil[i,p1:p3]/JK00_fil[0,0], linewidth=2, color=cm.plasma((9-i)/10.0), label=comp_label)
 
-    print(9-lay_show)
+    # print(9-lay_show)
     plt.axhline(y=JK00_fil[i,-1]/JK00_fil[0,0], color='k', linestyle='--')
     plt.axhline(y=JKQ_1[0][0].real/JK00_fil[0,0], color='b', linestyle='--')
     plt.axhline(y=JKQ_2[0][0].real/JK00_fil[0,0], color='r', linestyle='--')
@@ -363,31 +363,31 @@ if __name__ == '__main__':
     # plt.xlabel('Wavelength [nm]')
 
     plt.tight_layout()
-    plt.savefig('3_3_1.pdf')
+    # plt.savefig('3_3_1.pdf')
     plt.show()
 
 
     # PLOT OF THE STOKES PARAMETERS
     plt.figure(figsize=(10,3.5), dpi=120)
     plt.subplot(1,2,1)
-    plt.plot(wave[p1:p3], I_nlte[p1:p3]/I_nlte[0] , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
-    plt.plot(wave[p1:p3], II[0,p1:p3]/I_nlte[0], linewidth=2, color=cm.plasma(8/10.0), label=fr'Constant property slab')
-    plt.ylim(0, (I_nlte/I_nlte[0]).max()*1.1)
+    plt.plot(wave[p1:p3], I_nlte[p1:p3] , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
+    plt.plot(wave[p1:p3], II[0,p1:p3], linewidth=2, color=cm.plasma(8/10.0), label=fr'Constant property slab')
+    # plt.ylim(0, (I_nlte/I_nlte[0]).max()*1.1)
     plt.legend(loc='lower left')
     plt.title(r'$I$')
     plt.xlabel('Wavelength [nm]')
     plt.xticks(ticks, labels)
 
     plt.subplot(1,2,2)
-    plt.plot(wave[p1:p3], Q_nlte[p1:p3]/I_nlte[0] , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
-    plt.plot(wave[p1:p3], -II[1,p1:p3]/I_nlte[0] , linewidth=2, color=cm.plasma(8/10.0), label=fr'Const. slab')
+    plt.plot(wave[p1:p3], Q_nlte[p1:p3] , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
+    plt.plot(wave[p1:p3], II[1,p1:p3] , linewidth=2, color=cm.plasma(8/10.0), label=fr'Const. slab')
     # plt.legend()
     plt.title(r'$Q$')
     plt.xlabel('Wavelength [nm]')
     plt.xticks(ticks, labels)
 
     plt.tight_layout()
-    plt.savefig('3_3_2.pdf')
+    # plt.savefig('3_3_2.pdf')
     plt.show()
 
     # PLOT OF THE STOKES PARAMETERS
@@ -410,5 +410,5 @@ if __name__ == '__main__':
     plt.xticks(ticks, labels)
 
     plt.tight_layout()
-    plt.savefig('3_3_2I.pdf')
+    # plt.savefig('3_3_2I.pdf')
     plt.show()
