@@ -83,8 +83,54 @@ class Allen_class():
                       the Sun from a point at the height given in the
                       input
         """
+        self.h = h
         self.sinG = c.R_sun / (c.R_sun + h)
         self.cosG = np.sqrt(1. - self.sinG*self.sinG)
+
+    def get_ab_coeffs(self, h):
+        """ Get the CLV coefficients for a given height.
+            Input: height [cm]
+            Output: None
+            Internal: Defines the CLV coefficients a and b
+        """
+        self.get_gamma(h)
+        cg = self.cosG
+        cg2 = cg*cg
+        cg3 = cg2*cg
+
+        sg = self.sinG
+
+        self.a0 = (1-cg)
+        self.a1 = cg - 0.5 - 0.5*cg2/sg*np.log((1+sg)/cg)
+        self.a2 = (cg+2)*(cg-1)/(3*(cg+1))
+
+        self.b0 = 1/3 * (1-cg3)
+        self.b1 = 1/24* (8*cg3 - 3*cg2 -2) - 1/8* cg3*cg/sg*np.log((1+sg)/cg)
+        self.b2 = (cg-1)*(3*cg3 + 6*cg2 + 4*cg + 2)/(15*(cg+1))
+
+    def get_anisotropy(self, nu, h):
+        """ Get the anisotropy function for a given height.
+            Input: None
+            Output: None
+            Internal: Defines the anisotropy function
+        """
+        self.get_ab_coeffs(h)
+        I_0 = self.get_radiation(nu)
+        # Convert input to lambda [micron]
+        lamb = c.c*1e4/nu
+        # u1 and u2 from pre-defined interpolation functions
+        u1 = self.fu1(lamb)
+        u2 = self.fu2(lamb)
+
+        J_nu = 0.5*I_0*(self.a0 + self.a1*u1 + self.a2*u2)
+        K_nu = 0.5*I_0*(self.b0 + self.b1*u1 + self.b2*u2)
+
+        self.wnu_JK = (3*K_nu-J_nu)/(2*J_nu)
+
+        J00 = J_nu
+        J20 = J00*self.wnu_JK/np.sqrt(2)
+
+        return self.wnu_JK, J00, J20
 
     def get_radiation(self,nus):
         """ Get radiation intensity from Allen

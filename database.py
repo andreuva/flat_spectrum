@@ -5,6 +5,7 @@ from RTcoefs import RTcoefs
 from atom import ESE
 from tensors import JKQ_to_Jqq, construct_JKQ_0
 import constants as cts
+from allen import Allen_class
 
 # General modules
 from mpi4py import MPI
@@ -36,52 +37,52 @@ def dump_data(profiles, parameters, filename, task_index=None):
         pkl.dump(parameters[0:task_index], f)
 
 
-def new_parameters(pm):
+class parameter_generator:
+    def __init__(self, pm):
+        self.pm_original = pm
+        self.Allen = Allen_class()
+        # Initialize the conditions objects given the initial set of parameters
+        cdt = conditions(pm)
+        B = np.array([pm.B, pm.B_inc, pm.B_az])
+        # Initialize the ESE object and computing the initial populations (equilibrium = True)
+        atoms = ESE(cdt.v_dop, cdt.a_voigt, B, cdt.temp, cdt.JS, True, 0, especial=True)
+        # Retrieve the resonance wavelength of each line in the atom
+        self.nus = []
+        for line in atoms.atom.lines:
+            self.nus.append(line.nu)
 
-    # B field will change with each itteration to cover all the possible cases
-    pm.B = np.random.normal(10, 100)
-    while pm.B < 0:
+    def new_parameters(self):
+        pm = self.pm_original
+        # B field will change with each itteration to cover all the possible cases
         pm.B = np.random.normal(10, 100)
+        while pm.B < 0:
+            pm.B = np.random.normal(10, 100)
 
-    pm.B_inc = np.arccos(np.random.uniform(0, 1))*180/np.pi
-    pm.B_az = np.random.uniform(0, 360)
+        pm.B_inc = np.arccos(np.random.uniform(0, 1))*180/np.pi
+        pm.B_az = np.random.uniform(0, 360)
 
-    pm.mu = np.random.uniform(-1,1)
-    pm.chi = np.random.uniform(0,np.pi)
-    # ray direction (will change with each itteration to cover all the possible cases)
-    pm.ray_out = [[pm.mu, pm.chi]]
-    # amplitude of the profile
-    pm.a_voigt = np.random.choice(np.logspace(0,1e-6,10000)) #  1e-6 to 0.
-    pm.temp = 10**np.random.uniform(3., 5.)
+        pm.mu = np.random.uniform(-1,1)
+        pm.chi = np.random.uniform(0,np.pi)
+        # ray direction (will change with each itteration to cover all the possible cases)
+        pm.ray_out = [[pm.mu, pm.chi]]
+        pm.z0 = 10**np.random.uniform(3, 6)
+        pm.zf = pm.z0 + pm.z0*1e-3
 
-    # construct the JKQ dictionary
-    pm.JKQr = construct_JKQ_0()
-    pm.JKQr[0][0] = np.random.lognormal(-5, 1.5)
-    pm.JKQr[1][0] = np.random.uniform(-0.2, 0.2)*pm.JKQr[0][0]
-    pm.JKQr[2][0] = np.random.uniform(-0.2, 0.2)*pm.JKQr[0][0]
+        # amplitude of the profile
+        # pm.a_voigt = np.random.choice(np.logspace(0,1e-6,10000)) #  1e-6 to 0.
+        # pm.temp = 10**np.random.uniform(3., 5.)
 
-    pm.JKQr[1][1] = np.random.uniform(-0.2, 0.2)*pm.JKQr[0][0] + np.random.uniform(-0.2, 0.2)*pm.JKQr[0][0]*1j
-    pm.JKQr[2][1] = np.random.uniform(-0.2, 0.2)*pm.JKQr[0][0] + np.random.uniform(-0.2, 0.2)*pm.JKQr[0][0]*1j
-    pm.JKQr[2][2] = np.random.uniform(-0.2, 0.2)*pm.JKQr[0][0] + np.random.uniform(-0.2, 0.2)*pm.JKQr[0][0]*1j
+        # construct the JKQ dictionary
+        # Get Allen gamma angles
+        self.Allen.get_gamma(pm.z0)
 
-    pm.JKQr[2][-2] =      np.conjugate(pm.JKQr[2][2])
-    pm.JKQr[2][-1] = -1.0*np.conjugate(pm.JKQr[2][1])
-    pm.JKQr[1][-1] = -1.0*np.conjugate(pm.JKQr[1][1])
+        pm.JKQ = []
+        pm.wnu = np.zeros(len(self.nus))
+        for i,nu in enumerate(self.nus):
+            pm.JKQ.append(construct_JKQ_0())
+            pm.wnu[i], pm.JKQ[-1][0][0], pm.JKQ[-1][2][0] = self.Allen.get_anisotropy(nu, pm.z0)
 
-    pm.JKQb = construct_JKQ_0()
-    pm.JKQb[0][0] = np.random.lognormal(-5, 1.5)
-    pm.JKQb[1][0] = np.random.uniform(-0.2, 0.2)*pm.JKQb[0][0]
-    pm.JKQb[2][0] = np.random.uniform(-0.2, 0.2)*pm.JKQb[0][0]
-
-    pm.JKQb[1][1] = np.random.uniform(-0.2, 0.2)*pm.JKQb[0][0] + np.random.uniform(-0.2, 0.2)*pm.JKQb[0][0]*1j
-    pm.JKQb[2][1] = np.random.uniform(-0.2, 0.2)*pm.JKQb[0][0] + np.random.uniform(-0.2, 0.2)*pm.JKQb[0][0]*1j
-    pm.JKQb[2][2] = np.random.uniform(-0.2, 0.2)*pm.JKQb[0][0] + np.random.uniform(-0.2, 0.2)*pm.JKQb[0][0]*1j
-
-    pm.JKQb[2][-2] =      np.conjugate(pm.JKQb[2][2])
-    pm.JKQb[2][-1] = -1.0*np.conjugate(pm.JKQb[2][1])
-    pm.JKQb[1][-1] = -1.0*np.conjugate(pm.JKQb[1][1])
-
-    return pm
+        return pm
 
 
 # Wraper to compute the Rtcoefs module with a given parameters
@@ -102,14 +103,23 @@ def compute_profile(pm=pm, especial=True, jqq=None):
         # Initialize the jqq and construct the dictionary
         atoms.atom.lines[0].initialize_profiles_first(cdt.nus_N)
 
+        for line in atoms.atom.lines:
+            line.initialize_profiles_first(cdt.nus_N)
+
         # reset the jqq to zero to construct from there the radiation field with the JKQ
         atoms.reset_jqq(cdt.nus_N)
-        atoms.atom.lines[0].jqq[components[0]] = JKQ_to_Jqq(pm.JKQr, cdt.JS)
-        atoms.atom.lines[0].jqq[components[1]] = JKQ_to_Jqq(pm.JKQb, cdt.JS)
+
+        atoms.atom.lines[0].jqq[components[0]] = JKQ_to_Jqq(pm.JKQ[0], cdt.JS)
+        atoms.atom.lines[0].jqq[components[1]] = JKQ_to_Jqq(pm.JKQ[0], cdt.JS)
+        for i,line in enumerate(atoms.atom.lines[1:]):
+            line.jqq = JKQ_to_Jqq(pm.JKQ[i+1], cdt.JS)
+
     else:
         # Initialize the jqq and construct the dictionary
-        atoms.atom.lines[0].initialize_profiles_first(cdt.nus_N)
-        atoms.atom.lines[0].jqq = JKQ_to_Jqq(pm.JKQr, cdt.JS)
+        for line in atoms.atom.lines:
+            line.initialize_profiles_first(cdt.nus_N)
+        for i,line in enumerate(atoms.atom.lines):
+            line.jqq = JKQ_to_Jqq(pm.JKQ[i], cdt.JS)
 
     # print(atoms.atom.lines[0].jqq)
     if jqq is not None:
@@ -212,6 +222,9 @@ def master_work(nsamples, filename, write_frequency=100):
 
 def slave_work(pm):
 
+    # Initialize the parameters generator class
+    param_gen = parameter_generator(pm)
+    
     while True:
         # send the ready signal to the master
         comm.send(None, dest=0, tag=tags.READY)
@@ -227,27 +240,27 @@ def slave_work(pm):
             success = True
             try:
                 # create a new parameters
-                pm = new_parameters(pm)
+                pm = param_gen.new_parameters()
                 # compute the profile
                 profiles = compute_profile(pm=pm)
             except:
                 success = False
                 print('-'*50)
                 print("Error in the computation of the profile")
-                print("The parameters are:")
-                print("JKQ_red:", pm.JKQr)
-                print("JKQ_blue:", pm.JKQb)
-                print("B:", pm.B)
-                print("pm:", pm)
-                print("The error is:")
                 print(traceback.format_exc())
                 print('-'*50)
+                print("The parameters are:")
+                print("B:", pm.B)
+                print("pm:", pm)
+                print('-'*50)
+                for jkq in pm.JKQ:
+                    print("JKQ:", jkq)
+                print('-'*50)
                 profiles = None
+                exit()
 
-            parameters = {'JKQr':pm.JKQr, 'JKQb':pm.JKQb,
-                          'B':pm.B, 'B_inc':pm.B_inc, 'B_az':pm.B_az,
-                          'mu':pm.mu, 'chi':pm.chi,
-                          'a_voigt':pm.a_voigt, 'temp':pm.temp}
+            parameters = {'h':pm.z0, 'B':pm.B, 'B_inc':pm.B_inc, 'B_az':pm.B_az,
+                          'mu':pm.mu, 'chi':pm.chi}
 
             # Send the results to the master
             dataToSend = {'index': task_index, 'success': success, 'profiles': profiles, 

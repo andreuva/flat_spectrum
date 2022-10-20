@@ -1032,7 +1032,7 @@ class HeI_1083():
         self.terms = []
 
         # Internal switch
-        not_twoterm = False
+        not_twoterm = True
 
         # Add the two terms. Energy cm^-1
         self.terms.append(term_class(0.0,1.0,      [1.], \
@@ -1064,7 +1064,7 @@ class HeI_1083():
         self.lines.append(line_class(self.multiterm,[self.terms, (0, 1), (0, 1), \
                                      1.0216e+07, \
                                      125, 55, 15., 2.5], JS))
-#                                     75, 45, 15., 2.5], JS))
+#                                    75, 45, 15., 2.5], JS))
 #                                    15,  5, 15., 2.5], JS))
         if not_twoterm:
             self.lines.append(line_class(self.multiterm,[self.terms, (0, 3), (0, 3), \
