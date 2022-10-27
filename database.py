@@ -51,7 +51,7 @@ def new_parameters(pm):
     # ray direction (will change with each itteration to cover all the possible cases)
     pm.ray_out = [[pm.mu, pm.chi]]
     # amplitude of the profile
-    pm.a_voigt = np.random.choice(np.logspace(0,1e-6,10000)) #  1e-6 to 0.
+    pm.a_voigt = 10**np.random.uniform(-1, -10) #  1e-6 to 0.
     pm.temp = 10**np.random.uniform(3., 5.)
 
     # construct the JKQ dictionary
