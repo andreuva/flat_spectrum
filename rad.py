@@ -41,7 +41,7 @@ class RTE:
 
         return (2.*c.h*numc*numc*nus)/(np.exp(arg) - 1.)
 
-    def make_IC(self, nus, ray, T, Allen):
+    def make_IC(self, nus, ray, Allen):
         """ Get continuum radiation
         """
 
@@ -51,7 +51,7 @@ class RTE:
        #self.stokes[0] = self.bb(T,nus) * Allen.get_clv(ray,nus)
         self.stokes[0] = Allen.get_radiation(nus) * Allen.get_clv(ray,nus)
 
-    def make_IC_velocity(self, nus, ray, T, Allen, velocity):
+    def make_IC_velocity(self, nus, ray, Allen, velocity):
         """ Get continuum radiation
         """
 

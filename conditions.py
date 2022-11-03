@@ -159,7 +159,6 @@ class conditions:
         self.n_dens = parameters.n_dens
         self.temp = parameters.temp
         self.v_dop = np.sqrt(2.*constants.k_B*self.temp/atom.mass)/constants.c
-        self.Trad = parameters.Trad
 
         self.velocity = np.array(parameters.velocity)
 
@@ -275,16 +274,16 @@ class state:
             self.sun_rad.append(RTE(cdts.nus, cdts.v_dop))
             if ray.rinc < 0.5*np.pi:
                 if cdts.velocity.sum() == 0:
-                    self.sun_rad[-1].make_IC(cdts.nus, ray, cdts.Trad, Allen)
+                    self.sun_rad[-1].make_IC(cdts.nus, ray, Allen)
                 else:
-                    self.sun_rad[-1].make_IC_velocity(cdts.nus, ray, cdts.Trad, Allen, cdts.velocity)
+                    self.sun_rad[-1].make_IC_velocity(cdts.nus, ray, Allen, cdts.velocity)
         for ray in cdts.orays:
             self.osun_rad.append(RTE(cdts.nus, cdts.v_dop))
             if ray.rinc < 0.5*np.pi:
                 if cdts.velocity.sum() == 0:
-                    self.osun_rad[-1].make_IC(cdts.nus, ray, cdts.Trad, Allen)
+                    self.osun_rad[-1].make_IC(cdts.nus, ray, Allen)
                 else:
-                    self.osun_rad[-1].make_IC_velocity(cdts.nus, ray, cdts.Trad, Allen, cdts.velocity)
+                    self.osun_rad[-1].make_IC_velocity(cdts.nus, ray, Allen, cdts.velocity)
 
     def update_mrc(self, cdts, itter):
         """Update the mrc of the current state by finding the

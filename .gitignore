@@ -8,6 +8,7 @@ checks/
 output*/
 data*/
 test*/
+hazel/1083*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
