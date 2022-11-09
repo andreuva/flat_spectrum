@@ -1,7 +1,7 @@
 import time
 
 z0 = 30000.0*1e5   # height of the slav over the surfave [cm]
-zf = 30100.0*1e5   # geometrical height of the slab [cm]
+zf = 30150.0*1e5   # geometrical height of the slab [cm]
 zn = 10             # Points in z in the slab
 alpha = 0.         # angle between the vertical of the slav and the radial line [deg]
 
@@ -11,10 +11,10 @@ ray_out = [[1., 0.]]             # List of mu,phi for emergent radiation directi
 v_dop = 5.0*1e5            # Dopler velocity (not the actual one) [cm/s]
 a_voigt = 1e-2             # voigt damping parameter of the line profile
 n_dens = 5.8e4             # Density wich defines the optical thickness [cm^-3]
-temp = 1e4                 # Temperature of the slab [K]
+temp = 1.5e4                 # Temperature of the slab [K]
 
-B = 1e1                    # Magnetic field strength [T]
-B_inc = 90.0               # Magnetic field inclination [deg]
+B = 2e1                    # Magnetic field strength [T]
+B_inc = 45.0               # Magnetic field inclination [deg]
 B_az = 0.0                 # Magnetic field azimuth [deg]
 
 velocity = [0., 0., 0.]   # Velocity of the slab [cm/s]

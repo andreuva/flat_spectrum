@@ -1,7 +1,7 @@
 # Import classes and parameters
 from RTcoefs import RTcoefs
 from conditions import conditions, state, point
-import parameters_comparison as pm
+import parameters_hazel as pm
 from solver import BESSER, LinSC_old, BESSER_old
 from plot_utils import *
 import constants as c
