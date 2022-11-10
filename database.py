@@ -45,7 +45,7 @@ class parameter_generator:
         cdt = conditions(pm)
         B = np.array([pm.B, pm.B_inc, pm.B_az])
         # Initialize the ESE object and computing the initial populations (equilibrium = True)
-        atoms = ESE(cdt.v_dop, cdt.a_voigt, B, cdt.temp, cdt.JS, True, 0, especial=True)
+        atoms = ESE(cdt.v_dop, cdt.a_voigt, B, cdt.temp, cdt.JS, True, 0, especial=False)
         # Retrieve the resonance wavelength of each line in the atom
         self.nus = []
         for line in atoms.atom.lines:
@@ -54,18 +54,22 @@ class parameter_generator:
     def new_parameters(self):
         pm = self.pm_original
         # B field will change with each itteration to cover all the possible cases
-        pm.B = np.random.normal(10, 100)
+        pm.B = np.random.normal(10, 50)
         while pm.B < 0:
-            pm.B = np.random.normal(10, 100)
+            pm.B = np.random.normal(10, 50)
 
-        pm.B_inc = np.arccos(np.random.uniform(0, 1))*180/np.pi
+        pm.B_inc = np.random.uniform(0,180)
         pm.B_az = np.random.uniform(0, 360)
 
-        pm.mu = np.random.uniform(-1,1)
-        pm.chi = np.random.uniform(0,np.pi)
-        # ray direction (will change with each itteration to cover all the possible cases)
+        pm.x = np.random.uniform(-20, 20)*cts.R_sun
+        pm.b = np.random.uniform(0, 10)*cts.R_sun
+        pm.h = np.sqrt(pm.x**2 + pm.b**2)
+ 
+        pm.mu = pm.x/pm.h
+        pm.chi = 0
         pm.ray_out = [[pm.mu, pm.chi]]
-        pm.z0 = 10**np.random.uniform(3, 6)
+
+        pm.z0 = pm.h
         pm.zf = pm.z0 + pm.z0*1e-3
 
         # amplitude of the profile
@@ -86,7 +90,7 @@ class parameter_generator:
 
 
 # Wraper to compute the Rtcoefs module with a given parameters
-def compute_profile(pm=pm, especial=True, jqq=None):
+def compute_profile(pm=pm, especial=False, jqq=None):
     # Initialize the conditions and rtcoefs objects
     # given a set of parameters via the parameters_rtcoefs module
     cdt = conditions(pm)
@@ -143,13 +147,13 @@ def compute_profile(pm=pm, especial=True, jqq=None):
     profiles['eps_V'] = sf[3]*(kk[0][0] + cts.vacuum)
 
     # retrieve the absorption coefficients from the K matrix
-    profiles['eta_I'] = kk[0][0]
-    profiles['eta_Q'] = kk[0][1]*(kk[0][0] + cts.vacuum)
-    profiles['eta_U'] = kk[0][2]*(kk[0][0] + cts.vacuum)
-    profiles['eta_V'] = kk[0][3]*(kk[0][0] + cts.vacuum)
-    profiles['rho_Q'] = kk[1][0]*(kk[0][0] + cts.vacuum)
-    profiles['rho_U'] = kk[1][1]*(kk[0][0] + cts.vacuum)
-    profiles['rho_V'] = kk[1][2]*(kk[0][0] + cts.vacuum)
+    # profiles['eta_I'] = kk[0][0]
+    # profiles['eta_Q'] = kk[0][1]*(kk[0][0] + cts.vacuum)
+    # profiles['eta_U'] = kk[0][2]*(kk[0][0] + cts.vacuum)
+    # profiles['eta_V'] = kk[0][3]*(kk[0][0] + cts.vacuum)
+    # profiles['rho_Q'] = kk[1][0]*(kk[0][0] + cts.vacuum)
+    # profiles['rho_U'] = kk[1][1]*(kk[0][0] + cts.vacuum)
+    # profiles['rho_V'] = kk[1][2]*(kk[0][0] + cts.vacuum)
 
     return profiles
 
@@ -259,8 +263,10 @@ def slave_work(pm):
                 profiles = None
                 exit()
 
-            parameters = {'h':pm.z0, 'B':pm.B, 'B_inc':pm.B_inc, 'B_az':pm.B_az,
-                          'mu':pm.mu, 'chi':pm.chi}
+            parameters = {'b': pm.b, 'x': pm.x, 'h':pm.z0, ''
+                          'mu':pm.mu, 'chi':pm.chi,
+                          'B':pm.B, 'B_inc':pm.B_inc, 'B_az':pm.B_az,
+                          'JKQ':pm.JKQ}
 
             # Send the results to the master
             dataToSend = {'index': task_index, 'success': success, 'profiles': profiles, 
