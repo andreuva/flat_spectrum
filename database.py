@@ -296,15 +296,15 @@ if __name__ == '__main__':
         parser = argparse.ArgumentParser(description='Generate synthetic models and solve NLTE problem')
         parser.add_argument('-n', '--nmodels', default=1000, type=int, metavar='NMODELS', help='Number of models')
         parser.add_argument('-f', '--freq', default=100, type=int, metavar='FREQ', help='Frequency of model write')
-        parser.add_argument('-sav', '--savedir', default=f'database', metavar='SAVEDIR', help='directory for output files')
-        parser.add_argument('-id', '--identifier', default=f'', metavar='ID', help='identifier for output files directory')
+        parser.add_argument('-s', '--savedir', default=f'database', metavar='SAVEDIR', help='directory for output files')
+        parser.add_argument('-i', '--id', default=f'', metavar='ID', help='identifier for the database name')
 
         parsed = vars(parser.parse_args())
-        parsed['sav'] = os.path.join(parsed['sav'], f'data_{parsed["sav"]}_{time.strftime("%Y%m%d_%H%M%S")}/')
+        parsed['savedir'] = os.path.join(parsed['savedir'], f'data_{parsed["id"]}_{time.strftime("%Y%m%d_%H%M%S")}/')
 
-        if not os.path.exists(parsed['sav']):
-            os.makedirs(parsed['sav'])
+        if not os.path.exists(parsed['savedir']):
+            os.makedirs(parsed['savedir'])
 
-        master_work(parsed['n'], parsed['sav'], parsed['f'])
+        master_work(parsed['nmodels'], parsed['savedir'], parsed['freq'])
     else:
         slave_work(pm)
