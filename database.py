@@ -1,7 +1,8 @@
 # Especific modules
 import parameters_rtcoefs as pm
 from conditions import conditions
-from RTcoefs import RTcoefs
+from RTcoefs import RTcoefs as RTcoefs
+from RTcoefs_components import RTcoefs as RTcoefs_components
 from atom import ESE
 from tensors import JKQ_to_Jqq, construct_JKQ_0
 import constants as cts
@@ -90,6 +91,7 @@ def compute_profile(pm=pm, especial=True, jqq=None):
     # given a set of parameters via the parameters_rtcoefs module
     cdt = conditions(pm)
     RT_coeficients = RTcoefs(cdt.nus,cdt.nus_weights,cdt.mode)
+    RT_coeficients_components = RTcoefs_components(cdt.nus,cdt.nus_weights,cdt.mode)
 
     B = np.array([pm.B, pm.B_inc, pm.B_az])
     # Initialize the ESE object and computing the initial populations (equilibrium = True)
@@ -123,6 +125,26 @@ def compute_profile(pm=pm, especial=True, jqq=None):
 
     # Compute the RT coeficients for a given ray
     sf, kk = RT_coeficients.getRTcoefs(atoms, ray, cdt)
+    sf_comp, kk_comp = RT_coeficients_components.getRTcoefs(atoms, ray, cdt)
+
+    """ 
+    for ii, scomp in enumerate(sf_comp):
+        stk = 0
+        for comp in scomp.keys():
+            stk += scomp[comp]
+            plt.plot(cdt.nus, scomp[comp], label=comp)
+        
+        plt.plot(cdt.nus, stk, label='sum')
+        plt.plot(cdt.nus, sf[ii], label='coefsumed')
+        plt.legend()
+        plt.show()
+
+        if np.abs(stk - sf[ii]).sum() > 1e-10:
+            print('Error in the sum of the components of the source function', ii, stk, sf[ii])
+            print(sf[ii])
+            print(scomp)
+            raise ValueError
+    """
 
     # Compute the emision coefficients from the Source functions
     profiles = {}
