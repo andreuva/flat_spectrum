@@ -681,16 +681,16 @@ class RTcoefs:
         rho2 = rho_a2 - rho_s2
 
         # Scale eta and rho
-        eta1 /= (eta0 + cts.vacuum)
-        eta2 /= (eta0 + cts.vacuum)
-        eta3 /= (eta0 + cts.vacuum)
-        rho0 /= (eta0 + cts.vacuum)
-        rho1 /= (eta0 + cts.vacuum)
-        rho2 /= (eta0 + cts.vacuum)
-        eps0 /= (eta0 + cts.vacuum)
-        eps1 /= (eta0 + cts.vacuum)
-        eps2 /= (eta0 + cts.vacuum)
-        eps3 /= (eta0 + cts.vacuum)
+        # eta1 /= (eta0 + cts.vacuum)
+        # eta2 /= (eta0 + cts.vacuum)
+        # eta3 /= (eta0 + cts.vacuum)
+        # rho0 /= (eta0 + cts.vacuum)
+        # rho1 /= (eta0 + cts.vacuum)
+        # rho2 /= (eta0 + cts.vacuum)
+        # eps0 /= (eta0 + cts.vacuum)
+        # eps1 /= (eta0 + cts.vacuum)
+        # eps2 /= (eta0 + cts.vacuum)
+        # eps3 /= (eta0 + cts.vacuum)
 
         # Check physical absorption
         if np.any(eta0 < 0) and self.no_warning:
