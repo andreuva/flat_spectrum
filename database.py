@@ -141,6 +141,7 @@ def compute_profile(pm=pm, especial=True, jqq=None):
 
     # Compute the emision coefficients from the Source functions
     profiles = {}
+    profiles['nus'] = cdt.nus.copy()
     for ind, stk in enumerate(['I', 'Q', 'U', 'V']):
         profiles['eps_'+stk+'t'] = sf[ind]
         profiles['eps_'+stk+'r'] = sfr[ind]
@@ -157,7 +158,6 @@ def compute_profile(pm=pm, especial=True, jqq=None):
     """ 
     # Compute the emision coefficients from the Source functions
     # profiles = {}
-    profiles['nus'] = cdt.nus.copy()
     profiles['eps_I'] = sf[0]*(kk[0][0] + cts.vacuum)
     profiles['eps_Q'] = sf[1]*(kk[0][0] + cts.vacuum)
     profiles['eps_U'] = sf[2]*(kk[0][0] + cts.vacuum)
