@@ -127,27 +127,36 @@ def compute_profile(pm=pm, especial=True, jqq=None):
     sf, kk = RT_coeficients.getRTcoefs(atoms, ray, cdt)
     sf_comp, kk_comp = RT_coeficients_components.getRTcoefs(atoms, ray, cdt)
 
-    """ 
-    for ii, scomp in enumerate(sf_comp):
-        stk = 0
-        for comp in scomp.keys():
-            stk += scomp[comp]
-            plt.plot(cdt.nus, scomp[comp], label=comp)
-        
-        plt.plot(cdt.nus, stk, label='sum')
-        plt.plot(cdt.nus, sf[ii], label='coefsumed')
-        plt.legend()
-        plt.show()
+    keys = list(sf_comp[0].keys())
+    sfr = np.array([ss[keys[0]] for ss in sf_comp])
+    sfb = np.array([ss[keys[-1]] for ss in sf_comp])
 
-        if np.abs(stk - sf[ii]).sum() > 1e-10:
-            print('Error in the sum of the components of the source function', ii, stk, sf[ii])
-            print(sf[ii])
-            print(scomp)
-            raise ValueError
-    """
+    kkr = np.zeros((len(kk), len(kk[0]), len(kk[0][0])))
+    kkb = np.zeros((len(kk), len(kk[0]), len(kk[0][0])))
+
+    for ii in range(len(kk)):
+        for jj in range(len(kk[ii])):
+            kkr[ii][jj] = kk_comp[ii][jj][keys[0]]
+            kkb[ii][jj] = kk_comp[ii][jj][keys[-1]]
 
     # Compute the emision coefficients from the Source functions
     profiles = {}
+    for ind, stk in enumerate(['I', 'Q', 'U', 'V']):
+        profiles['eps_'+stk+'t'] = sf[ind]
+        profiles['eps_'+stk+'r'] = sfr[ind]
+        profiles['eps_'+stk+'b'] = sfb[ind]
+
+        profiles['eta_'+stk+'t'] = kk[0][ind]
+        profiles['eta_'+stk+'r'] = kkr[0][ind]
+        profiles['eta_'+stk+'b'] = kkb[0][ind]
+        if ind > 0:
+            profiles['rho_'+stk+'t'] = kk[1][ind-1]
+            profiles['rho_'+stk+'r'] = kkr[1][ind-1]
+            profiles['rho_'+stk+'b'] = kkb[1][ind-1]
+
+    """ 
+    # Compute the emision coefficients from the Source functions
+    # profiles = {}
     profiles['nus'] = cdt.nus.copy()
     profiles['eps_I'] = sf[0]*(kk[0][0] + cts.vacuum)
     profiles['eps_Q'] = sf[1]*(kk[0][0] + cts.vacuum)
@@ -162,6 +171,19 @@ def compute_profile(pm=pm, especial=True, jqq=None):
     profiles['rho_Q'] = kk[1][0]*(kk[0][0] + cts.vacuum)
     profiles['rho_U'] = kk[1][1]*(kk[0][0] + cts.vacuum)
     profiles['rho_V'] = kk[1][2]*(kk[0][0] + cts.vacuum)
+
+    # check that the profiles add up to the total
+    for ind, stk in enumerate(['I', 'Q', 'U', 'V']):
+        # check the emission
+        if not np.allclose(profiles['eps_'+stk+'t'], profiles['eps_'+stk+'r'] + profiles['eps_'+stk+'b']):
+            print('Emission coefficients do not add up for {}'.format(stk))
+        # check the absorption
+        if not np.allclose(profiles['eta_'+stk+'t'], profiles['eta_'+stk+'r'] + profiles['eta_'+stk+'b']):
+            print('Absorption coefficients do not add up for {}'.format(stk))
+        # check the rho
+        if ind > 0:
+            if not np.allclose(profiles['rho_'+stk+'t'], profiles['rho_'+stk+'r'] + profiles['rho_'+stk+'b']):
+                print('Rho coefficients do not add up for {}'.format(stk)) """
 
     return profiles
 
