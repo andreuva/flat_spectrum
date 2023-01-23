@@ -5,15 +5,15 @@ zf = 30100.0*1e5   # geometrical height of the slab [cm]
 zn = 10             # Points in z in the slab
 alpha = 0.         # angle between the vertical of the slav and the radial line [deg]
 
-ray_quad = "gaussian_quadrature_16x4.dat" # file where the angular quadrature is saved
-ray_out = [[0.05, 0.]]             # List of mu,phi for emergent radiation directions
+ray_quad = "gaussian_quadrature_64x16.dat" # file where the angular quadrature is saved
+ray_out = [[1.0, 0.]]              # List of mu,phi for emergent radiation directions
 
 v_dop = 5.0*1e5            # Dopler velocity (not the actual one) [cm/s]
 a_voigt = 1e-2             # voigt damping parameter of the line profile
-n_dens = 1.16e4 #5.8e4     # Density wich defines the optical thickness [cm^-3]
+n_dens = 5.8e4     # Density wich defines the optical thickness [cm^-3]
 temp = 1e4                 # Temperature of the slab [K]
 
-B = 0e1                    # Magnetic field strength [T]
+B = 1e1                    # Magnetic field strength [T]
 B_inc = 90.0               # Magnetic field inclination [deg]
 B_az = 0.0                 # Magnetic field azimuth [deg]
 

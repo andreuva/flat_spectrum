@@ -135,13 +135,24 @@ if __name__ == '__main__':
     B_spherical = cart_to_ang(B_xyz[0], B_xyz[1], B_xyz[2])
     B_spherical = np.array([pm.B, pm.B_inc*np.pi/180, pm.B_az*np.pi/180])
     velocity = np.array(pm.velocity)
-    especial = True
-    datadir = 'output_compar_B_0.0_90.0_0.0_z7.5mM_20221011-174601'
+    especial = False
+    datadir_fs = 'output_compar_B_10.0_90.0_0.0_z200.0mM_20230123-100417'
+    datadir = 'output_compar_B_10.0_90.0_0.0_20220613-094529'
+    # datadir = 'output_compar_B_10.0_90.0_0.0_z200.0mM_20230123-105515'
     pm.dir = datadir + '/'
 
     wave_imp, tau_imp = np.loadtxt(f'{datadir}/out/tau_00.out', skiprows=3, unpack=True)
     tau_max = tau_imp.max()
     freq_imp, I_nlte, Q_nlte, U_nlte, V_nlte = np.loadtxt(f'{datadir}/out/stokes_00.out', skiprows=3, unpack=True)
+
+    wave_imp_fs, tau_imp_fs = np.loadtxt(f'{datadir_fs}/out/tau_00.out', skiprows=3, unpack=True)
+    tau_max_fs = tau_imp_fs.max()
+    freq_imp_fs, I_nlte_fs, Q_nlte_fs, U_nlte_fs, V_nlte_fs = np.loadtxt(f'{datadir_fs}/out/stokes_00.out', skiprows=3, unpack=True)
+
+    # compare the tau_max_fs and tau_max to see if the same
+    print(f'tau_max_fs = {tau_max_fs}')
+    print(f'tau_max = {tau_max}')
+
     # define the parameters that will construct the background radiation field
     # to later compute the JKQ en both components
     # jqq_list = glob(f'{datadir}/jqq_*.pkl')
@@ -302,6 +313,10 @@ if __name__ == '__main__':
     JK20_fil = np.loadtxt(f'{datadir}/out/real_JK20_finished.out')
     JK21_fil = np.loadtxt(f'{datadir}/out/real_JK21_finished.out')
 
+    JK00_fil_fs = np.loadtxt(f'{datadir_fs}/out/real_JK00_finished.out')
+    JK20_fil_fs = np.loadtxt(f'{datadir_fs}/out/real_JK20_finished.out')
+    JK21_fil_fs = np.loadtxt(f'{datadir_fs}/out/real_JK21_finished.out')
+
     nn = 1.000293
     wave = wave/1e-9/nn
     ticks = [wave[nu_peak_1_indx], wave[nu_peak_2_indx]]
@@ -313,6 +328,10 @@ if __name__ == '__main__':
     JK20_fil = JK20_fil[1:,:]
     JK21_fil = JK20_fil[1:,:]
 
+    JK00_fil_fs = JK00_fil_fs[1:,:]
+    JK20_fil_fs = JK20_fil_fs[1:,:]
+    JK21_fil_fs = JK20_fil_fs[1:,:]
+
     lay_show = 9 - np.array([0, 2, 5, 7, 9])
     color_codes = ['#d9480f', '#5c940d', '#1864ab', '#ae3ec9', '#e03131']
     colors = {lay_show[i]: color_codes[i] for i in range(len(lay_show))}
@@ -321,7 +340,6 @@ if __name__ == '__main__':
     p1 = int(length/8)
     p3 = int(p1*7)
     tau = (heights-pm.z0)/(pm.zf-pm.z0)*tau_prof.max()
-    tau[0] += 0.01
 
     plt.figure(figsize=(15,5), dpi=200)
     plt.subplot(1,2,1)
@@ -330,6 +348,7 @@ if __name__ == '__main__':
         if i == 0:
             comp_label = fr'$\tau$=2.00'
         plt.plot(wave[p1:p3], JK00_fil[i,p1:p3]/JK00_fil[0,0], linewidth=2, color=cm.plasma((9-i)/10.0), label=comp_label)
+        plt.plot(wave[p1:p3], JK00_fil_fs[i,p1:p3]/JK00_fil_fs[0,0], '--', linewidth=2, color=cm.plasma((9-i)/10.0), label=comp_label+' fs')
 
     # print(9-lay_show)
     plt.axhline(y=JK00_fil[i,-1]/JK00_fil[0,0], color='k', linestyle='--')
@@ -345,6 +364,7 @@ if __name__ == '__main__':
     JK20_plot = JK20_fil[::-1]
     for i in lay_show:
         plt.plot(wave[p1:p3], JK20_fil[i,p1:p3]/JK00_fil[i,p1:p3], linewidth=2, color=cm.plasma((9-i)/10.0), label=fr'$\tau$={tau[i]/1e8:1.4f}')
+        plt.plot(wave[p1:p3], JK20_fil_fs[i,p1:p3]/JK00_fil_fs[i,p1:p3], '--', linewidth=2, color=cm.plasma((9-i)/10.0), label=fr'$\tau$={tau[i]/1e8:1.4f} fs')
     plt.axhline(y=JK20_fil[i,-1]/JK00_fil[0,0], color='k', linestyle='--')
     plt.axhline(y=JKQ_1[2][0].real/JK00_fil[0,0], color='b', linestyle='--')
     plt.axhline(y=JKQ_2[2][0].real/JK00_fil[0,0], color='r', linestyle='--')
@@ -370,6 +390,7 @@ if __name__ == '__main__':
     # PLOT OF THE STOKES PARAMETERS
     plt.figure(figsize=(10,3.5), dpi=120)
     plt.subplot(1,2,1)
+    plt.plot(wave[p1:p3], I_nlte_fs[p1:p3], '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE fs')
     plt.plot(wave[p1:p3], I_nlte[p1:p3] , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
     plt.plot(wave[p1:p3], II[0,p1:p3], linewidth=2, color=cm.plasma(8/10.0), label=fr'Constant property slab')
     # plt.ylim(0, (I_nlte/I_nlte[0]).max()*1.1)
@@ -379,6 +400,7 @@ if __name__ == '__main__':
     plt.xticks(ticks, labels)
 
     plt.subplot(1,2,2)
+    plt.plot(wave[p1:p3], Q_nlte_fs[p1:p3], '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE fs')
     plt.plot(wave[p1:p3], Q_nlte[p1:p3] , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
     plt.plot(wave[p1:p3], II[1,p1:p3] , linewidth=2, color=cm.plasma(8/10.0), label=fr'Const. slab')
     # plt.legend()
@@ -394,6 +416,7 @@ if __name__ == '__main__':
     plt.figure(figsize=(15,5), dpi=180)
     plt.subplot(1,2,1)
     plt.plot(wave[p1:p3], I_nlte[p1:p3]/I_nlte[0], linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
+    plt.plot(wave[p1:p3], I_nlte_fs[p1:p3]/I_nlte[0], '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE fs')
     plt.plot(wave[p1:p3], II[0,p1:p3]/I_nlte[0], linewidth=2, color=cm.plasma(8/10.0), label=fr'Constant property slab')
     plt.ylim(0, (I_nlte/I_nlte[0]).max()*1.1)
     plt.legend(loc='lower left')
@@ -403,6 +426,7 @@ if __name__ == '__main__':
 
     plt.subplot(1,2,2)
     plt.plot(wave[p1:p3], Q_nlte[p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
+    plt.plot(wave[p1:p3], Q_nlte_fs[p1:p3]/I_nlte[p1:p3]*100 , '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE fs')
     plt.plot(wave[p1:p3], -II[1,p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(8/10.0), label=fr'Const. slab')
     # plt.legend()
     plt.ylabel(r'$Q/I_c$ (%)')
