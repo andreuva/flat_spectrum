@@ -9,7 +9,7 @@ from iopy import io_saverho,io_saverad
 
 # Import needed libraries
 import numpy as np
-import struct, sys
+import struct, os
 from tensors import Jqq_to_JKQ
 from tqdm import tqdm
 
