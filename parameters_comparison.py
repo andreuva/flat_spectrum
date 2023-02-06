@@ -1,7 +1,7 @@
 import time
 
 z0 = 30000.0*1e5   # height of the slav over the surfave [cm]
-zf = 30100.0*1e5   # geometrical height of the slab [cm]
+zf = 30200.0*1e5   # geometrical height of the slab [cm]
 zn = 10             # Points in z in the slab
 alpha = 0.         # angle between the vertical of the slav and the radial line [deg]
 

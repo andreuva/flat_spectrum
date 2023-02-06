@@ -1,7 +1,7 @@
 # Import classes and parameters
 from RTcoefs import RTcoefs
 from conditions import conditions, state, point
-import parameters_hazel as pm
+import parameters_comparison as pm
 from solver import BESSER, LinSC_old, BESSER_old
 from plot_utils import *
 import constants as c
@@ -289,12 +289,33 @@ def main(pm=pm, disable_display=False):
             prof_real[0,:] = 1e7*c.c/st.radiation[0].nus
             prof_imag = np.zeros((1 + cdt.z_N,len(st.radiation[0].nus)))
             prof_imag[0,:] = 1e7*c.c/st.radiation[0].nus
+            # Also the integrated ones
+            if st.atomic[0].atom.lines[0].especial:
+                int_real_red = np.zeros((cdt.z_N))
+                int_imag_red = np.zeros((cdt.z_N))
+                int_real_blue = np.zeros((cdt.z_N))
+                int_imag_blue = np.zeros((cdt.z_N))
+            else:
+                int_real = np.zeros((cdt.z_N))
+                int_imag = np.zeros((cdt.z_N))
             # fig, (ax1, ax2) = plt.subplots(2, 1, sharex='col', figsize=(15,20), dpi=150)
             for lay, heigt in enumerate(st.radiation):
                 real = Jqq_to_JKQ(heigt.jqq, cdt.JS)[KK][QQ].real
                 imag = Jqq_to_JKQ(heigt.jqq, cdt.JS)[KK][QQ].imag
                 prof_real[1+lay, :] = real
                 prof_imag[1+lay, :] = imag
+
+            for lay, heigt in enumerate(st.atomic):
+                if heigt.atom.lines[0].especial:
+                    red, blue = st.atomic[0].atom.lines[0].resos[0], st.atomic[0].atom.lines[0].resos[1]
+                    int_real_red[lay] = Jqq_to_JKQ(heigt.atom.lines[0].jqq[red], cdt.JS)[KK][QQ].real
+                    int_imag_red[lay] = Jqq_to_JKQ(heigt.atom.lines[0].jqq[red], cdt.JS)[KK][QQ].imag
+                    int_real_blue[lay] = Jqq_to_JKQ(heigt.atom.lines[0].jqq[blue], cdt.JS)[KK][QQ].real
+                    int_imag_blue[lay] = Jqq_to_JKQ(heigt.atom.lines[0].jqq[blue], cdt.JS)[KK][QQ].imag
+                else:
+                    int_real[lay] = Jqq_to_JKQ(heigt.atom.lines[0].jqq, cdt.JS)[KK][QQ].real
+                    int_imag[lay] = Jqq_to_JKQ(heigt.atom.lines[0].jqq, cdt.JS)[KK][QQ].imag
+
                 # ax1.plot(1e7*c.c/st.radiation[0].nus, real, label=f'{lay:02d}', color=f'C{lay}')
                 # ax2.plot(1e7*c.c/st.radiation[0].nus, imag, color=f'C{lay}')
             # ax1.axhline(JKQ_1_bc[KK][QQ].real, label='JKQ_1')
@@ -313,6 +334,14 @@ def main(pm=pm, disable_display=False):
             # plt.close()
             np.savetxt(datadir+f'real_JK{KK}{QQ}_finished.out', prof_real)
             np.savetxt(datadir+f'imag_JK{KK}{QQ}_finished.out', prof_imag)
+            if st.atomic[0].atom.lines[0].especial:
+                np.savetxt(datadir+f'int_real_red_JK{KK}{QQ}_finished.out', int_real_red)
+                np.savetxt(datadir+f'int_imag_red_JK{KK}{QQ}_finished.out', int_imag_red)
+                np.savetxt(datadir+f'int_real_blue_JK{KK}{QQ}_finished.out', int_real_blue)
+                np.savetxt(datadir+f'int_imag_blue_JK{KK}{QQ}_finished.out', int_imag_blue)
+            else:
+                np.savetxt(datadir+f'int_real_JK{KK}{QQ}_finished.out', int_real)
+                np.savetxt(datadir+f'int_imag_JK{KK}{QQ}_finished.out', int_imag)
 
     # Remove unused boundaries
     for j in cdt.rays:

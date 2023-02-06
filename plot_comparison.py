@@ -136,9 +136,8 @@ if __name__ == '__main__':
     B_spherical = np.array([pm.B, pm.B_inc*np.pi/180, pm.B_az*np.pi/180])
     velocity = np.array(pm.velocity)
     especial = False
-    datadir_fs = 'output_compar_B_10.0_90.0_0.0_z200.0mM_20230123-100417'
-    datadir = 'output_compar_B_10.0_90.0_0.0_20220613-094529'
-    # datadir = 'output_compar_B_10.0_90.0_0.0_z200.0mM_20230123-105515'
+    datadir_fs = 'output_compar_fs_B_0.0_90.0_0.0_z200.0mM_20230203-183511'
+    datadir = 'output_compar_B_0.0_90.0_0.0_z200.0mM_20230203-183532'
     pm.dir = datadir + '/'
 
     wave_imp, tau_imp = np.loadtxt(f'{datadir}/out/tau_00.out', skiprows=3, unpack=True)
@@ -348,7 +347,7 @@ if __name__ == '__main__':
         if i == 0:
             comp_label = fr'$\tau$=2.00'
         plt.plot(wave[p1:p3], JK00_fil[i,p1:p3]/JK00_fil[0,0], linewidth=2, color=cm.plasma((9-i)/10.0), label=comp_label)
-        plt.plot(wave[p1:p3], JK00_fil_fs[i,p1:p3]/JK00_fil_fs[0,0], '--', linewidth=2, color=cm.plasma((9-i)/10.0), label=comp_label+' fs')
+        # plt.plot(wave[p1:p3], JK00_fil_fs[i,p1:p3]/JK00_fil_fs[0,0], '--', linewidth=2, color=cm.plasma((9-i)/10.0), label=comp_label+' fs')
 
     # print(9-lay_show)
     plt.axhline(y=JK00_fil[i,-1]/JK00_fil[0,0], color='k', linestyle='--')
@@ -364,7 +363,7 @@ if __name__ == '__main__':
     JK20_plot = JK20_fil[::-1]
     for i in lay_show:
         plt.plot(wave[p1:p3], JK20_fil[i,p1:p3]/JK00_fil[i,p1:p3], linewidth=2, color=cm.plasma((9-i)/10.0), label=fr'$\tau$={tau[i]/1e8:1.4f}')
-        plt.plot(wave[p1:p3], JK20_fil_fs[i,p1:p3]/JK00_fil_fs[i,p1:p3], '--', linewidth=2, color=cm.plasma((9-i)/10.0), label=fr'$\tau$={tau[i]/1e8:1.4f} fs')
+        # plt.plot(wave[p1:p3], JK20_fil_fs[i,p1:p3]/JK00_fil_fs[i,p1:p3], '--', linewidth=2, color=cm.plasma((9-i)/10.0), label=fr'$\tau$={tau[i]/1e8:1.4f} fs')
     plt.axhline(y=JK20_fil[i,-1]/JK00_fil[0,0], color='k', linestyle='--')
     plt.axhline(y=JKQ_1[2][0].real/JK00_fil[0,0], color='b', linestyle='--')
     plt.axhline(y=JKQ_2[2][0].real/JK00_fil[0,0], color='r', linestyle='--')
