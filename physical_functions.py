@@ -1,6 +1,6 @@
 import numpy as np
 from numpy import sin, cos, exp, sqrt, conj
-import math,copy
+import math
 
 
 #@jit(nopython=True)

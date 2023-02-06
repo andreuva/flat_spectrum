@@ -4,7 +4,7 @@ z0 = 30000.0*1e5   # height of the slav over the surfave [cm]
 zf = 30200.0*1e5   # geometrical height of the slab [cm]
 zn = 10            # Points in z in the slab
 
-ray_quad = "quadrature_gaussian_64x16.dat"# file where the angular quadrature is saved
+ray_quad = "quadrature_gaussian_16x4.dat"# file where the angular quadrature is saved
 ray_out = [[0.1,0.],[1.0,0.]]             # List of mu,phi for emergent radiation directions
 
 v_dop = 5.0*1e5            # Dopler velocity (not the actual one) [cm/s]
@@ -24,9 +24,9 @@ tolerance_c = 5e-4   # tolerated relative change in coherences
 
 initial_equilibrium = True   # Start from equilibrium
 verbose = False
-extra_plots = True
-extra_save = True
+extra_plots = False
+extra_save = False
 especial = True
 
-dir = f'output_{time.strftime("%Y%m%d-%H%M%S")}/'
+dir = f'output_sp_{especial}_eq_{initial_equilibrium}_{time.strftime("%Y%m%d-%H%M%S")}/'
 del time

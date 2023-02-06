@@ -4,7 +4,6 @@ from atom import ESE
 from rad import RTE
 
 import numpy as np
-import matplotlib.pyplot as plt
 import constants as constants
 from get_nus import get_nus
 from allen import Allen_class
