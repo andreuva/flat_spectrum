@@ -1,8 +1,7 @@
 import sys,copy
-from physical_functions import voigt, jsymbols
+from physical_functions import voigt, jsymbols, Tqq_all
 from atom import ESE
 from rad import RTE
-from physical_functions import Tqq_all
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,7 +17,7 @@ class ray:
     """ ray class representing each ray in the angular quadrature
     """
 
-    def __init__(self, weight, inclination, azimut, alpha, theta_crit, z0):
+    def __init__(self, weight, inclination, azimut, theta_crit, z0):
 
         # basic properties of the ray (inclination, azimut and weight in the slab RF
         self.weight = weight
@@ -28,35 +27,24 @@ class ray:
         self.rinc = self.inc*constants.degtorad
         self.raz = self.az*constants.degtorad
 
-        # Rotate the RF to the global one and store the result as a attribute
-        xyz_slab = np.array([np.sin(self.rinc)*np.cos(self.raz),
+        # Compute the xyz vector for the intersecting rays (Slab quantities)
+        self.xyz_slab = np.array([np.sin(self.rinc)*np.cos(self.raz),
                              np.sin(self.rinc)*np.sin(self.raz),
                              np.cos(self.rinc)])
-        rotation_matrix = np.array([[np.cos(alpha), 0, np.sin(-alpha)],
-                                    [0,             1,              0],
-                                    [np.sin(alpha), 0,  np.cos(alpha)]])
-        xyz_global = rotation_matrix @ xyz_slab
-
-        # Get global angles
-        self.inc_glob = np.arccos(xyz_global[2])*constants.radtodeg
-        global_az = np.arctan2(xyz_global[1], xyz_global[0])*constants.radtodeg
-        if global_az < 0:
-            global_az += 360.0
-        self.az_glob = global_az
 
         # Compute the CLV for the intersecting rays (Astrophysical quantities)
         self.clv = 0
 
         # If below critical inclination
-        if theta_crit > self.inc_glob:
+        if theta_crit > self.inc:
 
             # Get inclination for CLV
             arg = (constants.R_sun + z0)/constants.R_sun * \
-                   np.sin(180. - self.inc_glob)
+                   np.sin(180. - self.inc)
             if abs(arg) <= 1.:
                 theta_clv = 180.0 - \
                             np.arcsin((constants.R_sun + z0)/constants.R_sun * \
-                                      np.sin(180. - self.inc_glob))
+                                      np.sin(180. - self.inc))
             else:
                 theta_clv = 180.
 
@@ -68,8 +56,8 @@ class ray:
         if self.clv < 0:
             print(f"WARNING: CLV < 0 in ray {inclination}-{azimut}: {self.clv}")
 
-        # Check if the ray is upwards or not in the global RF
-        if self.inc_glob > 90.0:
+        # Check if the ray is upwards or not
+        if self.inc > 90.0:
             self.is_downward = True
         else:
             self.is_downward = False
@@ -123,11 +111,13 @@ class conditions:
         self.zz = np.linspace(self.z0, self.zf, self.z_N, endpoint=True)
         self.dz = self.zz[1] - self.zz[0]
 
+        self.especial = parameters.especial
+        self.verbose = parameters.verbose
+        self.extra_plots = parameters.extra_plots
+        self.extra_save = parameters.extra_save
+
         # Initialize J symbols
         self.JS = jsymbols(memoization=True)
-
-        # Parameters of the rotation of the slab and the global ref frame
-        self.alpha = parameters.alpha*np.pi/180
 
         self.theta_crit = 180. - \
                           np.arcsin(constants.R_sun/(constants.R_sun + self.z0))
@@ -138,7 +128,7 @@ class conditions:
             self.rays.append(ray(data_ray[0], \
                                  data_ray[1], \
                                  data_ray[2], \
-                                 self.alpha, self.theta_crit, self.z0))
+                                 self.theta_crit, self.z0))
         self.rays_N = len(self.rays)
 
         # Output rays
@@ -147,10 +137,10 @@ class conditions:
             self.orays.append(ray(1.0, \
                                   (np.arccos(LOS[0]) * 180.0 / np.pi), \
                                   LOS[1], \
-                                  self.alpha, self.theta_crit, self.z0))
+                                  self.theta_crit, self.z0))
 
         # Get copy of the atom
-        atom = ESE(0.,0.,np.zeros((3)),0.,self.JS)
+        atom = ESE(0.,0.,np.zeros((3)),0.,self.JS, especial=self.especial)
         atom = atom.atom
 
         # Dopler velocity
@@ -254,8 +244,9 @@ class state:
         self.mrc_c = -1.
 
         # Initialicing the atomic state instanciating ESE class for each point
-        self.atomic = [ESE(cdts.v_dop, cdts.a_voigt, \
-                vec, cdts.temp, cdts.JS, cdts.equi,iz) for iz,vec in enumerate(cdts.B)]
+        self.atomic = [ESE(cdts.v_dop, cdts.a_voigt, vec, cdts.temp,\
+                           cdts.JS, cdts.equi, iz, cdts.especial)
+                       for iz,vec in enumerate(cdts.B)]
         for atomic in self.atomic:
             atomic.initialize_profiles(cdts.nus_N)
 

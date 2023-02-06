@@ -1,6 +1,5 @@
 import numpy as np
 from numpy import sin, cos, exp, sqrt, conj
-#from numba import jit
 import math,copy
 
 

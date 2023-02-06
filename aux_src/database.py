@@ -1,5 +1,5 @@
 # Especific modules
-import parameters_rtcoefs as pm
+import parameters as pm
 from conditions import conditions
 from RTcoefs import RTcoefs
 from atom import ESE

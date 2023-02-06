@@ -32,16 +32,11 @@ def plot_quadrature(cdt, mode='save', directory='plots'):
     plt.figure()
     # plt.subplot(projection="aitoff")
 
-    inclinations_loc = np.array([ray.rinc for ray in cdt.rays])
-    azimuts_loc = np.array([ray.raz for ray in cdt.rays])
+    inclinations = np.array([ray.rinc for ray in cdt.rays])
+    azimuts = np.array([ray.raz for ray in cdt.rays])
 
-    inclinations_glob = np.array([ray.inc_glob*constants.degtorad for ray in cdt.rays])
-    azimuts_glob = np.array([ray.az_glob*constants.degtorad for ray in cdt.rays])
-
-    plt.plot(azimuts_loc, np.cos(inclinations_loc), 'o', label='local RF')
-    plt.plot(azimuts_glob, np.cos(inclinations_glob), 'o', alpha=0.5, label='global RF')
+    plt.plot(azimuts, np.cos(inclinations), 'o')
     plt.title('Quadrature in the two reference frames')
-    plt.legend()
     save_or_show(mode, 'quadrature', directory)
 
     # Create a sphere
@@ -52,22 +47,16 @@ def plot_quadrature(cdt, mode='save', directory='plots'):
     z = r*np.cos(phi)
 
     # transform data
-    theta, phi, r = inclinations_loc, azimuts_loc, np.ones_like(azimuts_loc)
-    xx_loc = np.cos(phi)*np.sin(theta)
-    yy_loc = np.sin(phi)*np.sin(theta)
-    zz_loc = np.cos(theta)
-
-    theta, phi, r = inclinations_glob, azimuts_glob, np.ones_like(azimuts_loc)
-    xx_glob = np.cos(phi)*np.sin(theta)
-    yy_glob = np.sin(phi)*np.sin(theta)
-    zz_glob = np.cos(theta)
+    theta, phi, r = inclinations, azimuts, np.ones_like(azimuts)
+    xx = np.cos(phi)*np.sin(theta)
+    yy = np.sin(phi)*np.sin(theta)
+    zz = np.cos(theta)
 
     # Set colours and render
     fig = plt.figure(figsize=(10,10))
     ax = fig.add_subplot(111, projection='3d')
     ax.plot_surface(x, y, z,  rstride=1, cstride=1, color='c', alpha=0.5, linewidth=0)
-    ax.scatter(xx_glob, yy_glob, zz_glob, color="r", s=50, alpha=1)
-    ax.scatter(xx_loc, yy_loc, zz_loc, color="g", s=50, alpha=1)
+    ax.scatter(xx, yy, zz, color="r", s=50, alpha=1)
     ax.set_xlim([-1, 1])
     ax.set_ylim([-1, 1])
     ax.set_zlim([-1, 1])

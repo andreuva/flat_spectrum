@@ -1,6 +1,6 @@
 from enum import IntEnum
 from main import main
-import parameters_peaks_vs_tau as pm
+import parameters as pm
 from conditions import conditions
 import matplotlib.pyplot as plt
 import numpy as np

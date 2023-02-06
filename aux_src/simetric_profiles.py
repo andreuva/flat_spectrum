@@ -1,6 +1,6 @@
 from enum import IntEnum
 from main import main
-import parameters_profiles as pm
+import parameters as pm
 from conditions import conditions
 import matplotlib.pyplot as plt
 import numpy as np

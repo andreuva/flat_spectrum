@@ -1,7 +1,6 @@
 import copy
 import numpy as np
 import constants as c
-#from numba import jit
 
 
 def BESSER(point_M, point_O, point_P, \
