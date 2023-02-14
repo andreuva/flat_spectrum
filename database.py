@@ -155,22 +155,21 @@ def compute_profile(pm=pm, especial=True, jqq=None):
             profiles['rho_'+stk+'r'] = kkr[1][ind-1]
             profiles['rho_'+stk+'b'] = kkb[1][ind-1]
 
-    """ 
     # Compute the emision coefficients from the Source functions
     # profiles = {}
-    profiles['eps_I'] = sf[0]*(kk[0][0] + cts.vacuum)
-    profiles['eps_Q'] = sf[1]*(kk[0][0] + cts.vacuum)
-    profiles['eps_U'] = sf[2]*(kk[0][0] + cts.vacuum)
-    profiles['eps_V'] = sf[3]*(kk[0][0] + cts.vacuum)
+    # profiles['eps_I'] = sf[0]*(kk[0][0] + cts.vacuum)
+    # profiles['eps_Q'] = sf[1]*(kk[0][0] + cts.vacuum)
+    # profiles['eps_U'] = sf[2]*(kk[0][0] + cts.vacuum)
+    # profiles['eps_V'] = sf[3]*(kk[0][0] + cts.vacuum)
 
     # retrieve the absorption coefficients from the K matrix
-    profiles['eta_I'] = kk[0][0]
-    profiles['eta_Q'] = kk[0][1]*(kk[0][0] + cts.vacuum)
-    profiles['eta_U'] = kk[0][2]*(kk[0][0] + cts.vacuum)
-    profiles['eta_V'] = kk[0][3]*(kk[0][0] + cts.vacuum)
-    profiles['rho_Q'] = kk[1][0]*(kk[0][0] + cts.vacuum)
-    profiles['rho_U'] = kk[1][1]*(kk[0][0] + cts.vacuum)
-    profiles['rho_V'] = kk[1][2]*(kk[0][0] + cts.vacuum)
+    # profiles['eta_I'] = kk[0][0]
+    # profiles['eta_Q'] = kk[0][1]*(kk[0][0] + cts.vacuum)
+    # profiles['eta_U'] = kk[0][2]*(kk[0][0] + cts.vacuum)
+    # profiles['eta_V'] = kk[0][3]*(kk[0][0] + cts.vacuum)
+    # profiles['rho_Q'] = kk[1][0]*(kk[0][0] + cts.vacuum)
+    # profiles['rho_U'] = kk[1][1]*(kk[0][0] + cts.vacuum)
+    # profiles['rho_V'] = kk[1][2]*(kk[0][0] + cts.vacuum)
 
     # check that the profiles add up to the total
     for ind, stk in enumerate(['I', 'Q', 'U', 'V']):
@@ -183,7 +182,7 @@ def compute_profile(pm=pm, especial=True, jqq=None):
         # check the rho
         if ind > 0:
             if not np.allclose(profiles['rho_'+stk+'t'], profiles['rho_'+stk+'r'] + profiles['rho_'+stk+'b']):
-                print('Rho coefficients do not add up for {}'.format(stk)) """
+                print('Rho coefficients do not add up for {}'.format(stk))
 
     return profiles
 
@@ -200,7 +199,7 @@ def master_work(nsamples, filename, write_frequency=100):
     profiles = [None]*nsamples
     parameters = [None]*nsamples
 
-    with tqdm(total=nsamples, ncols=100) as pbar:
+    with tqdm(total=nsamples, ncols=69) as pbar:
         while closed_workers < num_workers:
 
             # Recieve the ready signal from the workers
