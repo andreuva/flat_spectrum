@@ -689,16 +689,16 @@ class RTcoefs:
 
         # Scale eta and rho
         for res in line.resos:
-        #   eta1[res] /= (eta0[res] + cts.vacuum)
-        #   eta2[res] /= (eta0[res] + cts.vacuum)
-        #   eta3[res] /= (eta0[res] + cts.vacuum)
-        #   rho0[res] /= (eta0[res] + cts.vacuum)
-        #   rho1[res] /= (eta0[res] + cts.vacuum)
-        #   rho2[res] /= (eta0[res] + cts.vacuum)
-        #   eps0[res] /= (eta0[res] + cts.vacuum)
-        #   eps1[res] /= (eta0[res] + cts.vacuum)
-        #   eps2[res] /= (eta0[res] + cts.vacuum)
-        #   eps3[res] /= (eta0[res] + cts.vacuum)
+          eta1[res] /= (eta0[res] + cts.vacuum)
+          eta2[res] /= (eta0[res] + cts.vacuum)
+          eta3[res] /= (eta0[res] + cts.vacuum)
+          rho0[res] /= (eta0[res] + cts.vacuum)
+          rho1[res] /= (eta0[res] + cts.vacuum)
+          rho2[res] /= (eta0[res] + cts.vacuum)
+          eps0[res] /= (eta0[res] + cts.vacuum)
+          eps1[res] /= (eta0[res] + cts.vacuum)
+          eps2[res] /= (eta0[res] + cts.vacuum)
+          eps3[res] /= (eta0[res] + cts.vacuum)
 
           # Check physical absorption
           if np.any(eta0[res] < 0) and self.no_warning:
