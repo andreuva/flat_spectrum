@@ -1023,7 +1023,7 @@ class HeI_1083_2Ltest():
 class HeI_1083():
     """ Class to acces the atomic model. 2-term atom Helium 10830
     """
-    def __init__(self,JS,B=0.0,especial=False):
+    def __init__(self,JS,B=0.0,especial=True):
 
         # Set as multiterm atom
         self.multiterm = True
