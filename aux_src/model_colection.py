@@ -234,7 +234,7 @@ def slave_work(pm, npoints=1000):
             success = True
             try:
                 # create a new parameters
-                pm = param_gen.new_parameters()
+                pm = param_gen.new_parameters(task_index)
                 # compute the profile
                 profiles = compute_profile(pm=pm)
             except:
@@ -297,4 +297,4 @@ if __name__ == '__main__':
 
         master_work(parsed['nmodels'], parsed['savedir'], parsed['freq'])
     else:
-        slave_work(pm, parsed['nmodels'])
+        slave_work(pm, 1000)
