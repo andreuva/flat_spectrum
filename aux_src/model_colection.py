@@ -136,6 +136,11 @@ def compute_profile(pm=pm, especial=False, jqq=None):
     profiles['eps_U'] = sf[2]*(kk[0][0] + cts.vacuum)
     profiles['eps_V'] = sf[3]*(kk[0][0] + cts.vacuum)
 
+    print('\nmean eps_I = ', np.mean(profiles['eps_I']))
+    print('mean eps_Q = ',   np.mean(profiles['eps_Q']))
+    print('mean eps_U = ',   np.mean(profiles['eps_U']))
+    print('mean eps_V = ',   np.mean(profiles['eps_V']))
+
     # retrieve the absorption coefficients from the K matrix
     # profiles['eta_I'] = kk[0][0]
     # profiles['eta_Q'] = kk[0][1]*(kk[0][0] + cts.vacuum)
