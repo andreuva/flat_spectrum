@@ -54,17 +54,14 @@ class parameter_generator:
     def new_parameters(self):
         pm = self.pm_original
         # B field will change with each itteration to cover all the possible cases
-        pm.B = np.random.normal(10, 50)
-        while pm.B < 0:
-            pm.B = np.random.normal(10, 50)
-
+        pm.B = np.abs(np.random.normal(0, 20))
         pm.B_inc = np.random.uniform(0,180)
         pm.B_az = np.random.uniform(0, 360)
 
-        pm.x = np.random.uniform(-20, 20)*cts.R_sun
-        pm.b = np.random.uniform(0, 10)*cts.R_sun
+        pm.x = np.random.uniform(4, 10)*cts.R_sun
+        pm.b = np.random.uniform(4, 12)*cts.R_sun
         pm.h = np.sqrt(pm.x**2 + pm.b**2)
- 
+
         pm.mu = pm.x/pm.h
         pm.chi = 0
         pm.ray_out = [[pm.mu, pm.chi]]
