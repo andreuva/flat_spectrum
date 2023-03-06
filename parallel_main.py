@@ -39,6 +39,8 @@ def new_parameters(pm, npoints, index):
     # Define the parameters for the grid in tau and B
     # the idea is to first vary tau for a fixed B and then move the B
     # for that we need to have the number of points in tau and B and the index
+    print(f'\nComputing parameters for index {index}')
+
     pm.B = [0, 0.01, 0.025, 0.05, 0.075, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
             2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 20.0, 30.0, 40.0, 50.0, 75.0, 100]
     pm.z0 = 30000.0*1e5
@@ -50,6 +52,7 @@ def new_parameters(pm, npoints, index):
 
     b_index = index // len(pm.B)
     t_index = index % len(pm.zf)
+    print(f'With place in the grid: tau = {t_index}, B = {b_index}\n')
 
     pm.B = pm.B[b_index]
     pm.zf = pm.zf[t_index]
