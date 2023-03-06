@@ -42,9 +42,16 @@ def main(pm=pm, disable_display=False):
     if cdt.extra_plots:
         plot_quadrature(cdt, directory=datadir)
 
+    #
+    # In this version we need to initialize the Jqq
+    #
+    for atom in st.atomic:
+        atom.initialize_jqq(st.Allen)
+
+
     # Opening MRC file
     f = open(datadir+'MRC', 'w')
-    f.write(f'Itteration  ||  Max. Rel. change\n')
+    f.write(f'Iteration   ||  Max. Rel. change\n')
     f.write('-'*50 + '\n')
     f.close()
 
@@ -123,7 +130,7 @@ def main(pm=pm, disable_display=False):
                     print(f'Added Jqq contribution at point {z}')
 
             # Get RT coefficients at initial point
-            sf_o, kk_o = RT_coeficients.getRTcoefs(point_O.atomic, ray, cdt)
+            sf_o, kk_o = RT_coeficients.getRTcoefs_NN(point_O.atomic, ray, cdt)
 
             # verbose
             if cdt.verbose:
@@ -132,7 +139,7 @@ def main(pm=pm, disable_display=False):
             # Get next point and its RT coefficients
             z += step
             point_P = point(st.atomic[z], st.radiation[z], cdt.zz[z])
-            sf_p, kk_p = RT_coeficients.getRTcoefs(point_P.atomic, ray, cdt)
+            sf_p, kk_p = RT_coeficients.getRTcoefs_NN(point_P.atomic, ray, cdt)
 
             # verbose
             if cdt.verbose:
@@ -172,7 +179,7 @@ def main(pm=pm, disable_display=False):
                         print(f'Prepare next point {z+step}')
 
                     # Compute the RT coeficients for the next point (for solving RTE)
-                    sf_p, kk_p = RT_coeficients.getRTcoefs(point_P.atomic, ray, cdt)
+                    sf_p, kk_p = RT_coeficients.getRTcoefs_NN(point_P.atomic, ray, cdt)
 
                     # verbose
                     if cdt.verbose:
@@ -222,7 +229,7 @@ def main(pm=pm, disable_display=False):
                     print(f'Added Jqq contribution at point {z}')
 
         # Update the MRC and check wether we reached convergence
-        st.update_mrc(cdt, itteration)
+        st.update_mrc_j(cdt, itteration)
 
         # Write into file
         f = open(datadir+f'MRC','a')
@@ -328,12 +335,12 @@ def main(pm=pm, disable_display=False):
             point_O.setradiationas(st.osun_rad[j])
 
         # Get RT coefficients at initial point
-        sf_o, kk_o = RT_coeficients.getRTcoefs(point_O.atomic, ray, cdt)
+        sf_o, kk_o = RT_coeficients.getRTcoefs_NN(point_O.atomic, ray, cdt)
 
         # Get next point and its RT coefficients
         z += step
         point_P = point(st.atomic[z], st.radiation[z], cdt.zz[z])
-        sf_p, kk_p = RT_coeficients.getRTcoefs(point_P.atomic, ray, cdt)
+        sf_p, kk_p = RT_coeficients.getRTcoefs_NN(point_P.atomic, ray, cdt)
 
         # Go through all the points (besides 0 and -1 for being IC)
         for z in range(iz0, iz1, step):
@@ -355,7 +362,7 @@ def main(pm=pm, disable_display=False):
                 point_P = point(st.atomic[z+step], st.radiation[z+step], \
                                 cdt.zz[z+step])
                 # Compute the RT coeficients for the next point (for solving RTE)
-                sf_p, kk_p = RT_coeficients.getRTcoefs(point_P.atomic, ray, cdt)
+                sf_p, kk_p = RT_coeficients.getRTcoefs_NN(point_P.atomic, ray, cdt)
 
             # Transfer
             tau_tot = BESSER(point_M, point_O, point_P, \

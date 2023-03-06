@@ -712,3 +712,210 @@ class RTcoefs:
 
 
         return SS, KK
+
+
+    def getRTcoefs_MT_NN(self, ese, ray, cdts):
+        """ Provides the 4-vector of epsilon and the 4x4 K-matrix for the point
+            with given ESE state and ray direction.
+            Multi-term atom case in standard representation.
+            Eqs. 7.35 of LL04.
+              ese: the local instance of the ESE class
+              ray: object with .theta and .chi variables defining the ray
+                   of propagation direction
+              return value: [S (source function vector in frequencies), K (4x4 list of
+                             vectors in frequencies)]
+            Use Trained network
+        """
+
+        # Add density to global constant
+        # I left this one because it is very likely needed, at least the
+        # density, to scale the final profiles (only etaI, in fact, as the
+        # rest is normalized)
+        hnuN = self.hnu*cdts.n_dens
+
+        # For each transition
+        for line in ese.atom.lines:
+
+          # Initialize profiles
+          line.initialize_profiles()
+
+          # If line is special
+          if line.especial:
+
+              # Initialize line contributions
+              sum_etaI = 0e0
+              sum_etaQ = 0e0
+              sum_etaU = 0e0
+              sum_etaV = 0e0
+              sum_rhoQ = 0e0
+              sum_rhoU = 0e0
+              sum_rhoV = 0e0
+              sum_epsI = 0e0
+              sum_epsQ = 0e0
+              sum_epsU = 0e0
+              sum_epsV = 0e0
+
+              # Get frequency from the line component itself
+              for reso in line.resos:
+
+                  # Depending on the resonance, get quantities from network
+                 #N_etaI = 
+                 #N_etaQ = 
+                 #N_etaU = 
+                 #N_etaV = 
+                 #N_rhoQ = 
+                 #N_rhoU = 
+                 #N_rhoV = 
+                 #N_epsI = 
+                 #N_epsQ = 
+                 #N_epsU = 
+                 #N_epsV = 
+
+                  # Add to coefficients
+                  # I don't remember if they were normalized to eta_I component
+                  # or to eta_I. If it is by component, choose the second block
+                  sum_etaI += N_etaI
+                  '''
+                  '''
+                  sum_etaQ += N_etaQ
+                  sum_etaU += N_etaU
+                  sum_etaV += N_etaV
+                  sum_rhoQ += N_rhoQ
+                  sum_rhoU += N_rhoU
+                  sum_rhoV += N_rhoV
+                  sum_epsI += N_epsI
+                  sum_epsQ += N_epsQ
+                  sum_epsU += N_epsU
+                  sum_epsV += N_epsV
+                  '''
+                  '''
+                  '''
+                  sum_etaQ += N_etaQ*N_etaI
+                  sum_etaU += N_etaU*N_etaI
+                  sum_etaV += N_etaV*N_etaI
+                  sum_rhoQ += N_rhoQ*N_etaI
+                  sum_rhoU += N_rhoU*N_etaI
+                  sum_rhoV += N_rhoV*N_etaI
+                  sum_epsI += N_epsI*N_etaI
+                  sum_epsQ += N_epsQ*N_etaI
+                  sum_epsU += N_epsU*N_etaI
+                  sum_epsV += N_epsV*N_etaI
+                  '''
+
+                  # Contribute to jqq
+                  contr = N_etaI*cdts.nus_weights
+                  line.add_contribution_profiles(contr, reso)
+
+              # If normalized by component, comment this block
+              sum_etaQ *= sum_etaI
+              sum_etaU *= sum_etaI
+              sum_etaV *= sum_etaI
+              sum_rhoQ *= sum_etaI
+              sum_rhoU *= sum_etaI
+              sum_rhoV *= sum_etaI
+              sum_epsI *= sum_etaI
+              sum_epsQ *= sum_etaI
+              sum_epsU *= sum_etaI
+              sum_epsV *= sum_etaI
+
+          # Just one line
+          else:
+
+              # Get data for the full line from a NN
+             #sum_etaI = 
+             #sum_etaQ = 
+             #sum_etaU = 
+             #sum_etaV = 
+             #sum_rhoQ = 
+             #sum_rhoU = 
+             #sum_rhoV = 
+             #sum_epsI = 
+             #sum_epsQ = 
+             #sum_epsU = 
+             #sum_epsV = 
+
+              # De-normalization
+              # If the especial case is normalized to the whole line etaI, then
+              # this block is the same than in the other branch and they could
+              # be common at exit
+              sum_etaQ *= sum_etaI
+              sum_etaU *= sum_etaI
+              sum_etaV *= sum_etaI
+              sum_rhoQ *= sum_etaI
+              sum_rhoU *= sum_etaI
+              sum_rhoV *= sum_etaI
+              sum_epsI *= sum_etaI
+              sum_epsQ *= sum_etaI
+              sum_epsU *= sum_etaI
+              sum_epsV *= sum_etaI
+
+              # Contribute to jqq
+              contr = sum_etaI*cdts.nus_weights
+              line.add_contribution_profiles(contr, reso)
+
+          # Get final constants for the RT coefficients
+          # TODO whatever they are, I don't know
+
+          # Normalize line profile
+          line.normalize_profiles()
+
+          # Add to line contribution
+          # rho U is negative because is the upper part of the triangular
+          # propagation matrix
+          try:
+              etaI += sum_etaI
+              etaQ += sum_etaQ
+              etaU += sum_etaU
+              etaV += sum_etaV
+              rhoQ += sum_rhoQ
+              rhoU -= sum_rhoU
+              rhoV += sum_rhoV
+              epsI += sum_etaI
+              epsQ += sum_etaQ
+              epsU += sum_etaU
+              epsV += sum_etaV
+          except NameError:
+              etaI =  sum_etaI
+              etaQ =  sum_etaQ
+              etaU =  sum_etaU
+              etaV =  sum_etaV
+              rhoQ =  sum_rhoQ
+              rhoU = -sum_rhoU
+              rhoV =  sum_rhoV
+              epsI =  sum_etaI
+              epsQ =  sum_etaQ
+              epsU =  sum_etaU
+              epsV =  sum_etaV
+          except:
+              raise
+
+        # Scale eta and rho
+        etaQ /= (etaI + cts.vacuum)
+        etaU /= (etaI + cts.vacuum)
+        etaV /= (etaI + cts.vacuum)
+        rhoQ /= (etaI + cts.vacuum)
+        rhoU /= (etaI + cts.vacuum)
+        rhoV /= (etaI + cts.vacuum)
+        epsI /= (etaI + cts.vacuum)
+        epsQ /= (etaI + cts.vacuum)
+        epsU /= (etaI + cts.vacuum)
+        epsV /= (etaI + cts.vacuum)
+
+        # Check physical absorption
+        if np.any(etaI < 0) and self.no_warning:
+            print(f"Warning: eta_I < 0 at iz = {ese.iz} dir = {ray.rinc}x{ray.raz}")
+            for ifreq,eI in enumerate(etaI):
+                if eI < 0.:
+                    print(f"  Lambda {cts.c*1e7/cdts.nus[ifreq]:12.6f}: " + \
+                          f"{eI:13.6e}    MAX: {np.max(etaI):13.6e}")
+            self.no_warning = False
+            print(f"Will not bother you with more instances of this warning")
+
+        # Build propagation matrix
+        KK = [[etaI,etaQ,etaU,etaV],[rhoQ,rhoU,rhoV]]
+
+        # Build source function
+        # SS = np.concatenate((epsI,epsQ,epsU,epsV)).reshape((4,cdts.nus_N))
+        SS = [epsI,epsQ,epsU,epsV]
+
+        return SS, KK

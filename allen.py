@@ -132,6 +132,29 @@ class Allen_class():
 
         return self.wnu_JK, J00, J20
 
+    def get_default_anisotropy(self, nu):
+        """ Get the anisotropy function for the default height.
+            Input: None
+            Output: None
+            Internal: Defines the anisotropy function
+        """
+        I_0 = self.get_radiation(nu)
+        # Convert input to lambda [micron]
+        lamb = c.c*1e4/nu
+        # u1 and u2 from pre-defined interpolation functions
+        u1 = self.fu1(lamb)
+        u2 = self.fu2(lamb)
+
+        J_nu = 0.5*I_0*(self.a0 + self.a1*u1 + self.a2*u2)
+        K_nu = 0.5*I_0*(self.b0 + self.b1*u1 + self.b2*u2)
+
+        self.wnu_JK = (3*K_nu-J_nu)/(2*J_nu)
+
+        J00 = J_nu
+        J20 = J00*self.wnu_JK/np.sqrt(2)
+
+        return self.wnu_JK, J00, J20
+
     def get_radiation(self,nus):
         """ Get radiation intensity from Allen
             Input: numpy array of frequencies [Hz]

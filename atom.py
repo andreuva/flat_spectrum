@@ -977,6 +977,108 @@ class line_class():
             return self.jqq
 
 ################################################################################
+
+    def get_mrc(self, JS):
+        """ Method to get the MRC in JKQ for the line
+        """
+
+        # If special Helium case
+        if self.especial:
+
+            mrc_c = -1.
+            mrc_p = -1.
+
+            # For each component
+            for comp in self.jqq:
+
+                # Get local mrc
+                lmrc_c, lmrc_p = self.actually_get_mrc(self.jqq[comp], \
+                                                       self.jqq_copy[comp],JS)
+                mrc_c = np.max([mrc_c,lmrc_c])
+                mrc_p = np.max([mrc_p,lmrc_p])
+
+
+        # Usual multi-term
+        else:
+
+            # Get mrc
+            mrc_c, mrc_p = self.actually_get_mrc(self.jqq,self.jqq_copy,JS)
+
+        # Return mrc
+        return mrc_c, mrc_p
+
+################################################################################
+
+    def actually_get_mrc(self, jqq, jqq_old, JS):
+        """ Method to get the MRC in JKQ for the line, but seriously now
+        """
+
+
+        #
+        # Build JKQ tensors
+        #
+
+        mrc_p = -1.
+
+        # For each multipole
+        for K in range(3):
+
+            # Compute positive Q
+            for Q in range(0,K+1):
+
+                # Initialize
+                JKQ = 0.
+                JKQ_old = 0.
+
+                # Factor for K
+                f1 = np.sqrt(3.*(2.*K + 1.))
+
+                # For each q and q'
+                for qq in range(-1,2):
+
+                    # Factor for q
+                    f2 = f1*JS.sign(1+qq)
+
+                    # Only contribution from q' from 3J symbol
+                    qp = qq - Q
+
+                    # Control qp
+                    if np.absolute(qp) > 1:
+                        continue
+
+                    # Get factor
+                    ff = f2*JS.j3(1.,1.,K,qq,-qp,-Q)
+
+                    # Add contribution for qq'
+                    JKQ += jqq[qq][qp]*ff
+                    JKQ_old += jqq_old[qq][qp]*ff
+
+                #
+                # Get MRC
+                #
+                if np.absolute(JKQ_old) > 0.:
+                    lmrc = np.absolute(JKQ - JKQ_old)/np.absolute(JKQ_old)
+                elif np.absolute(JKQ) > 0.:
+                    lmrc = np.absolute(JKQ - JKQ_old)/np.absolute(JKQ)
+                else:
+                    lmrc = 0.
+
+                # Mean radiation
+                if K == 0:
+
+                    # Done
+                    mrc_c = lmrc
+
+                # Anisotropi"es"
+                else:
+
+                    # Get MRC
+                    mrc_p = np.max([mrc_p,lmrc])
+
+        return mrc_c, mrc_p
+
+
+################################################################################
 ################################################################################
 ################################################################################
 
@@ -1033,6 +1135,12 @@ class HeI_1083():
 
         # Internal switch
         not_twoterm = False
+
+        #
+        # This version is only for 10830
+        #
+        if not_twoterm:
+            sys.exit('Sorry, the NN test is only for 10830')
 
         # Add the two terms. Energy cm^-1
         self.terms.append(term_class(0.0,1.0,      [1.], \
@@ -1387,6 +1495,57 @@ class ESE:
             self.N_rho = len(self.rho)
             self.coherences = self.N_rho - self.populations
             self.ESE_indep = np.zeros((self.N_rho, self.N_rho))
+
+################################################################################
+
+    def initialize_jqq(self, allen):
+        """ Set the Jqq matrix with J00 value from Allen
+        """
+
+        # For each line
+        for line in self.atom.lines:
+
+            # Create a copy of jqq
+            line.jqq_copy = copy.deepcopy(line.jqq)
+
+            # If special Helium
+            if line.special:
+
+                # For each component
+                for comp in line.jqq_copy:
+
+                    # Make LTE
+                    self.lte_jqq(line.jqq_copy[comp], line.nu, allen)
+
+            # Normal line
+            else:
+
+                # Make LTE
+                self.lte_jqq(line.jqq_copy, line.nu, allen)
+
+################################################################################
+
+    def lte_jqq(jqq, nu, allen):
+        """ Actually set the Jqq matrix in LTE
+        """
+
+        # Get J00
+        dummya, J00, dummyb = allen.get_default_anisotropy(nu)
+
+        # j00 = J00/3
+        j00 = J00/3e0
+
+        # For each q and q'
+        for qq in range(-1,2):
+
+            # Diagonal
+            jqq[qq][qq] = j00
+
+            # Non-diagonal
+            for qp in range(qq+1,2):
+
+                # Zero
+                jqq[qq][qp] = 0e0
 
 ################################################################################
 

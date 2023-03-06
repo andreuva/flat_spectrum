@@ -253,8 +253,8 @@ class state:
         self.radiation = [RTE(cdts.nus, cdts.v_dop) for z in cdts.zz]
 
         # Get Allen class instance and gamma angles
-        Allen = Allen_class()
-        Allen.get_gamma(np.min(cdts.zz))
+        self.Allen = Allen_class()
+        self.Allen.get_gamma(np.min(cdts.zz))
 
         # Define the IC for the downward and upward rays as a radiation class
         self.space_rad = RTE(cdts.nus, cdts.v_dop)
@@ -264,16 +264,18 @@ class state:
             self.sun_rad.append(RTE(cdts.nus, cdts.v_dop))
             if ray.rinc < 0.5*np.pi:
                 if cdts.velocity.sum() == 0:
-                    self.sun_rad[-1].make_IC(cdts.nus, ray, Allen)
+                    self.sun_rad[-1].make_IC(cdts.nus, ray, self.Allen)
                 else:
-                    self.sun_rad[-1].make_IC_velocity(cdts.nus, ray, Allen, cdts.velocity)
+                    self.sun_rad[-1].make_IC_velocity(cdts.nus, ray, self.Allen, \
+                                                      cdts.velocity)
         for ray in cdts.orays:
             self.osun_rad.append(RTE(cdts.nus, cdts.v_dop))
             if ray.rinc < 0.5*np.pi:
                 if cdts.velocity.sum() == 0:
-                    self.osun_rad[-1].make_IC(cdts.nus, ray, Allen)
+                    self.osun_rad[-1].make_IC(cdts.nus, ray, self.Allen)
                 else:
-                    self.osun_rad[-1].make_IC_velocity(cdts.nus, ray, Allen, cdts.velocity)
+                    self.osun_rad[-1].make_IC_velocity(cdts.nus, ray, self.Allen, \
+                                                       cdts.velocity)
 
     def update_mrc(self, cdts, itter):
         """Update the mrc of the current state by finding the
@@ -287,6 +289,26 @@ class state:
             mrc_p, mrc_c = point.solveESE(self.radiation[i], cdts)
             self.mrc_p = np.max([self.mrc_p,mrc_p])
             self.mrc_c = np.max([self.mrc_c,mrc_c])
+
+    def update_mrc_j(self, cdts, itter):
+        """Update the mrc in jqq of the current state by finding the
+           maximum mrc over all points in z
+        """
+
+        # For each point
+        for i, point in enumerate(self.atomic):
+
+            # For each line in the atom
+            for line in point.lines:
+
+                mrc_c, mrc_p = line.get_mrc()
+
+                self.mrc_c = np.max([self.mrc_c,mrc_c])
+                self.mrc_p = np.max([self.mrc_p,mrc_p])
+
+                # Update jqq
+                line.jqq_copy = copy.deepcopy(line.jqq)
+
 
     def new_itter(self):
         """Update the source funtions of all the points with the new radiation field
