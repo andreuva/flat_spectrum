@@ -48,7 +48,7 @@ def new_parameters(pm, npoints, index):
     # pm.B = [0, 0.1, 1, 10, 100]
     # pm.zf = pm.z0 + np.array([25, 50, 100, 200, 300])*1e5
 
-    b_index = index // len(pm.B)
+    b_index = index // len(pm.zf)
     t_index = index % len(pm.zf)
 
     pm.B = pm.B[b_index]
@@ -93,7 +93,7 @@ def master_work(npoints):
                 # Send the task to the worker
                 if task_index >= 0:
                     print('sending task {}/{} to worker {}'.format(task_index, npoints, source))
-                    print('wich corresponds grid  (B,tau)   =    ({},{})'.format(task_index%30, task_index//12))
+                    print('wich corresponds grid  (B,tau)   =    ({},{})'.format(task_index//12, task_index%12))
                     comm.send(task_index, dest=source, tag=tags.START)
                     task_status[task_index] = 1
                 else:
