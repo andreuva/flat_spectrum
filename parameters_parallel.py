@@ -3,7 +3,7 @@ zf = 30200.0*1e5   # geometrical height of the slab [cm]
 zn = 10            # Points in z in the slab
 
 ray_quad = "quadrature_gaussian_16x4.dat"# file where the angular quadrature is saved
-ray_out = [[1.0,0.]]             # List of mu,phi for emergent radiation directions
+ray_out = [[1.0, 0.0]]             # List of mu,phi for emergent radiation directions
 
 v_dop = 5.0*1e5            # Dopler velocity (not the actual one) [cm/s]
 a_voigt = 1e-2             # voigt damping parameter of the line profile
