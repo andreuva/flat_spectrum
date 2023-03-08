@@ -335,6 +335,12 @@ def main(pm=pm, disable_display=False):
         point_P = point(st.atomic[z], st.radiation[z], cdt.zz[z])
         sf_p, kk_p = RT_coeficients.getRTcoefs(point_P.atomic, ray, cdt)
 
+        # remove dichroism just in the output rays (solution atmosphere is the same)
+        # kk_o = [[kk_o[0][0], kk_o[0][1]*0, kk_o[0][2]*0, kk_o[0][3]*0],
+        #                     [kk_o[0][0]*0, kk_o[0][0]*0, kk_o[0][0]*0]]
+        # kk_p = [[kk_p[0][0], kk_p[0][1]*0, kk_p[0][2]*0, kk_p[0][3]*0],
+        #                     [kk_p[0][0]*0, kk_p[0][0]*0, kk_p[0][0]*0]]
+
         # Go through all the points (besides 0 and -1 for being IC)
         for z in range(iz0, iz1, step):
 

@@ -2,7 +2,7 @@ import time
 
 z0 = 30000.0*1e5   # height of the slav over the surfave [cm]
 zf = 30100.0*1e5   # geometrical height of the slab [cm]
-zn = 50            # Points in z in the slab
+zn = 10            # Points in z in the slab
 
 ray_quad = "quadrature_gaussian_16x4.dat"# file where the angular quadrature is saved
 ray_out = [[1.0,0.]]             # List of mu,phi for emergent radiation directions
@@ -28,5 +28,5 @@ extra_plots = True
 extra_save = True
 especial = True
 
-dir = f'output_lim_stks_I_dz_{(zf-z0)/1e5:1.1f}_nz_{zn}_B_{B}_sp_{especial}_qd_{ray_quad[-8:-4]}_{time.strftime("%Y%m%d-%H%M%S")}/'
+dir = f'output_dz_{(zf-z0)/1e5:1.1f}_B_{B}_sp_{especial}_qd_{ray_quad[-8:-4]}_{time.strftime("%Y%m%d-%H%M%S")}/'
 del time

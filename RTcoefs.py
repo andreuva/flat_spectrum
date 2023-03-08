@@ -692,6 +692,14 @@ class RTcoefs:
         eps2 /= (eta0 + cts.vacuum)
         eps3 /= (eta0 + cts.vacuum)
 
+        # removed dichroism
+        # eta1 *= (eta0 + cts.vacuum)*0
+        # eta2 *= (eta0 + cts.vacuum)*0
+        # eta3 *= (eta0 + cts.vacuum)*0
+        # rho0 *= (eta0 + cts.vacuum)*0
+        # rho1 *= (eta0 + cts.vacuum)*0
+        # rho2 *= (eta0 + cts.vacuum)*0
+
         # Check physical absorption
         if np.any(eta0 < 0) and self.no_warning:
             print(f"Warning: eta_I < 0 at iz = {ese.iz} dir = {ray.rinc}x{ray.raz}")
