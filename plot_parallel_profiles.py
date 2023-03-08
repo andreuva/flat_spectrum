@@ -342,8 +342,8 @@ if __name__ == '__main__':
     figure, axis = plt.subplots(nrows=30, ncols=12, figsize=(30, 20), dpi=200)
     for i in tqdm(range(30), desc='Plotting', ncols=50):
         for j in range(12):
-            axis[i, j].plot(wave[p1:p3], -Q_nlte_grid[i,j,p1:p3]/I_nlte_grid[i,j,p1:p3]*100, label='NLTE')
-            axis[i, j].plot(wave[p1:p3], Q_analytical_grid[i,j,p1:p3]/I_analytical[i*12+j,p1:p3]*100, label='slab')
+            axis[i, j].plot(wave[p1:p3], Q_nlte_grid[i,j,p1:p3]/I_nlte_grid[i,j,p1:p3]*100, label='NLTE')
+            axis[i, j].plot(wave[p1:p3], -Q_analytical_grid[i,j,p1:p3]/I_analytical[i*12+j,p1:p3]*100, label='slab')
             axis[i, j].set_yticks([])
             # axis[i, j].set_xticks(ticks, labels)
             axis[i, j].set_xticks([])
@@ -384,8 +384,8 @@ if __name__ == '__main__':
     plt.savefig(f'{pm.basedir}I_error.png')
     plt.close()
 
-    Q_2d_error_r = (Q_nlte_grid/I_nlte_grid - Q_analytical_grid/I_analytical_grid)[:,:,nu_peak_1_indx]*100
-    Q_2d_error_b = (Q_nlte_grid/I_nlte_grid - Q_analytical_grid/I_analytical_grid)[:,:,nu_peak_2_indx]*100
+    Q_2d_error_r = (Q_nlte_grid/I_nlte_grid + Q_analytical_grid/I_analytical_grid)[:,:,nu_peak_1_indx]*100
+    Q_2d_error_b = (Q_nlte_grid/I_nlte_grid + Q_analytical_grid/I_analytical_grid)[:,:,nu_peak_2_indx]*100
 
     # same but for Q
     plt.figure(figsize=(20,10), dpi=120)

@@ -1,5 +1,5 @@
 from allen import Allen_class
-import parameters_comparison as pm
+import parameters as pm
 import constants as cts
 from conditions import conditions
 from RTcoefs import RTcoefs
@@ -136,8 +136,8 @@ if __name__ == '__main__':
     B_spherical = np.array([pm.B, pm.B_inc*np.pi/180, pm.B_az*np.pi/180])
     velocity = np.array(pm.velocity)
     especial = False
-    datadir_fs = 'output_compar_fs_B_0.0_90.0_0.0_z200.0mM_20230203-183511'
-    datadir = 'output_compar_B_0.0_90.0_0.0_z200.0mM_20230203-183532'
+    datadir_fs = ''
+    datadir = ''
     pm.dir = datadir + '/'
 
     wave_imp, tau_imp = np.loadtxt(f'{datadir}/out/tau_00.out', skiprows=3, unpack=True)
@@ -382,7 +382,7 @@ if __name__ == '__main__':
     # plt.xlabel('Wavelength [nm]')
 
     plt.tight_layout()
-    # plt.savefig('3_3_1.pdf')
+    # plt.savefig(f'{pm.dir}/plot_comparison_JKQ.pdf')
     plt.show()
 
 
@@ -408,7 +408,7 @@ if __name__ == '__main__':
     plt.xticks(ticks, labels)
 
     plt.tight_layout()
-    # plt.savefig('3_3_2.pdf')
+    # plt.savefig(f'{pm.dir}/plot_comparison_Q.pdf')
     plt.show()
 
     # PLOT OF THE STOKES PARAMETERS
@@ -433,5 +433,5 @@ if __name__ == '__main__':
     plt.xticks(ticks, labels)
 
     plt.tight_layout()
-    # plt.savefig('3_3_2I.pdf')
+    plt.savefig(f'{pm.dir}/plot_comparison_Q_I.pdf')
     plt.show()
