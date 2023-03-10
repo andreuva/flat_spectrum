@@ -5,7 +5,7 @@ import numpy as np
 from mpi4py import MPI
 import os, argparse
 from tqdm import tqdm
-import traceback
+import traceback, time
 import pickle as pkl
 
 
@@ -53,7 +53,7 @@ def new_parameters(pm, npoints, index):
 
     pm.B = pm.B[b_index]
     pm.zf = pm.zf[t_index]
-    pm.dir = f'{pm.basedir}tau_{t_index}_BB_{pm.B}/'
+    pm.dir = f'{pm.basedir}tau_{t_index}_BB_{pm.B}_{time.strftime("%Y%m%d-%H%M%S")}/'
     return pm
 
 
