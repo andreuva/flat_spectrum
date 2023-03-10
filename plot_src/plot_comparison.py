@@ -86,6 +86,8 @@ def compute_profile(JKQ_1, JKQ_2, pm=pm, B=np.array([0, 0, 0]), especial=True, j
     #     atoms.atom.lines[0].jqq = atoms.atom.lines[0].jqq = {276733332165635.5: {-1: {-1: (8.375176071590015e-06+0j), 0: (1.1855266276444219e-19+5.2353657675870114e-18j), 1: (6.347751887308007e-07-2.8554737086374053e-13j)},0: {-1: 0j, 0: (9.00950985634052e-06+0j),1: (-1.1855266276444219e-19-5.235372385031912e-18j)}, 1: {-1: 0j, 0: 0j, 1: (8.374099225151616e-06+0j)}}, 
     #                                                          276764094706172.62:{-1: {-1: (6.094236834279895e-06+0j), 0: (-3.805888397243992e-18-1.685474405888409e-16j), 1: (4.4084743129272864e-07+3.580508415744089e-12j)}, 0: {-1: 0j, 0: (6.5419934862266725e-06+0j), 1: (3.805888397243992e-18+1.6854745051500825e-16j)}, 1: {-1: 0j, 0: 0j, 1: (6.105864267347921e-06+0j)}}}
 
+    # rotate the radiation field
+    atoms.rotate_Jqq(cdt.JS)
     # Solve the ESE
     atoms.solveESE(None, cdt)
 
@@ -136,33 +138,15 @@ if __name__ == '__main__':
     B_spherical = np.array([pm.B, pm.B_inc*np.pi/180, pm.B_az*np.pi/180])
     velocity = np.array(pm.velocity)
     especial = False
-    # quadrature 16x4, B=0.03, tau=1.07
-    # datadir_fs = 'output_dz_100.0_sp_False_qd_16x4_20230308-093520'
-    # datadir = 'output_dz_100.0_sp_True_qd_16x4_20230308-093512'
-    # quadrature 32x8, B=0.03, tau=1.07
-    # datadir_fs = 'output_dz_100.0_sp_False_qd_32x8_20230308-093529'
-    # datadir = 'output_dz_100.0_sp_True_qd_32x8_20230308-093540'
-    # quadrature 16x4, B=10, tau=1.07
-    # datadir_fs = 'output_dz_100.0_B_10_sp_False_qd_16x4_20230308-095831'
-    # datadir = 'output_dz_100.0_B_10_sp_True_qd_16x4_20230308-095753'
-    # sanity check nz = 50 (tau=1.19)
-    # datadir_fs = 'output_dz_100.0_nz_50_B_0.03_sp_True_qd_16x4_20230308-104052'
-    # sanity check nz = 50 (tau=1)
-    # datadir_fs = 'output_dz_85.0_nz_50_B_0.03_sp_True_qd_16x4_20230308-113031'
-    # datadir = 'output_dz_95.0_B_0.03_sp_True_qd_16x4_20230308-120111'
-    # limit sumstokes to I in the Jqq calculation
-    # datadir_fs = 'output_sumI_dz_100.0_B_0.03_sp_True_qd_16x4_20230308-165324'
-    # datadir_fs = 'output_lim_stks_I_dz_100.0_B_0.03_sp_True_qd_16x4_20230308-104603'
-    # remove dichroism in the solution
-    # datadir_fs = 'output_no_dichroism_dz_100.0_B_0.03_sp_True_qd_16x4_20230308-105315'
-    # remove dichroism in the output rays
-    # datadir_fs = 'output_no_dichroism_exit_dz_100.0_B_0.03_sp_True_qd_16x4_20230309-084815'
-    # remove lower level polarization in the ESE equations
-    # datadir = 'output_norho_dz_100.0_B_0.03_sp_True_qd_16x4_20230309-103606'
-    # datadir_fs = 'output_norho_nodicro_dz_100.0_B_0.03_sp_True_qd_16x4_20230309-102715'
-    # comparison between magnetic fields weak and strong
-    datadir_fs = 'output_dz_100.0_B_500_sp_True_qd_16x4_20230309-115520'
-    datadir = 'output_dz_100.0_B_0.1_sp_True_qd_16x4_20230309-115501'
+
+    # tau 0.5, quad 32x8, change in B
+    # datadir = 'output_dz_50.0_B_0.1_sp_True_qd_32x8_20230310-111959'
+    # datadir = 'output_dz_50.0_B_1_sp_True_qd_32x8_20230310-112009'
+    # datadir = 'output_dz_50.0_B_10_sp_True_qd_32x8_20230310-112018'
+    # datadir = 'output_dz_50.0_B_100_sp_True_qd_32x8_20230310-112025'
+    # tau 1. quad 16x4, B 1
+    datadir_fs = 'output_dz_25.0_B_0.1_sp_True_qd_32x8_20230310-112140'
+    datadir = 'output_dz_25.0_B_0.1_sp_True_qd_32x8_20230310-112140'
 
     pm.dir = datadir + '/'
 
@@ -452,7 +436,7 @@ if __name__ == '__main__':
     plt.subplot(1,2,2)
     plt.plot(wave[p1:p3], Q_nlte[p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE nz=10 tau={tau_max:.2f}')
     plt.plot(wave[p1:p3], Q_nlte_fs[p1:p3]/I_nlte[p1:p3]*100 , '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE nz=10 tau={tau_max_fs:.2f}')
-    plt.plot(wave[p1:p3], -II[1,p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(8/10.0), label=fr'Const. slab')
+    plt.plot(wave[p1:p3], II[1,p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(8/10.0), label=fr'Const. slab')
     # plt.legend()
     plt.ylabel(r'$Q/I_c$ (%)')
     plt.xlabel('Wavelength [nm]')

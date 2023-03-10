@@ -1649,8 +1649,8 @@ class ESE:
         Bnorm = self.B
 
         # If there is magnetic field, need to rotate Jqq
-        if self.rotate:
-            self.rotate_Jqq(JS)
+        # if self.rotate:
+        #     self.rotate_Jqq(JS)
 
         # Initialize to zero the coefficients
         for i, p_lev in enumerate(self.atom.dens_elmnt_indep):
@@ -2615,7 +2615,7 @@ class ESE:
         if self.rotate:
 
             # Rotate Jqq
-            self.rotate_Jqq(JS)
+            # self.rotate_Jqq(JS)
 
             # Debug
             if self.debug:

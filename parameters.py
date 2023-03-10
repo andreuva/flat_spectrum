@@ -8,7 +8,7 @@ ray_quad = "quadrature_gaussian_16x4.dat"# file where the angular quadrature is 
 ray_out = [[1.0,0.]]             # List of mu,phi for emergent radiation directions
 
 v_dop = 5.0*1e5            # Dopler velocity (not the actual one) [cm/s]
-a_voigt = 1e-2             # voigt damping parameter of the line profile
+a_voigt = 1e-99             # voigt damping parameter of the line profile
 n_dens = 5.8e4             # Density wich defines the optical thickness [cm^-3]
 temp = 8.665251563142749e3 # Temperature of the slab [K] (6 km/s)
 
@@ -29,5 +29,4 @@ extra_save = True
 especial = True
 
 dir = f'output_dz_{(zf-z0)/1e5:1.1f}_B_{B}_sp_{especial}_qd_{ray_quad[-8:-4]}_{time.strftime("%Y%m%d-%H%M%S")}/'
-dir = f'output_debug_rotation_B_{B}/'
 del time

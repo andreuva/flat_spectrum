@@ -11,7 +11,6 @@ from iopy import io_saverho,io_saverad
 import numpy as np
 import struct, os
 from tensors import Jqq_to_JKQ
-from tqdm import tqdm
 
 # set numpy to raise all as errors
 # np.seterr(all='raise')
@@ -64,10 +63,13 @@ def main(pm=pm, disable_display=False):
 
         # Reset the internal state for a new itteration
         st.new_itter()
+        print('--'*50)
+        print(f'Iteration {itteration}')
+        print('--'*50 + '\n')
 
         # Go through all the rays in the cuadrature
-        for j, ray in enumerate(tqdm(cdt.rays, desc=f'propagating rays itteration {itteration}', 
-                                     disable=disable_display, ncols=90)):
+        for j, ray in enumerate(cdt.rays):
+            print(f'Ray {j} {ray.inc} {ray.az}')
 
             # Initialize optical depth
             tau = np.zeros((cdt.nus_N))
