@@ -139,14 +139,8 @@ if __name__ == '__main__':
     velocity = np.array(pm.velocity)
     especial = False
 
-    # tau 0.5, quad 32x8, change in B
-    # datadir = 'output_dz_50.0_B_0.1_sp_True_qd_32x8_20230310-111959'
-    # datadir = 'output_dz_50.0_B_1_sp_True_qd_32x8_20230310-112009'
-    # datadir = 'output_dz_50.0_B_10_sp_True_qd_32x8_20230310-112018'
-    # datadir = 'output_dz_50.0_B_100_sp_True_qd_32x8_20230310-112025'
-    # tau 1. quad 16x4, B 1
-    datadir_fs = 'output_dz_25.0_B_0.1_sp_True_qd_32x8_20230310-112140'
-    datadir = 'output_dz_25.0_B_0.1_sp_True_qd_32x8_20230310-112140'
+    datadir_fs = 'output_dz_100.0_B_0.1_sp_True_qd_16x4_20230310-125821'
+    datadir = 'output_dz_100.0_B_0.1_sp_True_qd_16x4_20230310-125821'
 
     pm.dir = datadir + '/'
 
@@ -422,10 +416,10 @@ if __name__ == '__main__':
     plt.show()
 
     # PLOT OF THE STOKES PARAMETERS
-    plt.figure(figsize=(15,5), dpi=180)
-    plt.subplot(1,2,1)
+    plt.figure(figsize=(20,20), dpi=180)
+    plt.subplot(2,2,1)
     plt.plot(wave[p1:p3], I_nlte[p1:p3]/I_nlte[0], linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
-    plt.plot(wave[p1:p3], I_nlte_fs[p1:p3]/I_nlte[0], '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE nz=10 fs')
+    plt.plot(wave[p1:p3], I_nlte_fs[p1:p3]/I_nlte[0], '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent')
     plt.plot(wave[p1:p3], II[0,p1:p3]/I_nlte[0], linewidth=2, color=cm.plasma(8/10.0), label=fr'Constant property slab')
     plt.ylim(0, (I_nlte/I_nlte[0]).max()*1.1)
     plt.legend(loc='lower left')
@@ -433,12 +427,30 @@ if __name__ == '__main__':
     plt.xlabel('Wavelength [nm]')
     plt.xticks(ticks, labels)
 
-    plt.subplot(1,2,2)
-    plt.plot(wave[p1:p3], Q_nlte[p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE nz=10 tau={tau_max:.2f}')
-    plt.plot(wave[p1:p3], Q_nlte_fs[p1:p3]/I_nlte[p1:p3]*100 , '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE nz=10 tau={tau_max_fs:.2f}')
+    plt.subplot(2,2,2)
+    plt.plot(wave[p1:p3], Q_nlte[p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
+    plt.plot(wave[p1:p3], Q_nlte_fs[p1:p3]/I_nlte[p1:p3]*100 , '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
     plt.plot(wave[p1:p3], II[1,p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(8/10.0), label=fr'Const. slab')
     # plt.legend()
     plt.ylabel(r'$Q/I_c$ (%)')
+    plt.xlabel('Wavelength [nm]')
+    plt.xticks(ticks, labels)
+
+    plt.subplot(2,2,3)
+    plt.plot(wave[p1:p3], U_nlte[p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
+    plt.plot(wave[p1:p3], U_nlte_fs[p1:p3]/I_nlte[p1:p3]*100 , '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
+    plt.plot(wave[p1:p3], II[2,p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(8/10.0), label=fr'Const. slab')
+    # plt.legend()
+    plt.ylabel(r'$U/I_c$ (%)')
+    plt.xlabel('Wavelength [nm]')
+    plt.xticks(ticks, labels)
+
+    plt.subplot(2,2,4)
+    plt.plot(wave[p1:p3], V_nlte[p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
+    plt.plot(wave[p1:p3], V_nlte_fs[p1:p3]/I_nlte[p1:p3]*100 , '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
+    plt.plot(wave[p1:p3], II[3,p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(8/10.0), label=fr'Const. slab')
+    # plt.legend()
+    plt.ylabel(r'$V/I_c$ (%)')
     plt.xlabel('Wavelength [nm]')
     plt.xticks(ticks, labels)
 
