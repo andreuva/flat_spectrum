@@ -63,13 +63,16 @@ def main(pm=pm, disable_display=False):
 
         # Reset the internal state for a new itteration
         st.new_itter()
-        print('--'*50)
-        print(f'Iteration {itteration}')
-        print('--'*50 + '\n')
+
+        if not disable_display:
+            print('--'*50)
+            print(f'Iteration {itteration}')
+            print('--'*50 + '\n')
 
         # Go through all the rays in the cuadrature
         for j, ray in enumerate(cdt.rays):
-            print(f'Ray {j} {ray.inc} {ray.az}')
+            if not disable_display:
+                print(f'Ray {j} {ray.inc} {ray.az}')
 
             # Initialize optical depth
             tau = np.zeros((cdt.nus_N))
