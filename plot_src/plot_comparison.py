@@ -136,8 +136,34 @@ if __name__ == '__main__':
     B_spherical = np.array([pm.B, pm.B_inc*np.pi/180, pm.B_az*np.pi/180])
     velocity = np.array(pm.velocity)
     especial = False
-    datadir_fs = ''
-    datadir = ''
+    # quadrature 16x4, B=0.03, tau=1.07
+    # datadir_fs = 'output_dz_100.0_sp_False_qd_16x4_20230308-093520'
+    # datadir = 'output_dz_100.0_sp_True_qd_16x4_20230308-093512'
+    # quadrature 32x8, B=0.03, tau=1.07
+    # datadir_fs = 'output_dz_100.0_sp_False_qd_32x8_20230308-093529'
+    # datadir = 'output_dz_100.0_sp_True_qd_32x8_20230308-093540'
+    # quadrature 16x4, B=10, tau=1.07
+    # datadir_fs = 'output_dz_100.0_B_10_sp_False_qd_16x4_20230308-095831'
+    # datadir = 'output_dz_100.0_B_10_sp_True_qd_16x4_20230308-095753'
+    # sanity check nz = 50 (tau=1.19)
+    # datadir_fs = 'output_dz_100.0_nz_50_B_0.03_sp_True_qd_16x4_20230308-104052'
+    # sanity check nz = 50 (tau=1)
+    # datadir_fs = 'output_dz_85.0_nz_50_B_0.03_sp_True_qd_16x4_20230308-113031'
+    # datadir = 'output_dz_95.0_B_0.03_sp_True_qd_16x4_20230308-120111'
+    # limit sumstokes to I in the Jqq calculation
+    # datadir_fs = 'output_sumI_dz_100.0_B_0.03_sp_True_qd_16x4_20230308-165324'
+    # datadir_fs = 'output_lim_stks_I_dz_100.0_B_0.03_sp_True_qd_16x4_20230308-104603'
+    # remove dichroism in the solution
+    # datadir_fs = 'output_no_dichroism_dz_100.0_B_0.03_sp_True_qd_16x4_20230308-105315'
+    # remove dichroism in the output rays
+    # datadir_fs = 'output_no_dichroism_exit_dz_100.0_B_0.03_sp_True_qd_16x4_20230309-084815'
+    # remove lower level polarization in the ESE equations
+    # datadir = 'output_norho_dz_100.0_B_0.03_sp_True_qd_16x4_20230309-103606'
+    # datadir_fs = 'output_norho_nodicro_dz_100.0_B_0.03_sp_True_qd_16x4_20230309-102715'
+    # comparison between magnetic fields weak and strong
+    datadir_fs = 'output_dz_100.0_B_500_sp_True_qd_16x4_20230309-115520'
+    datadir = 'output_dz_100.0_B_0.1_sp_True_qd_16x4_20230309-115501'
+
     pm.dir = datadir + '/'
 
     wave_imp, tau_imp = np.loadtxt(f'{datadir}/out/tau_00.out', skiprows=3, unpack=True)
@@ -344,8 +370,8 @@ if __name__ == '__main__':
     plt.subplot(1,2,1)
     for i in lay_show:
         comp_label = fr'$\tau$={tau_prof.max()-tau[i]:1.2f}'
-        if i == 0:
-            comp_label = fr'$\tau$=2.00'
+        # if i == 0:
+        #     comp_label = fr'$\tau$=1.00'
         plt.plot(wave[p1:p3], JK00_fil[i,p1:p3]/JK00_fil[0,0], linewidth=2, color=cm.plasma((9-i)/10.0), label=comp_label)
         # plt.plot(wave[p1:p3], JK00_fil_fs[i,p1:p3]/JK00_fil_fs[0,0], '--', linewidth=2, color=cm.plasma((9-i)/10.0), label=comp_label+' fs')
 
@@ -415,7 +441,7 @@ if __name__ == '__main__':
     plt.figure(figsize=(15,5), dpi=180)
     plt.subplot(1,2,1)
     plt.plot(wave[p1:p3], I_nlte[p1:p3]/I_nlte[0], linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
-    plt.plot(wave[p1:p3], I_nlte_fs[p1:p3]/I_nlte[0], '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE fs')
+    plt.plot(wave[p1:p3], I_nlte_fs[p1:p3]/I_nlte[0], '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE nz=10 fs')
     plt.plot(wave[p1:p3], II[0,p1:p3]/I_nlte[0], linewidth=2, color=cm.plasma(8/10.0), label=fr'Constant property slab')
     plt.ylim(0, (I_nlte/I_nlte[0]).max()*1.1)
     plt.legend(loc='lower left')
@@ -424,8 +450,8 @@ if __name__ == '__main__':
     plt.xticks(ticks, labels)
 
     plt.subplot(1,2,2)
-    plt.plot(wave[p1:p3], Q_nlte[p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
-    plt.plot(wave[p1:p3], Q_nlte_fs[p1:p3]/I_nlte[p1:p3]*100 , '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE fs')
+    plt.plot(wave[p1:p3], Q_nlte[p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE nz=10 tau={tau_max:.2f}')
+    plt.plot(wave[p1:p3], Q_nlte_fs[p1:p3]/I_nlte[p1:p3]*100 , '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE nz=10 tau={tau_max_fs:.2f}')
     plt.plot(wave[p1:p3], -II[1,p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(8/10.0), label=fr'Const. slab')
     # plt.legend()
     plt.ylabel(r'$Q/I_c$ (%)')

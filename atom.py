@@ -999,7 +999,7 @@ class HeI_1083_2Ltest():
             self.levels.append(levels[ord])
 
         # Line inverse lifetime s^-1
-        self.lines = [line(self.multiterm,[self.levels, (0, 1), (0, 1), 1.0216e+07, \
+        self.lines = [line_class(self.multiterm,[self.levels, (0, 1), (0, 1), 1.0216e+07, \
                                            125,85,30.,5.],JS)]
 
         self.dens_elmnt = []
@@ -1672,7 +1672,7 @@ class ESE:
 
                 # Get magnetic contribution
                 nu_L = c.nu_L*Bnorm
-                gamma = 2.0*np.pi*nu_L*self.atom.levels[p_level[0]]
+                gamma = 2.0*np.pi*nu_L*self.atom.levels[p_lev[0]]
 
                 # Column
                 for j, q_lev in enumerate(self.atom.dens_elmnt_indep):
@@ -2725,6 +2725,7 @@ class ESE:
 
                 # Get multiplicative term
                 Gamma = 2.*np.pi*(EE - EE1)*c.c
+                # if index[1] == 0: Gamma *= 1e99
 
                 # If imaginary row
                 if index[-1]:

@@ -362,6 +362,8 @@ def main(pm=pm, disable_display=False):
                                 cdt.zz[z+step])
                 # Compute the RT coeficients for the next point (for solving RTE)
                 sf_p, kk_p = RT_coeficients.getRTcoefs(point_P.atomic, ray, cdt)
+                # kk_p = [[kk_p[0][0], kk_p[0][1]*0, kk_p[0][2]*0, kk_p[0][3]*0],
+                #                     [kk_p[0][0]*0, kk_p[0][0]*0, kk_p[0][0]*0]]
 
             # Transfer
             tau_tot = BESSER(point_M, point_O, point_P, \

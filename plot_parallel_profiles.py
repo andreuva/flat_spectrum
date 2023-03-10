@@ -357,6 +357,20 @@ if __name__ == '__main__':
     plt.close()
     # plt.show()
 
+    # plot all the magnetic field strengths for the same tau value in a single plot
+    plt.figure(figsize=(20,10), dpi=120)
+    for i in range(30):
+        plt.plot(wave[p1:p3], Q_nlte_grid[i,5,p1:p3]/I_nlte_grid[i,5,p1:p3], label=f'B = {B_grid[i,0]:.2f} G')
+    plt.legend()
+    plt.show()
+
+    # plot all the magnetic field strengths for the same tau value in a single plot
+    plt.figure(figsize=(20,10), dpi=120)
+    for i in range(30):
+        plt.plot(wave[p1:p3], Q_analytical_grid[i,0,p1:p3]/I_analytical_grid[i,0,p1:p3], label=f'B = {B_grid[i,0]:.2f} G')
+    plt.legend()
+    plt.show()
+
     # plot a 2d histogram of the Q errors in red and blue components
     I_2d_error_r = ((I_nlte_grid - I_analytical_grid)/I_nlte_grid)[:,:,nu_peak_1_indx]*100
     I_2d_error_b = ((I_nlte_grid - I_analytical_grid)/I_nlte_grid)[:,:,nu_peak_2_indx]*100
@@ -390,7 +404,7 @@ if __name__ == '__main__':
     # same but for Q
     plt.figure(figsize=(20,10), dpi=120)
     plt.subplot(1,2,1)
-    plt.imshow(Q_2d_error_r, cmap='RdBu_r', aspect='auto', vmin=-5, vmax=5)
+    plt.imshow(Q_2d_error_r, cmap='RdBu_r', aspect='auto', vmin=-3, vmax=3)
     plt.xticks(np.arange(len(tau_grid[0,:]))[::2],[f'{tau:.2f}' for tau in tau_grid[0,::2]])
     plt.yticks(np.arange(len(B_grid[:,0]))[::2],B_grid[::2,0])
     # plt.colorbar()
@@ -398,7 +412,7 @@ if __name__ == '__main__':
     plt.xlabel(fr'$\tau$')
     plt.ylabel(fr'$B$')
     plt.subplot(1,2,2)
-    plt.imshow(Q_2d_error_b, cmap='RdBu_r', aspect='auto', vmin=-5, vmax=5)
+    plt.imshow(Q_2d_error_b, cmap='RdBu_r', aspect='auto', vmin=-3, vmax=3)
     plt.xticks(np.arange(len(tau_grid[0,:]))[::2], [f'{tau:.2f}' for tau in tau_grid[0,::2]])
     plt.yticks(np.arange(len(B_grid[:,0]))[::2], B_grid[::2,0])
     plt.colorbar()
