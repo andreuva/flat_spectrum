@@ -1437,8 +1437,9 @@ class ESE:
         """ Just calls the same method for the atom
         """
 
-        # For each line
-        self.atom.rotate_Jqq(self.DKQQ, JS)
+        # For each line if the rotation matrix is not None
+        if self.DKQQ is not None:
+            self.atom.rotate_Jqq(self.DKQQ, JS)
 
 ################################################################################
 

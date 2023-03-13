@@ -71,6 +71,8 @@ def compute_profile(JKQ_1, JKQ_2, pm=pm, B=np.array([0, 0, 0]), especial=True, j
     #     atoms.atom.lines[0].jqq = atoms.atom.lines[0].jqq = {276733332165635.5: {-1: {-1: (8.375176071590015e-06+0j), 0: (1.1855266276444219e-19+5.2353657675870114e-18j), 1: (6.347751887308007e-07-2.8554737086374053e-13j)},0: {-1: 0j, 0: (9.00950985634052e-06+0j),1: (-1.1855266276444219e-19-5.235372385031912e-18j)}, 1: {-1: 0j, 0: 0j, 1: (8.374099225151616e-06+0j)}}, 
     #                                                          276764094706172.62:{-1: {-1: (6.094236834279895e-06+0j), 0: (-3.805888397243992e-18-1.685474405888409e-16j), 1: (4.4084743129272864e-07+3.580508415744089e-12j)}, 0: {-1: 0j, 0: (6.5419934862266725e-06+0j), 1: (3.805888397243992e-18+1.6854745051500825e-16j)}, 1: {-1: 0j, 0: 0j, 1: (6.105864267347921e-06+0j)}}}
 
+    # rotate the radiation field
+    atoms.rotate_Jqq(cdt.JS)
     # Solve the ESE
     atoms.solveESE(None, cdt)
 
@@ -135,11 +137,11 @@ if __name__ == '__main__':
     stokes_analytical = []
 
     for i, _ in enumerate(folders):
-        folder = f'{pm.basedir}tau_{i % 12}_BB_{BBs[i]}'
+        folder = f'{pm.basedir}tau_{i % 16}_BB_{BBs[i]}'
         pm.dir = folder
         print('--'*30)
         print(f'Loading {folder}')
-        print('wich corresponds grid  (B,tau)   =    ({},{})'.format(i//12, i%12))
+        print('wich corresponds grid  (B,tau)   =    ({},{})'.format(i//16, i%16))
         wave_nlte, tau_nlte = np.loadtxt(f'{folder}/out/tau_00.out', skiprows=3, unpack=True)
         tau_nlte = taus[i]
         I_nlte, Q_nlte, U_nlte, V_nlte = stokes[i]
