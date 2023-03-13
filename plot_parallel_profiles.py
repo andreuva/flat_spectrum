@@ -479,6 +479,7 @@ if __name__ == '__main__':
         plt.ylabel(fr'$Q/I$')
         plt.xscale('log')
         # plt.yscale('log')
+        # plt.ylim(-0.02, 0.041)
         if i==0:
             plt.legend()
         plt.title(fr'$\tau$ = {tau_grid[0,taus_indexes[i]]}')
