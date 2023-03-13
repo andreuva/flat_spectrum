@@ -139,7 +139,7 @@ if __name__ == '__main__':
     for i, _ in enumerate(folders):
         folder = f'{pm.basedir}tau_{i % 16}_BB_{BBs[i]}'
         pm.dir = folder
-        print('--'*30)
+        print('--'*50)
         print(f'Loading {folder}')
         print('wich corresponds grid  (B,tau)   =    ({},{})'.format(i//16, i%16))
         wave_nlte, tau_nlte = np.loadtxt(f'{folder}/out/tau_00.out', skiprows=3, unpack=True)
@@ -156,7 +156,7 @@ if __name__ == '__main__':
 
         print(f'Computing analitical profiles for {folder}')
         print(f'with parameters:\n B = {B_spherical} \n tau_max = {tau_nlte_max}')
-        print('--'*30 + '\n')
+        print('--'*50 + '\n')
 
         # plot the profiles for the test
         # fig, ax = plt.subplots(2, 2, figsize=(10, 10))
@@ -303,32 +303,32 @@ if __name__ == '__main__':
     # separate the stokes parameters in their own lists
     stokes = np.array(stokes)
     I_nlte = stokes[:,0,:]
-    I_nlte_grid = np.resize(I_nlte, (30,12,len_w))
+    I_nlte_grid = np.resize(I_nlte, (24,16,len_w))
     Q_nlte = stokes[:,1,:]
-    Q_nlte_grid = np.resize(Q_nlte, (30,12,len_w))
+    Q_nlte_grid = np.resize(Q_nlte, (24,16,len_w))
     U_nlte = stokes[:,2,:]
-    U_nlte_grid = np.resize(U_nlte, (30,12,len_w))
+    U_nlte_grid = np.resize(U_nlte, (24,16,len_w))
     V_nlte = stokes[:,3,:]
-    V_nlte_grid = np.resize(V_nlte, (30,12,len_w))
+    V_nlte_grid = np.resize(V_nlte, (24,16,len_w))
 
     stokes_analytical = np.array(stokes_analytical)
     I_analytical = stokes_analytical[:,0,:]
-    I_analytical_grid = np.resize(I_analytical, (30,12,len_w))
+    I_analytical_grid = np.resize(I_analytical, (24,16,len_w))
     Q_analytical = stokes_analytical[:,1,:]
-    Q_analytical_grid = np.resize(Q_analytical, (30,12,len_w))
+    Q_analytical_grid = np.resize(Q_analytical, (24,16,len_w))
     U_analytical = stokes_analytical[:,2,:]
-    U_analytical_grid = np.resize(U_analytical, (30,12,len_w))
+    U_analytical_grid = np.resize(U_analytical, (24,16,len_w))
     V_analytical = stokes_analytical[:,3,:]
-    V_analytical_grid = np.resize(V_analytical, (30,12,len_w))
+    V_analytical_grid = np.resize(V_analytical, (24,16,len_w))
 
-    B_grid = np.resize(np.array(BBs), (30,12))
-    tau_grid = np.resize(np.array(taus).max(axis=-1), (30,12))
+    B_grid = np.resize(np.array(BBs), (24,16))
+    tau_grid = np.resize(np.array(taus).max(axis=-1), (24,16))
 
-    figure, axis = plt.subplots(nrows=30, ncols=12, figsize=(30, 20), dpi=200)
-    for i in tqdm(range(30), desc='Plotting', ncols=50):
-        for j in range(12):
+    figure, axis = plt.subplots(nrows=24, ncols=16, figsize=(30, 20), dpi=200)
+    for i in tqdm(range(24), desc='Plotting', ncols=50):
+        for j in range(16):
             axis[i, j].plot(wave[p1:p3], I_nlte_grid[i,j,p1:p3]/I_nlte_grid[i,j,0], label='NLTE')
-            axis[i, j].plot(wave[p1:p3], I_analytical_grid[i,j,p1:p3]/I_nlte_grid[i,j,0], label='analytical')
+            axis[i, j].plot(wave[p1:p3], I_analytical_grid[i,j,p1:p3]/I_analytical_grid[i,j,0], label='analytical')
             axis[i, j].set_yticks([])
             # axis[i, j].set_xticks(ticks, labels)
             axis[i, j].set_xticks([])
@@ -341,15 +341,15 @@ if __name__ == '__main__':
     plt.close()
     # plt.show()
 
-    figure, axis = plt.subplots(nrows=30, ncols=12, figsize=(30, 20), dpi=200)
-    for i in tqdm(range(30), desc='Plotting', ncols=50):
-        for j in range(12):
+    figure, axis = plt.subplots(nrows=24, ncols=16, figsize=(30, 20), dpi=200)
+    for i in tqdm(range(24), desc='Plotting', ncols=50):
+        for j in range(16):
             axis[i, j].plot(wave[p1:p3], Q_nlte_grid[i,j,p1:p3]/I_nlte_grid[i,j,p1:p3]*100, label='NLTE')
-            axis[i, j].plot(wave[p1:p3], -Q_analytical_grid[i,j,p1:p3]/I_analytical[i*12+j,p1:p3]*100, label='slab')
+            axis[i, j].plot(wave[p1:p3], Q_analytical_grid[i,j,p1:p3]/I_analytical_grid[i,j,p1:p3]*100, label='slab')
             axis[i, j].set_yticks([])
             # axis[i, j].set_xticks(ticks, labels)
             axis[i, j].set_xticks([])
-            axis[i, j].set_ylim(-2.5, 2.5)
+            axis[i, j].set_ylim(-3, 3)
             axis[i, j].set_title(f'B = {B_grid[i,j]:.2f} G, tau = {tau_grid[i,j]:.2f}',
                                  fontsize=8)
 
@@ -359,39 +359,25 @@ if __name__ == '__main__':
     plt.close()
     # plt.show()
 
-    # plot all the magnetic field strengths for the same tau value in a single plot
-    plt.figure(figsize=(20,10), dpi=120)
-    for i in range(30):
-        plt.plot(wave[p1:p3], Q_nlte_grid[i,5,p1:p3]/I_nlte_grid[i,5,p1:p3], label=f'B = {B_grid[i,0]:.2f} G')
-    plt.legend()
-    plt.show()
-
-    # plot all the magnetic field strengths for the same tau value in a single plot
-    plt.figure(figsize=(20,10), dpi=120)
-    for i in range(30):
-        plt.plot(wave[p1:p3], Q_analytical_grid[i,0,p1:p3]/I_analytical_grid[i,0,p1:p3], label=f'B = {B_grid[i,0]:.2f} G')
-    plt.legend()
-    plt.show()
-
     # plot a 2d histogram of the Q errors in red and blue components
-    I_2d_error_r = ((I_nlte_grid - I_analytical_grid)/I_nlte_grid)[:,:,nu_peak_1_indx]*100
-    I_2d_error_b = ((I_nlte_grid - I_analytical_grid)/I_nlte_grid)[:,:,nu_peak_2_indx]*100
+    I_2d_error_r = (I_nlte_grid - I_analytical_grid)[:,:,nu_peak_1_indx]/I_nlte_grid[:,:,0] *100
+    I_2d_error_b = (I_nlte_grid - I_analytical_grid)[:,:,nu_peak_2_indx]/I_nlte_grid[:,:,0] *100
 
     # print the images of the errors in the red and blue components
     plt.figure(figsize=(20,10), dpi=120)
     plt.subplot(1,2,1)
     # show the image to be squared
     plt.imshow(I_2d_error_r, cmap='RdBu_r', aspect='auto', vmin=-10, vmax=10)
-    plt.xticks(np.arange(len(tau_grid[0,:]))[::2],[f'{tau:.2f}' for tau in tau_grid[0,::2]])
-    plt.yticks(np.arange(len(B_grid[:,0]))[::2],B_grid[::2,0])
+    plt.xticks(np.arange(len(tau_grid[0,:])),[f'{tau:.2f}' for tau in tau_grid[0,:]])
+    plt.yticks(np.arange(len(B_grid[:,0])),B_grid[:,0])
     # plt.colorbar()
     plt.title(r'$\frac{I_{NLTE} - I_{analit}}{I_{NLTE}}$ --> % in $\nu_{red}$')
     plt.xlabel(fr'$\tau$')
     plt.ylabel(fr'$B$')
     plt.subplot(1,2,2)
     plt.imshow(I_2d_error_b, cmap='RdBu_r', aspect='auto',  vmin=-10, vmax=10)
-    plt.xticks(np.arange(len(tau_grid[0,:]))[::2],[f'{tau:.2f}' for tau in tau_grid[0,::2]])
-    plt.yticks(np.arange(len(B_grid[:,0]))[::2],B_grid[::2,0])
+    plt.xticks(np.arange(len(tau_grid[0,:])),[f'{tau:.2f}' for tau in tau_grid[0,:]])
+    plt.yticks(np.arange(len(B_grid[:,0])),B_grid[:,0])
     plt.colorbar()
     plt.title(r'$\frac{I_{NLTE} - I_{analit}}{I_{NLTE}}$ --> % in $\nu_{blue}$')
     plt.xlabel(fr'$\tau$')
@@ -400,23 +386,23 @@ if __name__ == '__main__':
     plt.savefig(f'{pm.basedir}I_error.png')
     plt.close()
 
-    Q_2d_error_r = (Q_nlte_grid/I_nlte_grid + Q_analytical_grid/I_analytical_grid)[:,:,nu_peak_1_indx]*100
-    Q_2d_error_b = (Q_nlte_grid/I_nlte_grid + Q_analytical_grid/I_analytical_grid)[:,:,nu_peak_2_indx]*100
+    Q_2d_error_r = (Q_nlte_grid/I_nlte_grid - Q_analytical_grid/I_analytical_grid)[:,:,nu_peak_1_indx]*100
+    Q_2d_error_b = (Q_nlte_grid/I_nlte_grid - Q_analytical_grid/I_analytical_grid)[:,:,nu_peak_2_indx]*100
 
     # same but for Q
     plt.figure(figsize=(20,10), dpi=120)
     plt.subplot(1,2,1)
     plt.imshow(Q_2d_error_r, cmap='RdBu_r', aspect='auto', vmin=-3, vmax=3)
-    plt.xticks(np.arange(len(tau_grid[0,:]))[::2],[f'{tau:.2f}' for tau in tau_grid[0,::2]])
-    plt.yticks(np.arange(len(B_grid[:,0]))[::2],B_grid[::2,0])
+    plt.xticks(np.arange(len(tau_grid[0,:])),[f'{tau:.2f}' for tau in tau_grid[0,:]])
+    plt.yticks(np.arange(len(B_grid[:,0])),B_grid[:,0])
     # plt.colorbar()
     plt.title(r'$\frac{Q_{NLTE}}{I_{NLTE}} - \frac{Q_{ANAL.}}{I_{ANAL.}}$ --> % in $\nu_{red}$')
     plt.xlabel(fr'$\tau$')
     plt.ylabel(fr'$B$')
     plt.subplot(1,2,2)
     plt.imshow(Q_2d_error_b, cmap='RdBu_r', aspect='auto', vmin=-3, vmax=3)
-    plt.xticks(np.arange(len(tau_grid[0,:]))[::2], [f'{tau:.2f}' for tau in tau_grid[0,::2]])
-    plt.yticks(np.arange(len(B_grid[:,0]))[::2], B_grid[::2,0])
+    plt.xticks(np.arange(len(tau_grid[0,:])), [f'{tau:.2f}' for tau in tau_grid[0,:]])
+    plt.yticks(np.arange(len(B_grid[:,0])), B_grid[:,0])
     plt.colorbar()
     plt.title(r'$\frac{Q_{NLTE}}{I_{NLTE}} - \frac{Q_{ANAL.}}{I_{ANAL.}}$ --> % in $\nu_{blue}$')
     plt.xlabel(fr'$\tau$')
@@ -470,4 +456,33 @@ if __name__ == '__main__':
 
     # plt.tight_layout()
     # plt.savefig(f'{folder}.png')
+    # plt.show()
+
+    # plot 4 panels with diferent tau values where the x axis is the magnetic field
+    taus_indexes = [0,7,10,13]
+    plt.figure(figsize=(20,20), dpi=150)
+    for i in range(4):
+        plt.subplot(2,2,i+1)
+        plt.plot(B_grid[:,0], (Q_nlte_grid/I_nlte_grid)[:,taus_indexes[i],nu_peak_1_indx],
+                'r', label=r'$\nu_{red}$, NLTE, F.S.')
+        plt.plot(B_grid[:,0], (Q_nlte_grid/I_nlte_grid)[:,taus_indexes[i],nu_peak_1_indx],
+                 'r--', label=r'$\nu_{red}$, NLTE, self-consistent')
+        plt.plot(B_grid[:,0], (Q_analytical_grid/I_analytical_grid)[:,taus_indexes[i],nu_peak_1_indx],
+                 'r:', label=r'$\nu_{red}$, slab')
+        plt.plot(B_grid[:,0], (Q_nlte_grid/I_nlte_grid)[:,taus_indexes[i],nu_peak_2_indx],
+                 'b', label=r'$\nu_{blue}$, NLTE, F.S.')
+        plt.plot(B_grid[:,0], (Q_nlte_grid/I_nlte_grid)[:,taus_indexes[i],nu_peak_2_indx],
+                 'b--', label=r'$\nu_{blue}$, NLTE, self-consistent')
+        plt.plot(B_grid[:,0], (Q_analytical_grid/I_analytical_grid)[:,taus_indexes[i],nu_peak_2_indx],
+                 'b:', label=r'$\nu_{blue}$, slab')
+        plt.xlabel(fr'$B$')
+        plt.ylabel(fr'$Q/I$')
+        plt.xscale('log')
+        # plt.yscale('log')
+        if i==0:
+            plt.legend()
+        plt.title(fr'$\tau$ = {tau_grid[0,taus_indexes[i]]}')
+    plt.tight_layout()
+    plt.savefig(f'{pm.basedir}Q_I_vs_B_taus.png')
+    plt.close()
     # plt.show()
