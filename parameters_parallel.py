@@ -22,8 +22,8 @@ tolerance_c = 5e-4   # tolerated relative change in coherences
 
 initial_equilibrium = True   # Start from equilibrium
 verbose = False
-extra_plots = True
-extra_save = True
+extra_plots = False
+extra_save = False
 especial = True
 
-basedir = f'output_grid_B_tau/'
+basedir = f'output_grid_B_tau_zem/'
