@@ -139,8 +139,8 @@ if __name__ == '__main__':
     velocity = np.array(pm.velocity)
     especial = False
 
-    datadir_fs = 'output_dz_100.0_B_0.1_sp_True_qd_16x4_20230310-125821'
-    datadir = 'output_dz_100.0_B_0.1_sp_True_qd_16x4_20230310-125821'
+    datadir_fs = 'output_dz_180.0_B_10_sp_False_qd_16x4_20230315-190034'
+    datadir = 'output_dz_180.0_B_10_sp_True_qd_16x4_20230315-190023'
 
     pm.dir = datadir + '/'
 
@@ -348,8 +348,8 @@ if __name__ == '__main__':
     plt.subplot(1,2,1)
     for i in lay_show:
         comp_label = fr'$\tau$={tau_prof.max()-tau[i]:1.2f}'
-        # if i == 0:
-        #     comp_label = fr'$\tau$=1.00'
+        if i == 0:
+            comp_label = fr'$\tau$=2.00'
         plt.plot(wave[p1:p3], JK00_fil[i,p1:p3]/JK00_fil[0,0], linewidth=2, color=cm.plasma((9-i)/10.0), label=comp_label)
         # plt.plot(wave[p1:p3], JK00_fil_fs[i,p1:p3]/JK00_fil_fs[0,0], '--', linewidth=2, color=cm.plasma((9-i)/10.0), label=comp_label+' fs')
 
@@ -386,7 +386,7 @@ if __name__ == '__main__':
     # plt.xlabel('Wavelength [nm]')
 
     plt.tight_layout()
-    # plt.savefig(f'{pm.dir}/plot_comparison_JKQ.pdf')
+    plt.savefig(f'{pm.dir}/plot_comparison_JKQ.pdf')
     plt.show()
 
 
@@ -412,14 +412,14 @@ if __name__ == '__main__':
     plt.xticks(ticks, labels)
 
     plt.tight_layout()
-    # plt.savefig(f'{pm.dir}/plot_comparison_Q.pdf')
+    plt.savefig(f'{pm.dir}/plot_comparison_Q.pdf')
     plt.show()
 
     # PLOT OF THE STOKES PARAMETERS
-    plt.figure(figsize=(20,20), dpi=180)
-    plt.subplot(2,2,1)
+    plt.figure(figsize=(15,5), dpi=200)
+    plt.subplot(1,2,1)
     plt.plot(wave[p1:p3], I_nlte[p1:p3]/I_nlte[0], linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
-    plt.plot(wave[p1:p3], I_nlte_fs[p1:p3]/I_nlte[0], '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent')
+    plt.plot(wave[p1:p3], I_nlte_fs[p1:p3]/I_nlte[0], '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'FS NLTE')
     plt.plot(wave[p1:p3], II[0,p1:p3]/I_nlte[0], linewidth=2, color=cm.plasma(8/10.0), label=fr'Constant property slab')
     plt.ylim(0, (I_nlte/I_nlte[0]).max()*1.1)
     plt.legend(loc='lower left')
@@ -427,15 +427,16 @@ if __name__ == '__main__':
     plt.xlabel('Wavelength [nm]')
     plt.xticks(ticks, labels)
 
-    plt.subplot(2,2,2)
-    plt.plot(wave[p1:p3], Q_nlte[p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
-    plt.plot(wave[p1:p3], Q_nlte_fs[p1:p3]/I_nlte[p1:p3]*100 , '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
-    plt.plot(wave[p1:p3], II[1,p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(8/10.0), label=fr'Const. slab')
+    plt.subplot(1,2,2)
+    plt.plot(wave[p1:p3], -Q_nlte[p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
+    plt.plot(wave[p1:p3], -Q_nlte_fs[p1:p3]/I_nlte[p1:p3]*100 , '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'FS NLTE')
+    plt.plot(wave[p1:p3], -II[1,p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(8/10.0), label=fr'Const. slab')
     # plt.legend()
     plt.ylabel(r'$Q/I_c$ (%)')
     plt.xlabel('Wavelength [nm]')
     plt.xticks(ticks, labels)
-
+    
+    """ 
     plt.subplot(2,2,3)
     plt.plot(wave[p1:p3], U_nlte[p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
     plt.plot(wave[p1:p3], U_nlte_fs[p1:p3]/I_nlte[p1:p3]*100 , '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'Self-consistent NLTE')
@@ -453,6 +454,7 @@ if __name__ == '__main__':
     plt.ylabel(r'$V/I_c$ (%)')
     plt.xlabel('Wavelength [nm]')
     plt.xticks(ticks, labels)
+    """
 
     plt.tight_layout()
     plt.savefig(f'{pm.dir}/plot_comparison_Q_I.pdf')
