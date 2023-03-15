@@ -40,9 +40,9 @@ def new_parameters(pm, npoints, index):
     # the idea is to first vary tau for a fixed B and then move the B
     # for that we need to have the number of points in tau and B and the index
     pm.B = [0, 0.01, 0.025, 0.05, 0.075, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
-            2.0, 3.0, 4.0, 5.0, 7.5, 10.0, 50.0, 100.0, 500]
+            2.0, 3.0, 4.0, 5.0, 7.5, 10.0, 50.0, 100.0, 200, 350, 400,  500]
     pm.z0 = 30000.0*1e5
-    pm.zf = pm.z0 + np.array([1, 2.5, 5, 7.5, 10, 20, 35, 50, 75, 100, 125, 150, 200, 300, 400, 500])*1e5
+    pm.zf = pm.z0 + np.array([1, 5, 10, 20, 35, 50, 75, 100, 150, 200, 300, 400, 500])*1e5
 
     # reduced grid for testing
     # pm.B = [0, 0.1, 1, 10, 100]
@@ -93,7 +93,7 @@ def master_work(npoints):
                 # Send the task to the worker
                 if task_index >= 0:
                     print('sending task {}/{} to worker {}'.format(task_index, npoints, source))
-                    print('wich corresponds grid  (B,tau)   =    ({},{})'.format(task_index//16, task_index%16))
+                    print('wich corresponds grid  (B,tau)   =    ({},{})'.format(task_index//13, task_index%13))
                     comm.send(task_index, dest=source, tag=tags.START)
                     task_status[task_index] = 1
                 else:
@@ -188,7 +188,7 @@ if __name__ == '__main__':
     print(f"\nNode {rank+1}/{size} active", flush=False, end='')
 
     parser = argparse.ArgumentParser(description='Generate synthetic models and solve NLTE problem')
-    parser.add_argument('--n', '--npoints', default=384, type=int, metavar='NPOINTS', help='Number of points')
+    parser.add_argument('--n', '--npoints', default=351, type=int, metavar='NPOINTS', help='Number of points')
     parsed = vars(parser.parse_args())
 
     if rank == 0:
