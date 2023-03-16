@@ -16,9 +16,9 @@ from atom import ESE
 from tensors import JKQ_to_Jqq, construct_JKQ_0, TKQ
 
 
-# matplotlib.rcParams['mathtext.fontset'] = 'stix'
-# matplotlib.rcParams['font.family'] = 'STIXGeneral'
-# matplotlib.rcParams['font.size'] = 10
+matplotlib.rcParams['mathtext.fontset'] = 'stix'
+matplotlib.rcParams['font.family'] = 'STIXGeneral'
+#matplotlib.rcParams['font.size'] = 10
 
 
 # Function that computes the unit 3D vector from the inclination and the azimuth
@@ -133,15 +133,15 @@ if __name__ == '__main__':
 
     with open(f'{pm.basedir}stokes.pkl', 'rb') as f:
         stokes = pkl.load(f)
-    
+
     stokes_analytical = []
 
     for i, _ in enumerate(folders):
-        folder = f'{pm.basedir}tau_{i % 16}_BB_{BBs[i]}'
+        folder = f'{pm.basedir}tau_{i % 13}_BB_{BBs[i]}'
         pm.dir = folder
         print('--'*50)
         print(f'Loading {folder}')
-        print('wich corresponds grid  (B,tau)   =    ({},{})'.format(i//16, i%16))
+        print('wich corresponds grid  (B,tau)   =    ({},{})'.format(i//13, i%13))
         wave_nlte, tau_nlte = np.loadtxt(f'{folder}/out/tau_00.out', skiprows=3, unpack=True)
         tau_nlte = taus[i]
         I_nlte, Q_nlte, U_nlte, V_nlte = stokes[i]
@@ -303,30 +303,30 @@ if __name__ == '__main__':
     # separate the stokes parameters in their own lists
     stokes = np.array(stokes)
     I_nlte = stokes[:,0,:]
-    I_nlte_grid = np.resize(I_nlte, (24,16,len_w))
+    I_nlte_grid = np.resize(I_nlte, (27,13,len_w))
     Q_nlte = stokes[:,1,:]
-    Q_nlte_grid = np.resize(Q_nlte, (24,16,len_w))
+    Q_nlte_grid = np.resize(Q_nlte, (27,13,len_w))
     U_nlte = stokes[:,2,:]
-    U_nlte_grid = np.resize(U_nlte, (24,16,len_w))
+    U_nlte_grid = np.resize(U_nlte, (27,13,len_w))
     V_nlte = stokes[:,3,:]
-    V_nlte_grid = np.resize(V_nlte, (24,16,len_w))
+    V_nlte_grid = np.resize(V_nlte, (27,13,len_w))
 
     stokes_analytical = np.array(stokes_analytical)
     I_analytical = stokes_analytical[:,0,:]
-    I_analytical_grid = np.resize(I_analytical, (24,16,len_w))
+    I_analytical_grid = np.resize(I_analytical, (27,13,len_w))
     Q_analytical = stokes_analytical[:,1,:]
-    Q_analytical_grid = np.resize(Q_analytical, (24,16,len_w))
+    Q_analytical_grid = np.resize(Q_analytical, (27,13,len_w))
     U_analytical = stokes_analytical[:,2,:]
-    U_analytical_grid = np.resize(U_analytical, (24,16,len_w))
+    U_analytical_grid = np.resize(U_analytical, (27,13,len_w))
     V_analytical = stokes_analytical[:,3,:]
-    V_analytical_grid = np.resize(V_analytical, (24,16,len_w))
+    V_analytical_grid = np.resize(V_analytical, (27,13,len_w))
 
-    B_grid = np.resize(np.array(BBs), (24,16))
-    tau_grid = np.resize(np.array(taus).max(axis=-1), (24,16))
+    B_grid = np.resize(np.array(BBs), (27,13))
+    tau_grid = np.resize(np.array(taus).max(axis=-1), (27,13))
 
-    figure, axis = plt.subplots(nrows=24, ncols=16, figsize=(30, 20), dpi=200)
-    for i in tqdm(range(24), desc='Plotting', ncols=50):
-        for j in range(16):
+    figure, axis = plt.subplots(nrows=27, ncols=13, figsize=(30, 20), dpi=200)
+    for i in tqdm(range(27), desc='Plotting', ncols=50):
+        for j in range(13):
             axis[i, j].plot(wave[p1:p3], I_nlte_grid[i,j,p1:p3]/I_nlte_grid[i,j,0], label='NLTE')
             axis[i, j].plot(wave[p1:p3], I_analytical_grid[i,j,p1:p3]/I_analytical_grid[i,j,0], label='analytical')
             axis[i, j].set_yticks([])
@@ -341,9 +341,9 @@ if __name__ == '__main__':
     plt.close()
     # plt.show()
 
-    figure, axis = plt.subplots(nrows=24, ncols=16, figsize=(30, 20), dpi=200)
-    for i in tqdm(range(24), desc='Plotting', ncols=50):
-        for j in range(16):
+    figure, axis = plt.subplots(nrows=27, ncols=13, figsize=(30, 20), dpi=200)
+    for i in tqdm(range(27), desc='Plotting', ncols=50):
+        for j in range(13):
             axis[i, j].plot(wave[p1:p3], Q_nlte_grid[i,j,p1:p3]/I_nlte_grid[i,j,p1:p3]*100, label='NLTE')
             axis[i, j].plot(wave[p1:p3], Q_analytical_grid[i,j,p1:p3]/I_analytical_grid[i,j,p1:p3]*100, label='slab')
             axis[i, j].set_yticks([])
@@ -458,10 +458,10 @@ if __name__ == '__main__':
     # plt.savefig(f'{folder}.png')
     # plt.show()
 
-    fs = np.load(f'{pm.basedir[:-1]}_fs/data_for_plots.npz')
+    # fs = np.load(f'{pm.basedir[:-1]}_fs/data_for_plots.npz')
 
     # plot 4 panels with diferent tau values where the x axis is the magnetic field
-    taus_indexes = [0,7,10,13]
+    taus_indexes = [0,5,7,10]
     plt.figure(figsize=(11,11), dpi=150)
     for i in range(4):
         ax = plt.subplot(2,2,i+1)
@@ -489,7 +489,7 @@ if __name__ == '__main__':
         # put the ticks and label of the y axis to the right in the right plots
         if i==1 or i==3:
             ax.yaxis.tick_right()
-            ax.yaxis.set_label_position("right")            
+            ax.yaxis.set_label_position("right")
         plt.title(fr'$\tau$ = {tau_grid[0,taus_indexes[i]]}')
     plt.tight_layout()
     plt.savefig(f'{pm.basedir}Q_I_vs_B_taus.png')
@@ -498,7 +498,7 @@ if __name__ == '__main__':
 
 
     # save the data for the last plots to add it to the fs plot
-    
+
     np.savez(f'{pm.basedir}data_for_plots.npz',
              I_nlte_grid=I_nlte_grid, Q_nlte_grid=Q_nlte_grid, U_nlte_grid=U_nlte_grid, V_nlte_grid=V_nlte_grid,
              I_analytical_grid=I_analytical_grid, Q_analytical_grid=Q_analytical_grid, U_analytical_grid=U_analytical_grid, V_analytical_grid=V_analytical_grid,
