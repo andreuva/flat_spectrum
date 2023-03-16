@@ -462,36 +462,45 @@ if __name__ == '__main__':
 
     # plot 4 panels with diferent tau values where the x axis is the magnetic field
     taus_indexes = [0,7,10,13]
-    plt.figure(figsize=(11,11), dpi=150)
-    for i in range(4):
-        ax = plt.subplot(2,2,i+1)
+    figure, axis = plt.subplots(nrows=2, ncols=2, sharex=True, figsize=(10, 6.67), dpi=150)
+    plt.subplots_adjust(hspace=2e-2, wspace=1e-2)
+    # plt.figure(figsize=(11,11), dpi=150)
+    for i,ax in enumerate(axis.flatten()):
+        # ax = plt.subplot(2,2,i+1)
         # red line
-        # plt.plot(fs['B_grid'][:,0], (fs['Q_nlte_grid']/fs['I_nlte_grid'])[:,taus_indexes[i],fs['nu_peak_1_indx']]*100,
-        #         'r', label=r'$\nu_{red}$, NLTE, F.S.')
-        plt.plot(B_grid[:,0], (Q_nlte_grid/I_nlte_grid)[:,taus_indexes[i],nu_peak_1_indx]*100,
+        ax.plot(fs['B_grid'][:,0], (fs['Q_nlte_grid']/fs['I_nlte_grid'])[:,taus_indexes[i],fs['nu_peak_1_indx']]*100,
+                'r', label=r'$\nu_{red}$, NLTE, F.S.')
+        ax.plot(B_grid[:,0], (Q_nlte_grid/I_nlte_grid)[:,taus_indexes[i],nu_peak_1_indx]*100,
                  'r--', label=r'$\nu_{red}$, NLTE, self-consistent')
-        plt.plot(B_grid[:,0], (Q_analytical_grid/I_analytical_grid)[:,taus_indexes[i],nu_peak_1_indx]*100,
+        ax.plot(B_grid[:,0], (Q_analytical_grid/I_analytical_grid)[:,taus_indexes[i],nu_peak_1_indx]*100,
                  'r:', label=r'$\nu_{red}$, slab')
         # blue line
-        # plt.plot(fs['B_grid'][:,0], (fs['Q_nlte_grid']/fs['I_nlte_grid'])[:,taus_indexes[i],fs['nu_peak_2_indx']]*100,
-        #          'b', label=r'$\nu_{blue}$, NLTE, F.S.')
-        plt.plot(B_grid[:,0], (Q_nlte_grid/I_nlte_grid)[:,taus_indexes[i],nu_peak_2_indx]*100,
+        ax.plot(fs['B_grid'][:,0], (fs['Q_nlte_grid']/fs['I_nlte_grid'])[:,taus_indexes[i],fs['nu_peak_2_indx']]*100,
+                 'b', label=r'$\nu_{blue}$, NLTE, F.S.')
+        ax.plot(B_grid[:,0], (Q_nlte_grid/I_nlte_grid)[:,taus_indexes[i],nu_peak_2_indx]*100,
                  'b--', label=r'$\nu_{blue}$, NLTE, self-consistent')
-        plt.plot(B_grid[:,0], (Q_analytical_grid/I_analytical_grid)[:,taus_indexes[i],nu_peak_2_indx]*100,
+        ax.plot(B_grid[:,0], (Q_analytical_grid/I_analytical_grid)[:,taus_indexes[i],nu_peak_2_indx]*100,
                  'b:', label=r'$\nu_{blue}$, slab')
-        plt.xlabel(fr'$B$')
-        plt.xscale('log')
-        plt.ylabel(fr'$Q/I$ %')
-        # plt.ylim(-0.02, 0.041)
-        # plt.yscale('log')
-        if i==0:
-            plt.legend()
+
+        if i == 2 or i == 3:
+            ax.set_xlabel(fr'$B$')
         # put the ticks and label of the y axis to the right in the right plots
         if i==1 or i==3:
             ax.yaxis.tick_right()
-            ax.yaxis.set_label_position("right")            
-        plt.title(fr'$\tau$ = {tau_grid[0,taus_indexes[i]]}')
-    plt.tight_layout()
+            ax.yaxis.set_label_position("right")
+            ax.set_ylabel(fr'$Q/I$ %')
+        else:
+            ax.set_ylabel(fr'$Q/I$ %')
+
+        ax.set_xscale('log')
+        # plt.ylim(-0.02, 0.041)
+        # plt.yscale('log')
+        if i==0:
+            ax.legend()
+
+        _, ymax = ax.get_ylim()
+        ax.text(1e-2, ymax*0.9, fr'$\tau$ = {tau_grid[0,taus_indexes[i]]:.2f}', {})
+    # plt.tight_layout()
     plt.savefig(f'{pm.basedir}Q_I_vs_B_taus.png')
     plt.close()
     # plt.show()
