@@ -483,7 +483,7 @@ if __name__ == '__main__':
                  'b:', label=r'$\nu_{blue}$, C.P. slab')
 
         if i == 2 or i == 3:
-            ax.set_xlabel(fr'$B$')
+            ax.set_xlabel(fr'$B$ (G)')
         # put the ticks and label of the y axis to the right in the right plots
         if i==1 or i==3:
             ax.yaxis.tick_right()
@@ -497,14 +497,14 @@ if __name__ == '__main__':
         # plt.ylim(-0.02, 0.041)
         # plt.yscale('log')
         if i==0:
-            ax.legend()
+            ax.legend(loc= 'best', bbox_to_anchor=(0.4, 0.8))
 
         _, ymax = ax.get_ylim()
         ax.text(2e-2, ymax*0.9, fr'$\tau$ = {tau_grid[0,taus_indexes[i]]:.2f}', {})
     # plt.tight_layout()
     plt.savefig(f'{pm.basedir}Q_I_vs_B_taus.pdf')
-    plt.close()
-    # plt.show()
+    # plt.close()
+    plt.show()
 
 
     # save the data for the last plots to add it to the fs plot

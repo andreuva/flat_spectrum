@@ -26,4 +26,4 @@ extra_plots = False
 extra_save = False
 especial = False
 
-basedir = f'output_grid_B_tau_zem_fs/'
+basedir = f'output_grid_B_tau_zem/'
