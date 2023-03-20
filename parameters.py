@@ -1,7 +1,7 @@
 import time
 
 z0 = 30000.0*1e5   # height of the slav over the surfave [cm]
-zf = 30100.0*1e5   # geometrical height of the slab [cm]
+zf = 30180.0*1e5   # geometrical height of the slab [cm]
 zn = 10            # Points in z in the slab
 
 ray_quad = "quadrature_gaussian_16x4.dat"# file where the angular quadrature is saved
@@ -12,7 +12,7 @@ a_voigt = 1e-99             # voigt damping parameter of the line profile
 n_dens = 5.8e4             # Density wich defines the optical thickness [cm^-3]
 temp = 8.665251563142749e3 # Temperature of the slab [K] (6 km/s)
 
-B = 0.1                     # Magnetic field strength [T]
+B = 10                     # Magnetic field strength [T]
 B_inc = 90.0               # Magnetic field inclination [deg]
 B_az = 0.0                 # Magnetic field azimuth [deg]
 

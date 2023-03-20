@@ -337,7 +337,7 @@ if __name__ == '__main__':
                                  fontsize=8)
 
     # figure.tight_layout()
-    figure.savefig(f'{pm.basedir}comparison_I.png')
+    figure.savefig(f'{pm.basedir}comparison_I.pdf')
     plt.close()
     # plt.show()
 
@@ -355,7 +355,7 @@ if __name__ == '__main__':
 
     axis[0,0].legend()
     # figure.tight_layout()
-    figure.savefig(f'{pm.basedir}comparison_Q.png')
+    figure.savefig(f'{pm.basedir}comparison_Q.pdf')
     plt.close()
     # plt.show()
 
@@ -383,7 +383,7 @@ if __name__ == '__main__':
     plt.xlabel(fr'$\tau$')
     plt.ylabel(fr'$B$')
     plt.tight_layout()
-    plt.savefig(f'{pm.basedir}I_error.png')
+    plt.savefig(f'{pm.basedir}I_error.pdf')
     plt.close()
 
     Q_2d_error_r = (Q_nlte_grid/I_nlte_grid - Q_analytical_grid/I_analytical_grid)[:,:,nu_peak_1_indx]*100
@@ -408,7 +408,7 @@ if __name__ == '__main__':
     plt.xlabel(fr'$\tau$')
     plt.ylabel(fr'$B$')
     plt.tight_layout()
-    plt.savefig(f'{pm.basedir}Q_error.png')
+    plt.savefig(f'{pm.basedir}Q_error.pdf')
     plt.close()
 
     # PLOT OF THE STOKES PARAMETERS
@@ -455,7 +455,7 @@ if __name__ == '__main__':
     # plt.xticks(ticks, labels)
 
     # plt.tight_layout()
-    # plt.savefig(f'{folder}.png')
+    # plt.savefig(f'{folder}.pdf')
     # plt.show()
 
     fs = np.load(f'{pm.basedir[:-1]}_fs/data_for_plots.npz')
