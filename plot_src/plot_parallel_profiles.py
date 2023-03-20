@@ -493,14 +493,14 @@ if __name__ == '__main__':
             ax.set_ylabel(fr'$Q/I$ (%)')
 
         ax.set_xscale('log')
-        ax.set_xlim(1e-2, 7e2)
+        ax.set_xlim(9e-3, 7e2)
         # plt.ylim(-0.02, 0.041)
         # plt.yscale('log')
         if i==0:
             ax.legend()
 
         _, ymax = ax.get_ylim()
-        ax.text(1e-2, ymax*0.9, fr'$\tau$ = {tau_grid[0,taus_indexes[i]]:.2f}', {})
+        ax.text(2e-2, ymax*0.9, fr'$\tau$ = {tau_grid[0,taus_indexes[i]]:.2f}', {})
     # plt.tight_layout()
     plt.savefig(f'{pm.basedir}Q_I_vs_B_taus.pdf')
     plt.close()
