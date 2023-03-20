@@ -468,17 +468,17 @@ if __name__ == '__main__':
     for i,ax in enumerate(axis.flatten()):
         # ax = plt.subplot(2,2,i+1)
         # red line
-        ax.plot(fs['B_grid'][:,0], (fs['Q_nlte_grid']/fs['I_nlte_grid'])[:,taus_indexes[i],fs['nu_peak_1_indx']]*100,
-                'r', label=r'$\nu_{red}$, S-C NLTE, F.S')
         ax.plot(B_grid[:,0], (Q_nlte_grid/I_nlte_grid)[:,taus_indexes[i],nu_peak_1_indx]*100,
-                 'r--', label=r'$\nu_{red}$, S-C NLTE')
+                 'r', label=r'$\nu_{red}$, S-C NLTE')
+        ax.plot(fs['B_grid'][:,0], (fs['Q_nlte_grid']/fs['I_nlte_grid'])[:,taus_indexes[i],fs['nu_peak_1_indx']]*100,
+                'r--', label=r'$\nu_{red}$, S-C NLTE, F.S')
         ax.plot(B_grid[:,0], (Q_analytical_grid/I_analytical_grid)[:,taus_indexes[i],nu_peak_1_indx]*100,
                  'r:', label=r'$\nu_{red}$, C.P. slab')
         # blue line
-        ax.plot(fs['B_grid'][:,0], (fs['Q_nlte_grid']/fs['I_nlte_grid'])[:,taus_indexes[i],fs['nu_peak_2_indx']]*100,
-                 'b', label=r'$\nu_{blue}$, S-C NLTE, F.S')
         ax.plot(B_grid[:,0], (Q_nlte_grid/I_nlte_grid)[:,taus_indexes[i],nu_peak_2_indx]*100,
-                 'b--', label=r'$\nu_{blue}$, S-C NLTE')
+                 'b', label=r'$\nu_{blue}$, S-C NLTE')
+        ax.plot(fs['B_grid'][:,0], (fs['Q_nlte_grid']/fs['I_nlte_grid'])[:,taus_indexes[i],fs['nu_peak_2_indx']]*100,
+                 'b--', label=r'$\nu_{blue}$, S-C NLTE, F.S')
         ax.plot(B_grid[:,0], (Q_analytical_grid/I_analytical_grid)[:,taus_indexes[i],nu_peak_2_indx]*100,
                  'b:', label=r'$\nu_{blue}$, C.P. slab')
 
