@@ -327,8 +327,8 @@ if __name__ == '__main__':
     figure, axis = plt.subplots(nrows=27, ncols=13, figsize=(30, 20), dpi=200)
     for i in tqdm(range(27), desc='Plotting', ncols=50):
         for j in range(13):
-            axis[i, j].plot(wave[p1:p3], I_nlte_grid[i,j,p1:p3]/I_nlte_grid[i,j,0], label='NLTE')
-            axis[i, j].plot(wave[p1:p3], I_analytical_grid[i,j,p1:p3]/I_analytical_grid[i,j,0], label='analytical')
+            axis[i, j].plot(wave[p1:p3], I_nlte_grid[i,j,p1:p3]/I_nlte_grid[i,j,0], color=cm.plasma(0/10.0), label='NLTE')
+            axis[i, j].plot(wave[p1:p3], I_analytical_grid[i,j,p1:p3]/I_analytical_grid[i,j,0], color=cm.plasma(8/10.0), label='analytical')
             axis[i, j].set_yticks([])
             # axis[i, j].set_xticks(ticks, labels)
             axis[i, j].set_xticks([])
@@ -344,8 +344,8 @@ if __name__ == '__main__':
     figure, axis = plt.subplots(nrows=27, ncols=13, figsize=(30, 20), dpi=200)
     for i in tqdm(range(27), desc='Plotting', ncols=50):
         for j in range(13):
-            axis[i, j].plot(wave[p1:p3], Q_nlte_grid[i,j,p1:p3]/I_nlte_grid[i,j,p1:p3]*100, label='NLTE')
-            axis[i, j].plot(wave[p1:p3], Q_analytical_grid[i,j,p1:p3]/I_analytical_grid[i,j,p1:p3]*100, label='slab')
+            axis[i, j].plot(wave[p1:p3], Q_nlte_grid[i,j,p1:p3]/I_nlte_grid[i,j,p1:p3]*100, color=cm.plasma(0/10.0), label='NLTE')
+            axis[i, j].plot(wave[p1:p3], Q_analytical_grid[i,j,p1:p3]/I_analytical_grid[i,j,p1:p3]*100, color=cm.plasma(8/10.0), label='slab')
             axis[i, j].set_yticks([])
             # axis[i, j].set_xticks(ticks, labels)
             axis[i, j].set_xticks([])
@@ -469,18 +469,18 @@ if __name__ == '__main__':
         # ax = plt.subplot(2,2,i+1)
         # red line
         ax.plot(B_grid[:,0], (Q_nlte_grid/I_nlte_grid)[:,taus_indexes[i],nu_peak_1_indx]*100,
-                 'r', label=r'$\nu_{red}$, S-C NLTE')
+                 'r', label=r'$\nu_{red}$, S-C NLTE', color=cm.plasma(0/10.0))
         ax.plot(fs['B_grid'][:,0], (fs['Q_nlte_grid']/fs['I_nlte_grid'])[:,taus_indexes[i],fs['nu_peak_1_indx']]*100,
-                'r--', label=r'$\nu_{red}$, S-C NLTE, F.S')
+                'r--', label=r'$\nu_{red}$, S-C NLTE, F.S', color=cm.plasma(0/10.0))
         ax.plot(B_grid[:,0], (Q_analytical_grid/I_analytical_grid)[:,taus_indexes[i],nu_peak_1_indx]*100,
-                 'r:', label=r'$\nu_{red}$, C.P. slab')
+                 'r:', label=r'$\nu_{red}$, C.P. slab', color=cm.plasma(0/10.0))
         # blue line
         ax.plot(B_grid[:,0], (Q_nlte_grid/I_nlte_grid)[:,taus_indexes[i],nu_peak_2_indx]*100,
-                 'b', label=r'$\nu_{blue}$, S-C NLTE')
+                 'b', label=r'$\nu_{blue}$, S-C NLTE', color=cm.plasma(8/10.0))
         ax.plot(fs['B_grid'][:,0], (fs['Q_nlte_grid']/fs['I_nlte_grid'])[:,taus_indexes[i],fs['nu_peak_2_indx']]*100,
-                 'b--', label=r'$\nu_{blue}$, S-C NLTE, F.S')
+                 'b--', label=r'$\nu_{blue}$, S-C NLTE, F.S', color=cm.plasma(8/10.0))
         ax.plot(B_grid[:,0], (Q_analytical_grid/I_analytical_grid)[:,taus_indexes[i],nu_peak_2_indx]*100,
-                 'b:', label=r'$\nu_{blue}$, C.P. slab')
+                 'b:', label=r'$\nu_{blue}$, C.P. slab', color=cm.plasma(8/10.0))
 
         if i == 2 or i == 3:
             ax.set_xlabel(fr'$B$ (G)')
