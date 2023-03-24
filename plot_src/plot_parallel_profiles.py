@@ -469,18 +469,18 @@ if __name__ == '__main__':
         # ax = plt.subplot(2,2,i+1)
         # red line
         ax.plot(B_grid[:,0], (Q_nlte_grid/I_nlte_grid)[:,taus_indexes[i],nu_peak_1_indx]*100,
-                 'r', label=r'$\nu_{red}$, S-C NLTE', color=cm.plasma(0/10.0))
+                 '-', label=r'$\nu_{red}$, S-C NLTE', color=cm.plasma(0/10.0))
         ax.plot(fs['B_grid'][:,0], (fs['Q_nlte_grid']/fs['I_nlte_grid'])[:,taus_indexes[i],fs['nu_peak_1_indx']]*100,
-                'r--', label=r'$\nu_{red}$, S-C NLTE, F.S', color=cm.plasma(0/10.0))
+                '--', label=r'$\nu_{red}$, S-C NLTE, F.S', color=cm.plasma(0/10.0))
         ax.plot(B_grid[:,0], (Q_analytical_grid/I_analytical_grid)[:,taus_indexes[i],nu_peak_1_indx]*100,
-                 'r:', label=r'$\nu_{red}$, C.P. slab', color=cm.plasma(0/10.0))
+                 ':', label=r'$\nu_{red}$, C.P. slab', color=cm.plasma(0/10.0))
         # blue line
         ax.plot(B_grid[:,0], (Q_nlte_grid/I_nlte_grid)[:,taus_indexes[i],nu_peak_2_indx]*100,
-                 'b', label=r'$\nu_{blue}$, S-C NLTE', color=cm.plasma(8/10.0))
+                 '-', label=r'$\nu_{blue}$, S-C NLTE', color=cm.plasma(8/10.0))
         ax.plot(fs['B_grid'][:,0], (fs['Q_nlte_grid']/fs['I_nlte_grid'])[:,taus_indexes[i],fs['nu_peak_2_indx']]*100,
-                 'b--', label=r'$\nu_{blue}$, S-C NLTE, F.S', color=cm.plasma(8/10.0))
+                 '--', label=r'$\nu_{blue}$, S-C NLTE, F.S', color=cm.plasma(8/10.0))
         ax.plot(B_grid[:,0], (Q_analytical_grid/I_analytical_grid)[:,taus_indexes[i],nu_peak_2_indx]*100,
-                 'b:', label=r'$\nu_{blue}$, C.P. slab', color=cm.plasma(8/10.0))
+                 ':', label=r'$\nu_{blue}$, C.P. slab', color=cm.plasma(8/10.0))
 
         if i == 2 or i == 3:
             ax.set_xlabel(fr'$B$ (G)')
@@ -513,3 +513,51 @@ if __name__ == '__main__':
              I_nlte_grid=I_nlte_grid, Q_nlte_grid=Q_nlte_grid, U_nlte_grid=U_nlte_grid, V_nlte_grid=V_nlte_grid,
              I_analytical_grid=I_analytical_grid, Q_analytical_grid=Q_analytical_grid, U_analytical_grid=U_analytical_grid, V_analytical_grid=V_analytical_grid,
              B_grid=B_grid, tau_grid=tau_grid, wave=wave, nu_peak_1_indx=nu_peak_1_indx, nu_peak_2_indx=nu_peak_2_indx)
+
+
+    # plot ratios of red and blue components with tau for each approximation
+    plt.figure(figsize=(15,7), dpi=150)
+    line = [':', '--', '-']
+    for ii,B in enumerate([0.1,1,10]):
+        # search for the index of the magnetic field
+        B_indx = np.argmin(np.abs(B_grid[:,0]-B))
+        # plot the ratio of the intensities for the two peaks for that magnetic field
+        I_ratio_nlte = I_nlte_grid[B_indx,:,nu_peak_1_indx]/I_nlte_grid[B_indx,:,nu_peak_2_indx]
+        I_ratio_fs = fs['I_nlte_grid'][B_indx,:,fs['nu_peak_1_indx']]/fs['I_nlte_grid'][B_indx,:,fs['nu_peak_2_indx']]
+        I_ratio_analytical = I_analytical_grid[B_indx,:,nu_peak_1_indx]/I_analytical_grid[B_indx,:,nu_peak_2_indx]
+        
+        Q_ratio_nlte = Q_nlte_grid[B_indx,:,nu_peak_1_indx]/Q_nlte_grid[B_indx,:,nu_peak_2_indx]
+        Q_ratio_fs = fs['Q_nlte_grid'][B_indx,:,fs['nu_peak_1_indx']]/fs['Q_nlte_grid'][B_indx,:,fs['nu_peak_2_indx']]
+        Q_ratio_analytical = Q_analytical_grid[B_indx,:,nu_peak_1_indx]/Q_analytical_grid[B_indx,:,nu_peak_2_indx]
+
+        U_ratio_nlte = U_nlte_grid[B_indx,:,nu_peak_1_indx]/U_nlte_grid[B_indx,:,nu_peak_2_indx]
+        U_ratio_fs = fs['U_nlte_grid'][B_indx,:,fs['nu_peak_1_indx']]/fs['U_nlte_grid'][B_indx,:,fs['nu_peak_2_indx']]
+        U_ratio_analytical = U_analytical_grid[B_indx,:,nu_peak_1_indx]/U_analytical_grid[B_indx,:,nu_peak_2_indx]
+
+        V_ratio_nlte = V_nlte_grid[B_indx,:,nu_peak_1_indx]/V_nlte_grid[B_indx,:,nu_peak_2_indx]
+        V_ratio_fs = fs['V_nlte_grid'][B_indx,:,fs['nu_peak_1_indx']]/fs['V_nlte_grid'][B_indx,:,fs['nu_peak_2_indx']]
+        V_ratio_analytical = V_analytical_grid[B_indx,:,nu_peak_1_indx]/V_analytical_grid[B_indx,:,nu_peak_2_indx]
+
+        plt.subplot(1,2,1)
+        plt.plot(tau_grid[0,:], I_ratio_nlte, line[ii]+'r' ,label='S-C NLTE B='+str(B))
+        plt.plot(tau_grid[0,:], I_ratio_fs, line[ii]+'b', label='S-C NLTE, F.S. B='+str(B))
+        plt.plot(tau_grid[0,:], I_ratio_analytical, line[ii]+'k', label='C.P. slab B='+str(B))
+
+        plt.subplot(1,2,2)
+        plt.plot(tau_grid[0,:], Q_ratio_nlte, line[ii]+'r', label='S-C NLTE')
+        plt.plot(tau_grid[0,:], Q_ratio_fs, line[ii]+'b', label='S-C NLTE, F.S.')
+        plt.plot(tau_grid[0,:], Q_ratio_analytical, line[ii]+'k', label='C.P. slab')
+
+
+    plt.subplot(1,2,1)
+    plt.xlabel(r'$\tau$')
+    plt.ylabel(r'$I_{red}/I_{blue}$')
+    plt.legend(loc='best')
+    plt.subplot(1,2,2)
+    plt.xlabel(r'$\tau$')
+    plt.ylabel(r'$Q_{red}/Q_{blue}$')
+    plt.suptitle('Ratios of red and blue components')
+    # plt.tight_layout()
+    plt.savefig(f'{pm.basedir}ratios.pdf')
+    plt.show()
+    # plt.close()
