@@ -40,9 +40,9 @@ def new_parameters(pm, npoints, index):
     # the idea is to first vary tau for a fixed B and then move the B
     # for that we need to have the number of points in tau and B and the index
     pm.B = [0, 0.01, 0.025, 0.05, 0.075, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
-            2.0, 3.0, 4.0, 5.0, 7.5, 10.0, 50.0, 100.0, 200, 350, 400,  500]
+            2.0, 3.0, 4.0, 5.0, 7.5, 10.0, 50.0]
     pm.z0 = 30000.0*1e5
-    pm.zf = pm.z0 + np.array([1, 5, 10, 20, 35, 50, 75, 100, 150, 200, 300, 400, 500])*1e5
+    pm.zf = pm.z0 + np.array([1, 75, 100, 150, 300])*1e5
 
     # reduced grid for testing
     # pm.B = [0, 0.1, 1, 10, 100]
@@ -188,7 +188,7 @@ if __name__ == '__main__':
     print(f"\nNode {rank+1}/{size} active", flush=False, end='')
 
     parser = argparse.ArgumentParser(description='Generate synthetic models and solve NLTE problem')
-    parser.add_argument('--n', '--npoints', default=351, type=int, metavar='NPOINTS', help='Number of points')
+    parser.add_argument('--n', '--npoints', default=110, type=int, metavar='NPOINTS', help='Number of points')
     parsed = vars(parser.parse_args())
 
     if rank == 0:

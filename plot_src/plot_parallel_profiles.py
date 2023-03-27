@@ -137,11 +137,11 @@ if __name__ == '__main__':
     stokes_analytical = []
 
     for i, _ in enumerate(folders):
-        folder = f'{pm.basedir}tau_{i % 13}_BB_{BBs[i]}'
+        folder = f'{pm.basedir}tau_{i % 5}_BB_{BBs[i]}'
         pm.dir = folder
         print('--'*50)
         print(f'Loading {folder}')
-        print('wich corresponds grid  (B,tau)   =    ({},{})'.format(i//13, i%13))
+        print('wich corresponds grid  (B,tau)   =    ({},{})'.format(i//5, i%5))
         wave_nlte, tau_nlte = np.loadtxt(f'{folder}/out/tau_00.out', skiprows=3, unpack=True)
         tau_nlte = taus[i]
         I_nlte, Q_nlte, U_nlte, V_nlte = stokes[i]
@@ -303,30 +303,30 @@ if __name__ == '__main__':
     # separate the stokes parameters in their own lists
     stokes = np.array(stokes)
     I_nlte = stokes[:,0,:]
-    I_nlte_grid = np.resize(I_nlte, (27,13,len_w))
+    I_nlte_grid = np.resize(I_nlte, (22,5,len_w))
     Q_nlte = stokes[:,1,:]
-    Q_nlte_grid = np.resize(Q_nlte, (27,13,len_w))
+    Q_nlte_grid = np.resize(Q_nlte, (22,5,len_w))
     U_nlte = stokes[:,2,:]
-    U_nlte_grid = np.resize(U_nlte, (27,13,len_w))
+    U_nlte_grid = np.resize(U_nlte, (22,5,len_w))
     V_nlte = stokes[:,3,:]
-    V_nlte_grid = np.resize(V_nlte, (27,13,len_w))
+    V_nlte_grid = np.resize(V_nlte, (22,5,len_w))
 
     stokes_analytical = np.array(stokes_analytical)
     I_analytical = stokes_analytical[:,0,:]
-    I_analytical_grid = np.resize(I_analytical, (27,13,len_w))
+    I_analytical_grid = np.resize(I_analytical, (22,5,len_w))
     Q_analytical = stokes_analytical[:,1,:]
-    Q_analytical_grid = np.resize(Q_analytical, (27,13,len_w))
+    Q_analytical_grid = np.resize(Q_analytical, (22,5,len_w))
     U_analytical = stokes_analytical[:,2,:]
-    U_analytical_grid = np.resize(U_analytical, (27,13,len_w))
+    U_analytical_grid = np.resize(U_analytical, (22,5,len_w))
     V_analytical = stokes_analytical[:,3,:]
-    V_analytical_grid = np.resize(V_analytical, (27,13,len_w))
+    V_analytical_grid = np.resize(V_analytical, (22,5,len_w))
 
-    B_grid = np.resize(np.array(BBs), (27,13))
-    tau_grid = np.resize(np.array(taus).max(axis=-1), (27,13))
+    B_grid = np.resize(np.array(BBs), (22,5))
+    tau_grid = np.resize(np.array(taus).max(axis=-1), (22,5))
 
-    figure, axis = plt.subplots(nrows=27, ncols=13, figsize=(30, 20), dpi=200)
-    for i in tqdm(range(27), desc='Plotting', ncols=50):
-        for j in range(13):
+    figure, axis = plt.subplots(nrows=22, ncols=5, figsize=(30, 20), dpi=200)
+    for i in tqdm(range(22), desc='Plotting', ncols=50):
+        for j in range(5):
             axis[i, j].plot(wave[p1:p3], I_nlte_grid[i,j,p1:p3]/I_nlte_grid[i,j,0], color=cm.plasma(0/10.0), label='NLTE')
             axis[i, j].plot(wave[p1:p3], I_analytical_grid[i,j,p1:p3]/I_analytical_grid[i,j,0], color=cm.plasma(8/10.0), label='analytical')
             axis[i, j].set_yticks([])
@@ -341,9 +341,9 @@ if __name__ == '__main__':
     plt.close()
     # plt.show()
 
-    figure, axis = plt.subplots(nrows=27, ncols=13, figsize=(30, 20), dpi=200)
-    for i in tqdm(range(27), desc='Plotting', ncols=50):
-        for j in range(13):
+    figure, axis = plt.subplots(nrows=22, ncols=5, figsize=(30, 20), dpi=200)
+    for i in tqdm(range(22), desc='Plotting', ncols=50):
+        for j in range(5):
             axis[i, j].plot(wave[p1:p3], Q_nlte_grid[i,j,p1:p3]/I_nlte_grid[i,j,p1:p3]*100, color=cm.plasma(0/10.0), label='NLTE')
             axis[i, j].plot(wave[p1:p3], Q_analytical_grid[i,j,p1:p3]/I_analytical_grid[i,j,p1:p3]*100, color=cm.plasma(8/10.0), label='slab')
             axis[i, j].set_yticks([])
