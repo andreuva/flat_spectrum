@@ -41,6 +41,18 @@ def main(pm=pm, disable_display=False):
     if cdt.extra_plots:
         plot_quadrature(cdt, directory=datadir)
 
+    # Save the parameters used in this run to a file
+    # save just the parameters module to the output directory
+    # first convert the parameters to a dictionary
+    module_to_dict = lambda module: {k: getattr(module, k) for k in dir(module) if not k.startswith('_')}
+    pm_dict = module_to_dict(pm)
+    # save the dictionary to a file
+    f = open(datadir+'parameters.out', 'w')
+    for key, value in pm_dict.items():
+        if type(value) != dict:
+            f.write(f'{key:<25}: {value}\n')
+    f.close()
+
     # Opening MRC file
     f = open(datadir+'MRC', 'w')
     f.write(f'Itteration  ||  Max. Rel. change\n')
