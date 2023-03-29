@@ -24,6 +24,6 @@ initial_equilibrium = True   # Start from equilibrium
 verbose = False
 extra_plots = False
 extra_save = False
-especial = False
+especial = True
 
-basedir = f'output_grid_B_tau_zem/'
+basedir = f'output_grid_B_tau_D3/'
