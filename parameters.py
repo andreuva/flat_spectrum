@@ -28,5 +28,5 @@ extra_plots = False
 extra_save = True
 especial = False
 
-dir = f'output_dz_{(zf-z0)/1e5:1.1f}_B_{B}_sp_{especial}_qd_{ray_quad[-8:-4]}_{time.strftime("%Y%m%d-%H%M%S")}/'
+dir = f'output_z0_{z0/1e8:1.2f}Mm_dz_{(zf-z0)/1e5:1.1f}_B_{B}_sp_{especial}_qd_{ray_quad[-8:-4]}_{time.strftime("%Y%m%d-%H%M%S")}/'
 del time
