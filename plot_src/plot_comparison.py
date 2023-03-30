@@ -139,8 +139,8 @@ if __name__ == '__main__':
     velocity = np.array(pm.velocity)
     especial = False
 
-    datadir_fs = 'output_dz_180.0_B_10_sp_False_qd_16x4_20230315-190034'
-    datadir = 'output_dz_180.0_B_10_sp_True_qd_16x4_20230315-190023'
+    datadir_fs = 'output_dz_180.0_B_10_sp_False_qd_16x4_20230330-113624'
+    datadir = 'output_dz_180.0_B_10_sp_True_qd_16x4_20230330-113614'
 
     pm.dir = datadir + '/'
 
@@ -393,9 +393,9 @@ if __name__ == '__main__':
     # PLOT OF THE STOKES PARAMETERS
     plt.figure(figsize=(10,3.5), dpi=120)
     plt.subplot(1,2,1)
-    plt.plot(wave[p1:p3], I_nlte_fs[p1:p3], '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'S-C NLTE F.S.')
-    plt.plot(wave[p1:p3], I_nlte[p1:p3] , linewidth=2, color=cm.plasma(0/10.0), label=fr'S-C NLTE')
-    plt.plot(wave[p1:p3], II[0,p1:p3], linewidth=2, color=cm.plasma(8/10.0), label=fr'C.P. slab')
+    plt.plot(wave[p1:p3], I_nlte_fs[p1:p3], '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'RT-flat')
+    plt.plot(wave[p1:p3], I_nlte[p1:p3] , linewidth=2, color=cm.plasma(0/10.0), label=fr'RT')
+    plt.plot(wave[p1:p3], II[0,p1:p3], linewidth=2, color=cm.plasma(8/10.0), label=fr'non-RT')
     # plt.ylim(0, (I_nlte/I_nlte[0]).max()*1.1)
     plt.legend(loc='lower left')
     plt.title(r'$I$')
@@ -403,9 +403,9 @@ if __name__ == '__main__':
     plt.xticks(ticks, labels)
 
     plt.subplot(1,2,2)
-    plt.plot(wave[p1:p3], Q_nlte_fs[p1:p3], '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'S-C NLTE F.S.')
-    plt.plot(wave[p1:p3], Q_nlte[p1:p3] , linewidth=2, color=cm.plasma(0/10.0), label=fr'S-C NLTE')
-    plt.plot(wave[p1:p3], II[1,p1:p3] , linewidth=2, color=cm.plasma(8/10.0), label=fr'C.P. slab')
+    plt.plot(wave[p1:p3], Q_nlte_fs[p1:p3], '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'RT-flat')
+    plt.plot(wave[p1:p3], Q_nlte[p1:p3] , linewidth=2, color=cm.plasma(0/10.0), label=fr'RT')
+    plt.plot(wave[p1:p3], II[1,p1:p3] , linewidth=2, color=cm.plasma(8/10.0), label=fr'non-RT')
     # plt.legend()
     plt.title(r'$Q$')
     plt.xlabel('Wavelength [nm]')
@@ -418,9 +418,9 @@ if __name__ == '__main__':
     # PLOT OF THE STOKES PARAMETERS
     plt.figure(figsize=(15,5), dpi=200)
     plt.subplot(1,2,1)
-    plt.plot(wave[p1:p3], I_nlte[p1:p3]/I_nlte[0], linewidth=2, color=cm.plasma(0/10.0), label=fr'S-C NLTE')
-    plt.plot(wave[p1:p3], I_nlte_fs[p1:p3]/I_nlte[0], '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'S-C NLTE F.S.')
-    plt.plot(wave[p1:p3], II[0,p1:p3]/I_nlte[0], linewidth=2, color=cm.plasma(8/10.0), label=fr'C.P. slab')
+    plt.plot(wave[p1:p3], I_nlte[p1:p3]/I_nlte[0], linewidth=2, color=cm.plasma(0/10.0), label=fr'RT')
+    plt.plot(wave[p1:p3], I_nlte_fs[p1:p3]/I_nlte[0], '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'RT-flat')
+    plt.plot(wave[p1:p3], II[0,p1:p3]/I_nlte[0], linewidth=2, color=cm.plasma(8/10.0), label=fr'non-RT')
     plt.ylim(0, (I_nlte/I_nlte[0]).max()*1.1)
     plt.legend(loc='lower left')
     plt.ylabel(r'$I/I_c$')
@@ -428,9 +428,9 @@ if __name__ == '__main__':
     plt.xticks(ticks, labels)
 
     plt.subplot(1,2,2)
-    plt.plot(wave[p1:p3], -Q_nlte[p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(0/10.0), label=fr'S-C NLTE')
-    plt.plot(wave[p1:p3], -Q_nlte_fs[p1:p3]/I_nlte[p1:p3]*100 , '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'S-C NLTE F.S.')
-    plt.plot(wave[p1:p3], -II[1,p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(8/10.0), label=fr'C.P. slab')
+    plt.plot(wave[p1:p3], -Q_nlte[p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(0/10.0), label=fr'RT')
+    plt.plot(wave[p1:p3], -Q_nlte_fs[p1:p3]/I_nlte[p1:p3]*100 , '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'RT-flat')
+    plt.plot(wave[p1:p3], -II[1,p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(8/10.0), label=fr'non-RT')
     # plt.legend()
     plt.ylabel(r'$Q/I_c$ (%)')
     plt.xlabel('Wavelength [nm]')
@@ -438,18 +438,18 @@ if __name__ == '__main__':
     
     """ 
     plt.subplot(2,2,3)
-    plt.plot(wave[p1:p3], U_nlte[p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(0/10.0), label=fr'S-C NLTE')
-    plt.plot(wave[p1:p3], U_nlte_fs[p1:p3]/I_nlte[p1:p3]*100 , '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'S-C NLTE')
-    plt.plot(wave[p1:p3], II[2,p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(8/10.0), label=fr'C.P. slab')
+    plt.plot(wave[p1:p3], U_nlte[p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(0/10.0), label=fr'RT')
+    plt.plot(wave[p1:p3], U_nlte_fs[p1:p3]/I_nlte[p1:p3]*100 , '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'RT')
+    plt.plot(wave[p1:p3], II[2,p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(8/10.0), label=fr'non-RT')
     # plt.legend()
     plt.ylabel(r'$U/I_c$ (%)')
     plt.xlabel('Wavelength [nm]')
     plt.xticks(ticks, labels)
 
     plt.subplot(2,2,4)
-    plt.plot(wave[p1:p3], V_nlte[p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(0/10.0), label=fr'S-C NLTE')
-    plt.plot(wave[p1:p3], V_nlte_fs[p1:p3]/I_nlte[p1:p3]*100 , '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'S-C NLTE')
-    plt.plot(wave[p1:p3], II[3,p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(8/10.0), label=fr'C.P. slab')
+    plt.plot(wave[p1:p3], V_nlte[p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(0/10.0), label=fr'RT')
+    plt.plot(wave[p1:p3], V_nlte_fs[p1:p3]/I_nlte[p1:p3]*100 , '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'RT')
+    plt.plot(wave[p1:p3], II[3,p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(8/10.0), label=fr'non-RT')
     # plt.legend()
     plt.ylabel(r'$V/I_c$ (%)')
     plt.xlabel('Wavelength [nm]')

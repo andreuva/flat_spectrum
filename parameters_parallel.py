@@ -1,8 +1,8 @@
-z0 = 30000.0*1e5   # height of the slav over the surfave [cm]
-zf = 30000.0*1e5   # geometrical height of the slab [cm]
+z0 = 10000.0*1e5   # height of the slav over the surfave [cm]
+zf = 10000.0*1e5   # geometrical height of the slab [cm]
 zn = 10            # Points in z in the slab
 
-ray_quad = "quadrature_gaussian_32x8.dat"# file where the angular quadrature is saved
+ray_quad = "quadrature_gaussian_16x4.dat"# file where the angular quadrature is saved
 ray_out = [[1.0, 0.0]]             # List of mu,phi for emergent radiation directions
 
 v_dop = 5.0*1e5            # Dopler velocity (not the actual one) [cm/s]
@@ -26,4 +26,4 @@ extra_plots = False
 extra_save = False
 especial = True
 
-basedir = f'output_grid_B_tau_D3/'
+basedir = f'output_grid_B_tau_zem_10Mm/'
