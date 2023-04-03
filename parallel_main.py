@@ -93,7 +93,7 @@ def master_work(npoints):
                 # Send the task to the worker
                 if task_index >= 0:
                     print('sending task {}/{} to worker {}'.format(task_index, npoints, source))
-                    print('wich corresponds grid  (B,tau)   =    ({},{})'.format(task_index//8, task_index%8))
+                    print('wich corresponds grid  (B,tau)   =    ({},{})'.format(task_index//4, task_index%4))
                     comm.send(task_index, dest=source, tag=tags.START)
                     task_status[task_index] = 1
                 else:
@@ -188,7 +188,7 @@ if __name__ == '__main__':
     print(f"\nNode {rank+1}/{size} active", flush=False, end='')
 
     parser = argparse.ArgumentParser(description='Generate synthetic models and solve NLTE problem')
-    parser.add_argument('--n', '--npoints', default=176, type=int, metavar='NPOINTS', help='Number of points')
+    parser.add_argument('--n', '--npoints', default=88, type=int, metavar='NPOINTS', help='Number of points')
     parsed = vars(parser.parse_args())
 
     if rank == 0:
