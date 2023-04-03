@@ -139,8 +139,8 @@ if __name__ == '__main__':
     velocity = np.array(pm.velocity)
     especial = False
 
-    datadir_fs = 'output_dz_180.0_B_10_sp_False_qd_16x4_20230330-113624'
-    datadir = 'output_dz_180.0_B_10_sp_True_qd_16x4_20230330-113614'
+    datadir_fs = 'output_z0_6.00Mm_dz_190.0_B_10_sp_False_qd_16x4_20230403-101057'
+    datadir = 'output_z0_6.00Mm_dz_190.0_B_10_sp_True_qd_16x4_20230403-101109'
 
     pm.dir = datadir + '/'
 
@@ -423,7 +423,7 @@ if __name__ == '__main__':
     plt.plot(wave[p1:p3], II[0,p1:p3]/I_nlte[0], linewidth=2, color=cm.plasma(8/10.0), label=fr'non-RT')
     plt.ylim(0, (I_nlte/I_nlte[0]).max()*1.1)
     plt.legend(loc='lower left')
-    plt.ylabel(r'$I/I_c$')
+    plt.ylabel(r'$I(\lambda)/I_c$')
     plt.xlabel('Wavelength [nm]')
     plt.xticks(ticks, labels)
 
@@ -432,7 +432,7 @@ if __name__ == '__main__':
     plt.plot(wave[p1:p3], Q_nlte_fs[p1:p3]/I_nlte[p1:p3]*100 , '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'RT-flat')
     plt.plot(wave[p1:p3], II[1,p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(8/10.0), label=fr'non-RT')
     # plt.legend()
-    plt.ylabel(r'$Q/I_c$ (%)')
+    plt.ylabel(r'$Q(\lambda)/I(\lambda)$ (%)')
     plt.xlabel('Wavelength [nm]')
     plt.xticks(ticks, labels)
     

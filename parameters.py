@@ -1,7 +1,7 @@
 import time
 
-z0 = 10000.0*1e5   # height of the slav over the surfave [cm]
-zf = 10180.0*1e5   # geometrical height of the slab [cm]
+z0 = 6000.0*1e5   # height of the slav over the surfave [cm]
+zf = 6190.0*1e5   # geometrical height of the slab [cm]
 zn = 10            # Points in z in the slab
 
 ray_quad = "quadrature_gaussian_16x4.dat"# file where the angular quadrature is saved
@@ -26,7 +26,7 @@ initial_equilibrium = True   # Start from equilibrium
 verbose = False
 extra_plots = False
 extra_save = True
-especial = False
+especial = True
 
 dir = f'output_z0_{z0/1e8:1.2f}Mm_dz_{(zf-z0)/1e5:1.1f}_B_{B}_sp_{especial}_qd_{ray_quad[-8:-4]}_{time.strftime("%Y%m%d-%H%M%S")}/'
 del time

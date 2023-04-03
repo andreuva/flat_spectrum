@@ -138,7 +138,7 @@ if __name__ == '__main__':
     BBs = np.array(BBs)
     stokes = np.array(stokes)
 
-    num_taus = np.unique(np.around(taus.max(axis=1),1)).size
+    num_taus = np.unique(np.around(taus[:30].max(axis=1),1)).size
     num_BBs = np.unique(BBs).size
 
     stokes_analytical = []
@@ -147,7 +147,7 @@ if __name__ == '__main__':
         if BBs[i] == 0:
             folder = f'{pm.basedir}tau_{i % num_taus}_BB_0'
         elif BBs[i] > 100:
-            folder = f'{pm.basedir}tau_{i % num_taus}_BB_{BBs[i]:.0f}'
+            folder = f'{pm.basedir}tau_{i % num_taus}_BB_{BBs[i]:.1f}'
         else:
             folder = f'{pm.basedir}tau_{i % num_taus}_BB_{BBs[i]}'
         pm.dir = folder
@@ -480,7 +480,7 @@ if __name__ == '__main__':
     fs = np.load(f'{pm.basedir[:-1]}_fs/data_for_plots.npz')
 
     # plot 4 panels with diferent tau values where the x axis is the magnetic field
-    taus_indexes = [0, 5, 7, 10]
+    taus_indexes = [0, 1, 2, 3]
     figure, axis = plt.subplots(nrows=2, ncols=2, sharex=True, figsize=(10, 6.67), dpi=150)
     plt.subplots_adjust(hspace=4e-2, wspace=2e-2)
     # plt.figure(figsize=(11,11), dpi=150)
@@ -488,11 +488,11 @@ if __name__ == '__main__':
         # ax = plt.subplot(2,2,i+1)
         # red line
         ax.plot(B_grid[:,0], (Q_nlte_grid/I_nlte_grid)[:,taus_indexes[i],nu_peak_1_indx]*100,
-                 '-', label=r'$\nu_{red}$, RT', color=cm.plasma(8/10.0))
+                 '-', label=r'$\nu_{red}$, RT', color='red')
         ax.plot(fs['B_grid'][:,0], (fs['Q_nlte_grid']/fs['I_nlte_grid'])[:,taus_indexes[i],fs['nu_peak_1_indx']]*100,
-                '--', label=r'$\nu_{red}$, RT-flat', color=cm.plasma(8/10.0))
+                '--', label=r'$\nu_{red}$, RT-flat', color='red')
         ax.plot(B_grid[:,0], (Q_analytical_grid/I_analytical_grid)[:,taus_indexes[i],nu_peak_1_indx]*100,
-                 ':', label=r'$\nu_{red}$, non-RT', color=cm.plasma(8/10.0))
+                 ':', label=r'$\nu_{red}$, non-RT', color='red')
         # blue line
         ax.plot(B_grid[:,0], (Q_nlte_grid/I_nlte_grid)[:,taus_indexes[i],nu_peak_2_indx]*100,
                  '-', label=r'$\nu_{blue}$, RT', color=cm.plasma(0/10.0))
