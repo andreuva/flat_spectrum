@@ -428,9 +428,9 @@ if __name__ == '__main__':
     plt.xticks(ticks, labels)
 
     plt.subplot(1,2,2)
-    plt.plot(wave[p1:p3], -Q_nlte[p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(0/10.0), label=fr'RT')
-    plt.plot(wave[p1:p3], -Q_nlte_fs[p1:p3]/I_nlte[p1:p3]*100 , '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'RT-flat')
-    plt.plot(wave[p1:p3], -II[1,p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(8/10.0), label=fr'non-RT')
+    plt.plot(wave[p1:p3], Q_nlte[p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(0/10.0), label=fr'RT')
+    plt.plot(wave[p1:p3], Q_nlte_fs[p1:p3]/I_nlte[p1:p3]*100 , '--', linewidth=2, color=cm.plasma(0/10.0), label=fr'RT-flat')
+    plt.plot(wave[p1:p3], II[1,p1:p3]/I_nlte[p1:p3]*100 , linewidth=2, color=cm.plasma(8/10.0), label=fr'non-RT')
     # plt.legend()
     plt.ylabel(r'$Q/I_c$ (%)')
     plt.xlabel('Wavelength [nm]')
