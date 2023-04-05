@@ -38,7 +38,7 @@ for ind, st in enumerate(['I','Q','U','V']):
         plt.plot(nus[i], stokes[i, ind, :]/norm)
         plt.xlabel('Wavelength [nm]')
         plt.ylabel(f'{st}/I')
-        plt.title(fr'$\tau = $ {tau[i].max():.2f} B = {B[i]:.0f} G, mu = {mu[i]:.2f}, T = {temp[i]:.0f} K')
+        plt.title(fr'$\tau = $ {taus[i].max():.2f} B = {B[i]:.0f} G, mu = {mu[i]:.2f}, T = {temp[i]:.0f} K')
     # plt.tight_layout()
     plt.savefig(f'{datadir}stokes_{st}_profiles.png')
     plt.close()
