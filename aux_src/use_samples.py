@@ -10,7 +10,7 @@ with open(f'{datadir}stokes.pkl', 'rb') as f:
     stokes = pkl.load(f)
 
 with open(f'{datadir}tau.pkl', 'rb') as f:
-    tau = pkl.load(f)
+    taus = pkl.load(f)
 
 with open(f'{datadir}params.pkl', 'rb') as f:
     params = pkl.load(f)
@@ -27,7 +27,7 @@ B = np.array([p['B'] for p in params])
 nus = np.array([p['nus'] for p in params])
 
 stokes = np.array(stokes)
-tau = np.array(tau)
+taus = np.array(taus)
 
 # show a subsample of the stokes profiles (I,Q,U,V)
 for ind, st in enumerate(['I','Q','U','V']):
