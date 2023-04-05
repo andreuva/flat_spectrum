@@ -39,9 +39,9 @@ def new_parameters(pm, npoints, index):
     # for that we need to have the number of points in tau and B and the index
     pm.z0 = np.random.uniform(2000, 15000, 1)[0]*1e5
     pm.zf = pm.z0 + np.random.uniform(1, 200, 1)[0]*1e5
-    pm.temp = 10**np.random.uniform(3,5,1)[0]
-    pm.B = np.random.uniform(0, 250, 1)[0]
-    mu = np.random.uniform(1e-1, 1, 1)[0]
+    pm.temp = 5*10**np.random.uniform(3,4,1)[0]
+    pm.B = np.random.uniform(0, 200, 1)[0]
+    mu = np.random.uniform(5e-2, 1, 1)[0]
     phi = np.random.uniform(0, 2*np.pi, 1)[0]*0.0
 
     # pm.zf = pm.zf[-1]
@@ -156,7 +156,8 @@ def slave_work(npoints, pm = pm):
                 pm = new_parameters(pm, npoints, task_index)
                 # compute the profile
                 out = main(pm, disable_display=True)
-                _, _, _, tau, stokes = out[0]
+                _, nus, _, tau, stokes = out[0]
+                pm.nus = nus
 
             except:
                 success = False
@@ -167,7 +168,7 @@ def slave_work(npoints, pm = pm):
                 print("The error is:")
                 print(traceback.format_exc())
                 print('-'*50)
-                _, _, _, tau, stokes, pm.B = [None]*5
+                _, nus, _, tau, stokes, pm.B = [None]*5
 
             # Send the results to the master
             dataToSend = {'index': task_index, 'success': success, 
