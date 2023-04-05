@@ -20,18 +20,16 @@ class tags(IntEnum):
 
 
 # Function to dump the data to files
-def dump_data(zz, tau, BB, stokes, filename, task_index=None):
-    with open(f'{filename}zz.pkl', 'wb') as f:
-        pkl.dump(zz[0:task_index], f)
+def dump_data(tau, stokes, params, filename, task_index=None):
     
     with open(f'{filename}tau.pkl', 'wb') as f:
         pkl.dump(tau[0:task_index], f)
     
-    with open(f'{filename}BB.pkl', 'wb') as f:
-        pkl.dump(BB[0:task_index], f)
-
     with open(f'{filename}stokes.pkl', 'wb') as f:
         pkl.dump(stokes[0:task_index], f)
+    
+    with open(f'{filename}params.pkl', 'wb') as f:
+        pkl.dump(params[0:task_index], f)
 
 
 def new_parameters(pm, npoints, index):
@@ -39,21 +37,27 @@ def new_parameters(pm, npoints, index):
     # Define the parameters for the grid in tau and B
     # the idea is to first vary tau for a fixed B and then move the B
     # for that we need to have the number of points in tau and B and the index
-    pm.B = [0, 0.01, 0.025, 0.05, 0.08, 0.15, 0.3, 0.5, 0.75, 0.9, 1.1,
-            2.0, 3.0, 4.0, 5.0, 7.5, 10.0, 50.0, 100.0, 250.0, 400.0,  500.0]
-    pm.z0 = pm.z0
-    pm.zf = pm.z0 + np.array([1, 50, 100, 200])*1e5
+    pm.z0 = np.random.uniform(2000, 15000, 1)[0]*1e5
+    pm.zf = pm.z0 + np.random.uniform(1, 350, 1)[0]*1e5
+    pm.temp = 10**np.random.uniform(3,5,1)[0]
+    pm.B = np.random.uniform(0, 250, 1)[0]
+    mu = np.random.uniform(1e-1, 1, 1)[0]
+    phi = np.random.uniform(0, 2*np.pi, 1)[0]*0.0
 
-    # reduced grid for testing
-    # pm.B = [0, 0.1, 1, 10, 100]
-    # pm.zf = pm.z0 + np.array([25, 50, 100, 200, 300])*1e5
+    # pm.zf = pm.zf[-1]
+    # pm.temp = pm.temp[-1]
+    # mu = mu[-1]
+    # phi = phi[-1]
+    # pm.B = pm.B[-1]
+    # print('z0', pm.z0)
+    # print('zf', pm.zf)
+    # print('temp', pm.temp)
+    # print('mu', mu)
+    # print('phi', phi)
+    # print('B', pm.B)
 
-    b_index = index // len(pm.zf)
-    t_index = index % len(pm.zf)
-
-    pm.B = pm.B[b_index]
-    pm.zf = pm.zf[t_index]
-    pm.dir = f'{pm.basedir}tau_{t_index}_BB_{pm.B}_{time.strftime("%Y%m%d-%H%M%S")}/'
+    pm.dir = f'{pm.basedir}sample_{index}_z_{pm.zf-pm.z0:1.1e}_temp_{pm.temp}_mu_{mu}_B_{pm.B}/'
+    pm.ray_out = [[mu, phi]]
     return pm
 
 
@@ -68,8 +72,7 @@ def master_work(npoints):
     # Initialize the variables to store the results
     tau = [None]*npoints
     stokes = [None]*npoints
-    zz = [None]*npoints
-    BB = [None]*npoints
+    params = [None]*npoints
 
     with tqdm(total=npoints, ncols=100, disable=True) as pbar:
         while closed_workers < num_workers:
@@ -93,7 +96,6 @@ def master_work(npoints):
                 # Send the task to the worker
                 if task_index >= 0:
                     print('sending task {}/{} to worker {}'.format(task_index, npoints, source))
-                    print('wich corresponds grid  (B,tau)   =    ({},{})'.format(task_index//4, task_index%4))
                     comm.send(task_index, dest=source, tag=tags.START)
                     task_status[task_index] = 1
                 else:
@@ -110,8 +112,7 @@ def master_work(npoints):
                 if success:
                     tau[task_index] = dataReceived['tau']
                     stokes[task_index] = dataReceived['stokes']
-                    zz[task_index] = dataReceived['zz']
-                    BB[task_index] = dataReceived['BB']
+                    params[task_index] = dataReceived['params']
                     task_status[task_index] = 1
                     pbar.update(1)
                 else:
@@ -121,7 +122,7 @@ def master_work(npoints):
             if (task_index / 10 == task_index // 10):
                 # Dump the data
                 print('saving data')
-                dump_data(zz, tau, BB, stokes, pm.basedir, pbar.n)
+                dump_data(tau, stokes, params, pm.basedir, pbar.n)
 
     # Once all the workers are done, dump the data
     print('\n'+'#'*50)
@@ -130,7 +131,7 @@ def master_work(npoints):
     print("Master finishing")
     print("Dumping data")
     print('#'*50)
-    dump_data(zz, tau, BB, stokes, pm.basedir)
+    dump_data(tau, stokes, params, pm.basedir)
 
 
 def slave_work(npoints, pm = pm):
@@ -155,7 +156,7 @@ def slave_work(npoints, pm = pm):
                 pm = new_parameters(pm, npoints, task_index)
                 # compute the profile
                 out = main(pm, disable_display=True)
-                ray, nus, zz, tau, stokes = out[0]
+                _, _, _, tau, stokes = out[0]
 
             except:
                 success = False
@@ -166,11 +167,11 @@ def slave_work(npoints, pm = pm):
                 print("The error is:")
                 print(traceback.format_exc())
                 print('-'*50)
-                ray, nus, zz, tau, stokes, pm.B = [None]*5
+                _, _, _, tau, stokes, pm.B = [None]*5
 
             # Send the results to the master
             dataToSend = {'index': task_index, 'success': success, 
-                          'stokes': stokes, 'tau': tau, 'ray': ray, 'nus': nus, 'zz': zz, 'BB': pm.B}
+                          'stokes': stokes, 'tau': tau, 'params': module_to_dict(pm)}
             comm.send(dataToSend, dest=0, tag=tags.DONE)
 
         # If the master is sending the kill signal exit
@@ -188,7 +189,7 @@ if __name__ == '__main__':
     print(f"\nNode {rank+1}/{size} active", flush=False, end='')
 
     parser = argparse.ArgumentParser(description='Generate synthetic models and solve NLTE problem')
-    parser.add_argument('--n', '--npoints', default=88, type=int, metavar='NPOINTS', help='Number of points')
+    parser.add_argument('--n', '--npoints', default=100, type=int, metavar='NPOINTS', help='Number of points')
     parsed = vars(parser.parse_args())
 
     if rank == 0:
