@@ -38,7 +38,7 @@ def new_parameters(pm, npoints, index):
     # the idea is to first vary tau for a fixed B and then move the B
     # for that we need to have the number of points in tau and B and the index
     pm.z0 = np.random.uniform(2000, 15000, 1)[0]*1e5
-    pm.zf = pm.z0 + np.random.uniform(1, 350, 1)[0]*1e5
+    pm.zf = pm.z0 + np.random.uniform(1, 200, 1)[0]*1e5
     pm.temp = 10**np.random.uniform(3,5,1)[0]
     pm.B = np.random.uniform(0, 250, 1)[0]
     mu = np.random.uniform(1e-1, 1, 1)[0]
