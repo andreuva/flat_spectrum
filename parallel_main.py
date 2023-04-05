@@ -56,7 +56,7 @@ def new_parameters(pm, npoints, index):
     # print('phi', phi)
     # print('B', pm.B)
 
-    pm.dir = f'{pm.basedir}sample_{index}_z_{pm.zf-pm.z0:1.1e}_temp_{pm.temp}_mu_{mu}_B_{pm.B}/'
+    pm.dir = f'{pm.basedir}sample_{index}_z_{(pm.zf-pm.z0)/1e5:.1f}_temp_{pm.temp:.1f}_mu_{mu:.3f}_B_{pm.B:.0f}/'
     pm.ray_out = [[mu, phi]]
     return pm
 
