@@ -47,11 +47,10 @@ def new_parameters(pm, npoints, index):
 
     pm.B = [0, 0.01, 0.025, 0.05, 0.075, 0.1, 0.3, 0.5, 0.7, 1.0,
             2.0, 3.0, 4.0, 5.0, 7.5, 10.0, 50.0, 85.0, 120.0, 150.0, 200.0, 250.0]
-    pm.z0 = 30000.0*1e5
+    pm.z0 = 6000.0*1e5
     pm.zf = pm.z0 + np.array([1, 100, 150, 300])*1e5
 
     pm.B = pm.B[index]
-    pm.z0 = pm.z0[index]
     pm.zf = pm.zf[index]
 
     # print('z0', pm.z0)
