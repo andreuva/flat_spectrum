@@ -37,18 +37,19 @@ def new_parameters(pm, npoints, index):
     # Define the parameters for the grid in tau and B
     # the idea is to first vary tau for a fixed B and then move the B
     # for that we need to have the number of points in tau and B and the index
-    pm.z0 = np.random.uniform(2000, 15000, 1)[0]*1e5
-    pm.zf = pm.z0 + np.random.uniform(1, 200, 1)[0]*1e5
-    pm.temp = 5*10**np.random.uniform(3,4,1)[0]
-    pm.B = np.random.uniform(0, 200, 1)[0]
-    mu = np.random.uniform(5e-2, 1, 1)[0]
-    phi = np.random.uniform(0, 2*np.pi, 1)[0]*0.0
+    # pm.z0 = np.random.uniform(2000, 15000, 1)[0]*1e5
+    # pm.zf = pm.z0 + np.random.uniform(1, 200, 1)[0]*1e5
+    # pm.temp = 5*10**np.random.uniform(3,4,1)[0]
+    # pm.B = np.random.uniform(0, 200, 1)[0]
+    # mu = np.random.uniform(5e-2, 1, 1)[0]
+    # phi = np.random.uniform(0, 2*np.pi, 1)[0]*0.0
+    # pm.ray_out = [[mu, phi]]
 
-    # pm.zf = pm.zf[-1]
-    # pm.temp = pm.temp[-1]
-    # mu = mu[-1]
-    # phi = phi[-1]
-    # pm.B = pm.B[-1]
+    pm.B = [0, 0.01, 0.025, 0.05, 0.075, 0.1, 0.3, 0.5, 0.7, 1.0,
+            2.0, 3.0, 4.0, 5.0, 7.5, 10.0, 50.0, 85.0, 120.0, 150.0, 200.0, 250.0]
+    pm.z0 = 30000.0*1e5
+    pm.zf = pm.z0 + np.array([1, 100, 150, 300])*1e5
+
     # print('z0', pm.z0)
     # print('zf', pm.zf)
     # print('temp', pm.temp)
@@ -56,8 +57,8 @@ def new_parameters(pm, npoints, index):
     # print('phi', phi)
     # print('B', pm.B)
 
-    pm.dir = f'{pm.basedir}sample_{index}_z_{(pm.zf-pm.z0)/1e5:.1f}_temp_{pm.temp:.1f}_mu_{mu:.3f}_B_{pm.B:.0f}/'
-    pm.ray_out = [[mu, phi]]
+    # pm.dir = f'{pm.basedir}sample_{index}_z_{(pm.zf-pm.z0)/1e5:.1f}_temp_{pm.temp:.1f}_mu_{mu:.3f}_B_{pm.B:.0f}/'
+    pm.dir = f'{pm.basedir}sample_{index}_z_{(pm.zf-pm.z0)/1e5:.1f}_B_{pm.B:.0f}/'
     return pm
 
 
