@@ -50,6 +50,10 @@ def new_parameters(pm, npoints, index):
     pm.z0 = 30000.0*1e5
     pm.zf = pm.z0 + np.array([1, 100, 150, 300])*1e5
 
+    pm.B = pm.B[index]
+    pm.z0 = pm.z0[index]
+    pm.zf = pm.zf[index]
+
     # print('z0', pm.z0)
     # print('zf', pm.zf)
     # print('temp', pm.temp)
