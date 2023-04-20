@@ -46,7 +46,7 @@ def gaussian(x, mu, std):
 
 
 # Wraper to compute the Rtcoefs module with a given parameters
-def compute_profile(JKQ_1, JKQ_2, pm=pm, B=np.array([0, 0, 0]), especial=True, jqq=None):
+def compute_profile(JKQ, pm=pm, B=np.array([0, 0, 0]), especial=True, jqq=None):
     # Initialize the conditions and rtcoefs objects
     # given a set of parameters via the parameters_rtcoefs module
     cdt = conditions(pm)
@@ -65,16 +65,25 @@ def compute_profile(JKQ_1, JKQ_2, pm=pm, B=np.array([0, 0, 0]), especial=True, j
 
         # reset the jqq to zero to construct from there the radiation field with the JKQ
         atoms.reset_jqq(cdt.nus_N)
-        atoms.atom.lines[0].jqq[components[0]] = JKQ_to_Jqq(JKQ_1, cdt.JS)
-        atoms.atom.lines[0].jqq[components[1]] = JKQ_to_Jqq(JKQ_2, cdt.JS)
+        atoms.atom.lines[0].jqq[components[0]] = JKQ_to_Jqq(JKQ[0][0], cdt.JS)
+        atoms.atom.lines[0].jqq[components[1]] = JKQ_to_Jqq(JKQ[0][1], cdt.JS)
+        atoms.atom.lines[1].jqq = JKQ_to_Jqq(JKQ[1], cdt.JS)
+        atoms.atom.lines[2].jqq = JKQ_to_Jqq(JKQ[2], cdt.JS)
+        atoms.atom.lines[3].jqq = JKQ_to_Jqq(JKQ[3], cdt.JS)
+
     else:
         # Initialize the jqq and construct the dictionary
-        atoms.atom.lines[0].initialize_profiles_first(cdt.nus_N)
-        atoms.atom.lines[0].jqq = JKQ_to_Jqq(JKQ_1, cdt.JS)
+        for i,line in enumerate(atoms.atom.lines):
+            line.initialize_profiles_first(cdt.nus_N)
+            if i == 0:
+                line.jqq = JKQ_to_Jqq(JKQ[i][0], cdt.JS)
+            else:
+                line.jqq = JKQ_to_Jqq(JKQ[i], cdt.JS)
 
     # print(atoms.atom.lines[0].jqq)
     if jqq is not None:
-        atoms.atom.lines[0].jqq = jqq
+        for i, line in enumerate(atoms.atom.lines):
+            line.jqq = jqq[i]
 
     # rotate the radiation field
     atoms.rotate_Jqq(cdt.JS)
@@ -170,61 +179,68 @@ if __name__ == '__main__':
         print(f'with parameters:\n B = {B_spherical} \n tau_max = {tau_nlte_max}')
         print('--'*50 + '\n')
 
-        # plot the profiles for the test
-        # fig, ax = plt.subplots(2, 2, figsize=(10, 10))
-        # ax[0, 0].plot(wave_nlte, I_nlte, label='NLTE')
-        # ax[0, 1].plot(wave_nlte, Q_nlte/I_nlte, label='NLTE')
-        # ax[1, 0].plot(wave_nlte, U_nlte/I_nlte, label='NLTE')
-        # ax[1, 1].plot(wave_nlte, V_nlte/I_nlte, label='NLTE')
-        # plt.suptitle('Stokes parameters normalized to I')
-        # plt.show()
-
         ###############################################################################################
-
         # Get Allen class instance and gamma angles
         Allen = Allen_class()
         Allen.get_gamma(param.z0)
-
-        nu_1 = 2.76733e14
-        nu_2 = 2.76764e14
-        wave_1 = 299792458/nu_1
-        wave_2 = 299792458/nu_2
-        gaussian_width = 7e9
-        gaussian_1_height = 1e-1
-        gaussian_2_height = gaussian_1_height/7
 
         ###############################################################################################
         #                   Test the computation of the JKQ and the profiles                          #
         ###############################################################################################
         # create the JKQ
-        JKQ_1 = construct_JKQ_0()
-        JKQ_2 = construct_JKQ_0()
-
+        JKQ_0r = construct_JKQ_0()
         # compute the JKQ with ad-hoc values
-        JKQ_1[0][0] = 1e-4
-        JKQ_2[0][0] = 1e-6
-
+        JKQ_0r[0][0] = 1e-4
         # compute the profiles for the test
-        _, nus_cp, rays, _ = compute_profile(JKQ_1, JKQ_1, B=B_spherical, pm=param, especial=param.especial)
+        _, nus_cp, rays, _ = compute_profile([[JKQ_0r, JKQ_0r], JKQ_0r, JKQ_0r, JKQ_0r], B=B_spherical, pm=param, especial=param.especial)
 
         # compute the wavelength from the frequencies
         wave_cp = 299792458/nus_cp
 
         # compute the index of each of the peaks
-        nu_peak_1_indx = np.abs(nus_cp - nu_1).argmin()
-        nu_peak_2_indx = np.abs(nus_cp - nu_2).argmin()
+        nu_0r = 2.76733e14
+        nu_0b = 2.76764e14
+        nu_1 = 770725260863620.6
+        nu_2 = 424202775298533.06
+        nu_3 = 510086259106490.94
+
+        wave_0r = 299792458/nu_0r
+        wave_0b = 299792458/nu_0b
+        wave_1 = 299792458/nu_1
+        wave_2 = 299792458/nu_2
+        wave_3 = 299792458/nu_3
+
+        nu_peak_0r_indx = np.abs(nus_cp - wave_0r).argmin()
+        nu_peak_0b_indx = np.abs(nus_cp - wave_0b).argmin()
+        nu_peak_1_indx = np.abs(nus_cp - wave_1).argmin()
+        nu_peak_2_indx = np.abs(nus_cp - wave_2).argmin()
+        nu_peak_3_indx = np.abs(nus_cp - wave_3).argmin()
 
         ###############################################################################################
 
         # compute the gaussian profiles for each component
-        gauss_1 = gaussian(nus_cp, nu_1, gaussian_width)*gaussian_1_height
-        gauss_2 = gaussian(nus_cp, nu_2, gaussian_width)*gaussian_2_height
+        gaussian_width = 7e9
+        gaussian_0r_height = 1e-1
+        gaussian_0b_height = gaussian_0r_height/7
+
+        gauss_0r = gaussian(nus_cp, nu_0r, gaussian_width)*gaussian_0r_height
+        gauss_0b = gaussian(nus_cp, nu_0b, gaussian_width)*gaussian_0b_height
+        gauss_1 = gaussian(nus_cp, nu_1, gaussian_width)*gaussian_0r_height
+        gauss_2 = gaussian(nus_cp, nu_2, gaussian_width)*gaussian_0r_height
+        gauss_3 = gaussian(nus_cp, nu_3, gaussian_width)*gaussian_0r_height
+
+        gauss_0r_norm = gauss_0r/np.trapz(gauss_0r, nus_cp)
+        gauss_0b_norm = gauss_0b/np.trapz(gauss_0b, nus_cp)
         gauss_1_norm = gauss_1/np.trapz(gauss_1, nus_cp)
         gauss_2_norm = gauss_2/np.trapz(gauss_2, nus_cp)
+        gauss_3_norm = gauss_3/np.trapz(gauss_3, nus_cp)
 
         # compute the JKQ taking into account the background and velocity
+        JKQ_0r = construct_JKQ_0()
+        JKQ_0b = construct_JKQ_0()
         JKQ_1 = construct_JKQ_0()
         JKQ_2 = construct_JKQ_0()
+        JKQ_3 = construct_JKQ_0()
         for K in range(3):
             for Q in range(0,K+1):
                 for ray in rays:
@@ -232,13 +248,27 @@ if __name__ == '__main__':
 
                     if ray.rinc < np.pi/2:
                         continue
-
+                    
+                    JKQ_0r[K][Q] += background*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
+                    JKQ_0b[K][Q] += background*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
                     JKQ_1[K][Q] += background*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
                     JKQ_2[K][Q] += background*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
+                    JKQ_3[K][Q] += background*TKQ(0,K,Q,ray.rinc,ray.raz)*ray.weight
 
                 # integrate over nus
+                JKQ_0r[K][Q] = np.trapz(JKQ_0r[K][Q]*gauss_0r_norm, nus_cp)
+                JKQ_0b[K][Q] = np.trapz(JKQ_0b[K][Q]*gauss_0b_norm, nus_cp)
                 JKQ_1[K][Q] = np.trapz(JKQ_1[K][Q]*gauss_1_norm, nus_cp)
                 JKQ_2[K][Q] = np.trapz(JKQ_2[K][Q]*gauss_2_norm, nus_cp)
+                JKQ_3[K][Q] = np.trapz(JKQ_3[K][Q]*gauss_3_norm, nus_cp)
+
+        JKQ_0r[2][-2] =      np.conjugate(JKQ_0r[2][2])
+        JKQ_0r[2][-1] = -1.0*np.conjugate(JKQ_0r[2][1])
+        JKQ_0r[1][-1] = -1.0*np.conjugate(JKQ_0r[1][1])
+
+        JKQ_0b[2][-2] =      np.conjugate(JKQ_0b[2][2])
+        JKQ_0b[2][-1] = -1.0*np.conjugate(JKQ_0b[2][1])
+        JKQ_0b[1][-1] = -1.0*np.conjugate(JKQ_0b[1][1])
 
         JKQ_1[2][-2] =      np.conjugate(JKQ_1[2][2])
         JKQ_1[2][-1] = -1.0*np.conjugate(JKQ_1[2][1])
@@ -248,8 +278,12 @@ if __name__ == '__main__':
         JKQ_2[2][-1] = -1.0*np.conjugate(JKQ_2[2][1])
         JKQ_2[1][-1] = -1.0*np.conjugate(JKQ_2[1][1])
 
+        JKQ_3[2][-2] =      np.conjugate(JKQ_3[2][2])
+        JKQ_3[2][-1] = -1.0*np.conjugate(JKQ_3[2][1])
+        JKQ_3[1][-1] = -1.0*np.conjugate(JKQ_3[1][1])
+
         # compute the profiles with the new JKQs
-        profiles, nus_cp, rays, orays = compute_profile(JKQ_1, JKQ_2, param, B_spherical, especial=param.especial)
+        profiles, nus_cp, rays, orays = compute_profile([[JKQ_0r, JKQ_0b], JKQ_1, JKQ_2, JKQ_3], param, B_spherical, especial=param.especial)
 
         ################   SEMI-ANALYTICAL RADIATIVE TRANSFER  #################
         # identity matrix
@@ -299,24 +333,15 @@ if __name__ == '__main__':
         ################  "SAVE" FINAL RESULTS  #################
 
         stokes_analytical.append([II[0], II[1], II[2], II[3]])
-    
-    """ 
-    nu_1 = 2.76733e14
-    nu_2 = 2.76764e14
+
+    nu_1 = nu_3
+    nu_2 = nu_3
     wave_1 = 299792458/nu_1
     wave_2 = 299792458/nu_2
 
     nu_peak_1_indx = np.abs(nus_cp - nu_1).argmin()
     nu_peak_2_indx = np.abs(nus_cp - nu_2).argmin()
-    """
-    
-    nu_1_d3 = 5.100897681891647e14  
-    nu_2_d3 = 5.100597552934561e14 
-    wave_1_d3 = 299792458/nu_1_d3
-    wave_2_d3 = 299792458/nu_2_d3 
 
-    nu_peak_1_indx = np.abs(nus_cp - nu_1_d3).argmin() 
-    nu_peak_2_indx = np.abs(nus_cp - nu_2_d3).argmin() 
     ################   PLOT THE FINAL RESULTS  ################# 
 
     len_w = len(wave_cp) 
@@ -338,6 +363,9 @@ if __name__ == '__main__':
 
     ticks = [wave[nu_peak_1_indx], wave[nu_peak_2_indx]]
     labels = [f'{wave[nu_peak_1_indx]:.2f}', f'{wave[nu_peak_2_indx]:.2f}']
+
+    num_BBs = 22 # len(BBs)
+    num_taus = 4 # len(tau_prof)
 
     # separate the stokes parameters in their own lists
     I_nlte = stokes[:,0,:]
@@ -376,7 +404,7 @@ if __name__ == '__main__':
             axis[i, j].set_title(f'B = {B_grid[i,j]:.2f} G, tau = {tau_grid[i,j]:.2f}',
                                  fontsize=8)
 
-    # figure.tight_layout()
+    figure.tight_layout()
     figure.savefig(f'{pm.basedir}comparison_I.pdf')
     plt.close()
     # plt.show()
@@ -396,7 +424,7 @@ if __name__ == '__main__':
                                  fontsize=8)
 
     axis[0,0].legend()
-    # figure.tight_layout()
+    figure.tight_layout()
     figure.savefig(f'{pm.basedir}comparison_Q.pdf')
     plt.close()
     # plt.show()
