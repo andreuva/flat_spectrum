@@ -334,8 +334,8 @@ if __name__ == '__main__':
 
         stokes_analytical.append([II[0], II[1], II[2], II[3]])
 
-    nu_1 = nu_3
-    nu_2 = nu_3
+    nu_1 = 5.100897681891647e14
+    nu_2 = 5.100597552934561e14
     wave_1 = 299792458/nu_1
     wave_2 = 299792458/nu_2
 
@@ -371,9 +371,9 @@ if __name__ == '__main__':
     I_nlte = stokes[:,0,:]
     I_nlte_grid = np.resize(I_nlte, (num_BBs,num_taus,len_w_nlte))
     Q_nlte = stokes[:,1,:]
-    Q_nlte_grid = -np.resize(Q_nlte, (num_BBs,num_taus,len_w_nlte))
+    Q_nlte_grid = np.resize(Q_nlte, (num_BBs,num_taus,len_w_nlte))
     U_nlte = stokes[:,2,:]
-    U_nlte_grid = -np.resize(U_nlte, (num_BBs,num_taus,len_w_nlte))
+    U_nlte_grid = np.resize(U_nlte, (num_BBs,num_taus,len_w_nlte))
     V_nlte = stokes[:,3,:]
     V_nlte_grid = np.resize(V_nlte, (num_BBs,num_taus,len_w_nlte))
 
@@ -390,7 +390,7 @@ if __name__ == '__main__':
     B_grid = np.resize(BBs, (num_BBs,num_taus))
     tau_grid = np.resize(taus.max(axis=-1), (num_BBs,num_taus))
 
-    figure, axis = plt.subplots(nrows=num_BBs, ncols=num_taus, figsize=(30, 20), dpi=200)
+    figure, axis = plt.subplots(nrows=num_BBs, ncols=num_taus, figsize=(10, 40), dpi=200)
     for i in tqdm(range(num_BBs), desc='Plotting', ncols=50):
         for j in range(num_taus):
             axis[i, j].plot(wave[p1:p3], I_nlte_grid[i,j,p1:p3]/I_nlte_grid[i,j,0], color=cm.plasma(0/10.0), label='NLTE')
@@ -400,7 +400,7 @@ if __name__ == '__main__':
             axis[i, j].set_yticks([])
             # axis[i, j].set_xticks(ticks, labels)
             axis[i, j].set_xticks([])
-            axis[i, j].set_ylim(0.8, 1.05)
+            axis[i, j].set_ylim(0.7, 1.05)
             axis[i, j].set_title(f'B = {B_grid[i,j]:.2f} G, tau = {tau_grid[i,j]:.2f}',
                                  fontsize=8)
 
@@ -409,7 +409,7 @@ if __name__ == '__main__':
     plt.close()
     # plt.show()
 
-    figure, axis = plt.subplots(nrows=num_BBs, ncols=num_taus, figsize=(30, 20), dpi=200)
+    figure, axis = plt.subplots(nrows=num_BBs, ncols=num_taus, figsize=(10, 40), dpi=200)
     for i in tqdm(range(num_BBs), desc='Plotting', ncols=50):
         for j in range(num_taus):
             axis[i, j].plot(wave[p1:p3], Q_nlte_grid[i,j,p1:p3]/I_nlte_grid[i,j,p1:p3]*100, color=cm.plasma(0/10.0), label='NLTE')
@@ -419,7 +419,7 @@ if __name__ == '__main__':
             axis[i, j].set_yticks([])
             # axis[i, j].set_xticks(ticks, labels)
             axis[i, j].set_xticks([])
-            axis[i, j].set_ylim(-0.1, 0.1)
+            axis[i, j].set_ylim(-0.25, 0.25)
             axis[i, j].set_title(f'B = {B_grid[i,j]:.2f} G, tau = {tau_grid[i,j]:.2f}',
                                  fontsize=8)
 
@@ -540,14 +540,14 @@ if __name__ == '__main__':
         # red line
         ax.plot(B_grid[:,0], (Q_nlte_grid/I_nlte_grid)[:,taus_indexes[i],nu_peak_1_indx]*100,
                  '-', label=r'$\nu_{red}$, S-C NLTE', color=cm.plasma(8/10.0))
-        ax.plot(fs['B_grid'][:,0], (-fs['Q_nlte_grid']/fs['I_nlte_grid'])[:,taus_indexes[i],fs['nu_peak_1_indx']]*100,
+        ax.plot(fs['B_grid'][:,0], (fs['Q_nlte_grid']/fs['I_nlte_grid'])[:,taus_indexes[i],fs['nu_peak_1_indx']]*100,
                 '--', label=r'$\nu_{red}$, S-C NLTE, F.S', color=cm.plasma(8/10.0))
         ax.plot(B_grid[:,0], (Q_analytical_grid/I_analytical_grid)[:,taus_indexes[i],nu_peak_1_indx]*100,
                  ':', label=r'$\nu_{red}$, C.P. slab', color=cm.plasma(8/10.0))
         # blue line
         ax.plot(B_grid[:,0], (Q_nlte_grid/I_nlte_grid)[:,taus_indexes[i],nu_peak_2_indx]*100,
                  '-', label=r'$\nu_{blue}$, S-C NLTE', color=cm.plasma(0/10.0))
-        ax.plot(fs['B_grid'][:,0], (-fs['Q_nlte_grid']/fs['I_nlte_grid'])[:,taus_indexes[i],fs['nu_peak_2_indx']]*100,
+        ax.plot(fs['B_grid'][:,0], (fs['Q_nlte_grid']/fs['I_nlte_grid'])[:,taus_indexes[i],fs['nu_peak_2_indx']]*100,
                  '--', label=r'$\nu_{blue}$, S-C NLTE, F.S', color=cm.plasma(0/10.0))
         ax.plot(B_grid[:,0], (Q_analytical_grid/I_analytical_grid)[:,taus_indexes[i],nu_peak_2_indx]*100,
                  ':', label=r'$\nu_{blue}$, C.P. slab', color=cm.plasma(0/10.0))
@@ -597,7 +597,7 @@ if __name__ == '__main__':
         I_ratio_analytical = I_analytical_grid[B_indx,:,nu_peak_1_indx]/I_analytical_grid[B_indx,:,nu_peak_2_indx]
         
         Q_ratio_nlte = Q_nlte_grid[B_indx,:,nu_peak_1_indx]/Q_nlte_grid[B_indx,:,nu_peak_2_indx]
-        Q_ratio_fs = -fs['Q_nlte_grid'][B_indx,:,fs['nu_peak_1_indx']]/fs['Q_nlte_grid'][B_indx,:,fs['nu_peak_2_indx']]
+        Q_ratio_fs = fs['Q_nlte_grid'][B_indx,:,fs['nu_peak_1_indx']]/fs['Q_nlte_grid'][B_indx,:,fs['nu_peak_2_indx']]
         Q_ratio_analytical = Q_analytical_grid[B_indx,:,nu_peak_1_indx]/Q_analytical_grid[B_indx,:,nu_peak_2_indx]
 
         U_ratio_nlte = U_nlte_grid[B_indx,:,nu_peak_1_indx]/U_nlte_grid[B_indx,:,nu_peak_2_indx]
