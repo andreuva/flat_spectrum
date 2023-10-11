@@ -1032,7 +1032,7 @@ class HeI_1083():
         self.terms = []
 
         # Internal switch
-        not_twoterm = True
+        not_twoterm = False
 
         # Add the two terms. Energy cm^-1
         self.terms.append(term_class(0.0,1.0,      [1.], \

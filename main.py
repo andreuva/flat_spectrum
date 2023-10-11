@@ -10,6 +10,7 @@ from iopy import io_saverho,io_saverad
 # Import needed libraries
 import numpy as np
 import struct, os
+from tqdm import tqdm
 from tensors import Jqq_to_JKQ
 
 # set numpy to raise all as errors
@@ -82,9 +83,9 @@ def main(pm=pm, disable_display=False):
             print('--'*50 + '\n')
 
         # Go through all the rays in the cuadrature
-        for j, ray in enumerate(cdt.rays):
-            if not disable_display:
-                print(f'Ray {j} {ray.inc} {ray.az}')
+        for j, ray in tqdm(enumerate(cdt.rays), ncols=100, total=len(cdt.rays), desc=f'Propaating rays'):
+            # if not disable_display:
+            #     print(f'Ray {j} {ray.inc} {ray.az}')
 
             # Initialize optical depth
             tau = np.zeros((cdt.nus_N))
