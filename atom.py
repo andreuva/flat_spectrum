@@ -2562,6 +2562,10 @@ class ESE:
         except:
             raise
 
+        # if self.rotate:
+        #     # Rotate Jqq
+        #     self.rotate_Jqq(JS)
+
         # Debug
         if self.debug:
 
