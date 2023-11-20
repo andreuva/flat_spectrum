@@ -139,8 +139,8 @@ if __name__ == '__main__':
     velocity = np.array(pm.velocity)
     especial = False
 
-    datadir_fs = 'output_z0_6.00Mm_dz_190.0_B_10_sp_False_qd_16x4_20230403-101057'
-    datadir = 'output_z0_6.00Mm_dz_190.0_B_10_sp_True_qd_16x4_20230403-101109'
+    datadir_fs = 'output_z0_6.00Mm_dz_190.0_B_10.0_sp_False_qd_16x4_20231120-092239'
+    datadir = 'output_z0_6.00Mm_dz_190.0_B_10.0_sp_True_qd_16x4_20231120-085938'
 
     pm.dir = datadir + '/'
 

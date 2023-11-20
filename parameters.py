@@ -4,8 +4,8 @@ z0 = 6000.0*1e5    # height of the slav over the surfave [cm]
 zf = 6190.0*1e5    # geometrical height of the slab [cm]
 zn = 10            # Points in z in the slab
 
-ray_quad = "quadrature_gaussian_16x4_inv.dat" # file where the angular quadrature is read from
-ray_out = [[0.1,0.],[1.0,0.]]             # List of mu,phi for emergent radiation directions
+ray_quad = "quadrature_gaussian_16x4.dat" # file where the angular quadrature is read from
+ray_out = [[1.0,0.]]             # List of mu,phi for emergent radiation directions
 
 v_dop = 5.0*1e5            # Dopler velocity (not the actual one) [cm/s]
 a_voigt = 1e-5             # voigt damping parameter of the line profile
@@ -26,7 +26,7 @@ initial_equilibrium = True   # Start from equilibrium
 verbose = False
 extra_plots = False
 extra_save = True
-especial = True
+especial = False
 
 dir = f'output_z0_{z0/1e8:1.2f}Mm_dz_{(zf-z0)/1e5:1.1f}_B_{B}_sp_{especial}_qd_{ray_quad[-8:-4]}_{time.strftime("%Y%m%d-%H%M%S")}/'
 del time
