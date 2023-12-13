@@ -374,7 +374,7 @@ if __name__ == '__main__':
     plt.ylabel(r'$J^2_0/{J^0_0}_c$')
     # plt.ylim(0, jkq[-1]/JK00_fil[0,0]*1.1)
     plt.xlabel('Wavelength [nm]')
-    plt.xticks(ticks, labels)
+    plt.xticks(ticks, labels)    
 
     # plt.subplot(2,3,3)
     # for i,jkq in enumerate(JK21_fil/JK00_fil[0,0]):
@@ -389,7 +389,56 @@ if __name__ == '__main__':
     plt.savefig(f'{pm.dir}/plot_comparison_JKQ.pdf')
     plt.show()
 
+    # compute the shape of the JKQ profiles at the peaks with respect of z direction
+    jkq00r_shape = JK00_fil[:,nu_peak_2_indx]/JK00_fil[0,0]
+    jkq20r_shape = JK20_fil[:,nu_peak_2_indx]/JK00_fil[0,0]
+    jkq00b_shape = JK00_fil[:,nu_peak_1_indx]/JK00_fil[0,0]
+    jkq20b_shape = JK20_fil[:,nu_peak_1_indx]/JK00_fil[0,0]
 
+    jkq00_shape = JK00_fil/JK00_fil[0,0]
+    jkq20_shape = JK20_fil/JK00_fil[0,0]
+
+    # plot that shape
+    plt.figure(figsize=(10,5), dpi=200)
+    plt.title(r'')
+    plt.subplot(1,2,1)
+    plt.plot(tau, jkq00r_shape, linewidth=2, color='r', label=r'$J^0_0 r$')
+    plt.plot(tau, jkq00b_shape, linewidth=2, color='b', label=r'$J^0_0 b$')
+    plt.xlabel(r'$\tau$')
+    plt.ylabel(r'$J^0_0/{J^0_0}_c$')
+    plt.legend(loc='upper left')
+
+    plt.subplot(1,2,2)
+    plt.plot(tau, jkq20r_shape, linewidth=2, color='r', label=r'$J^2_0 r$')
+    plt.plot(tau, jkq20b_shape, linewidth=2, color='b', label=r'$J^2_0 b$')
+    plt.xlabel(r'$\tau$')
+    plt.ylabel(r'$J^2_0/{J^0_0}_c$')
+    plt.legend(loc='upper left')
+
+    plt.tight_layout()
+    plt.savefig(f'{pm.dir}/plot_comparison_JKQ_shape.pdf')
+    plt.show()
+
+    # show it as image
+    plt.figure(figsize=(10,5), dpi=200)
+    plt.subplot(1,2,1)
+    plt.imshow(jkq00_shape, aspect='auto', cmap='plasma', extent=[wave[0], wave[-1], tau[-1], tau[0]])
+    plt.colorbar()
+    plt.xlabel(r'$\nu$ [nm]')
+    plt.ylabel(r'$\tau$')
+    plt.title(r'$J^0_0/{J^0_0}_c$')
+
+    plt.subplot(1,2,2)
+    plt.imshow(jkq20_shape, aspect='auto', cmap='plasma', extent=[wave[0], wave[-1], tau[-1], tau[0]])
+    plt.colorbar()
+    plt.xlabel(r'$\nu$ [nm]')
+    plt.ylabel(r'$\tau$')
+    plt.title(r'$J^2_0/{J^0_0}_c$')
+
+    plt.tight_layout()
+    plt.savefig(f'{pm.dir}/plot_comparison_JKQ_shape_image.pdf')
+    plt.show()
+    
     # PLOT OF THE STOKES PARAMETERS
     plt.figure(figsize=(10,3.5), dpi=120)
     plt.subplot(1,2,1)
