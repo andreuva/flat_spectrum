@@ -461,7 +461,7 @@ def io_saverad(datadir,atomic):
                     f2.write('\n')
             for K in range(1,3):
                 for Q in range(-K,K+1):
-                    f.write(f'J^{K:1d}{Q:2d}_v')
+                    f2.write(f'J^{K:1d}{Q:2d}_v')
                     for i,atoml in enumerate(atomic):
                         if atoml.rotate:
                             DKQQ = rota.get_DKQQ(2,-atoml.theta,-atoml.phi,backwards=True)
